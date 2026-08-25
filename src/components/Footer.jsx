@@ -1,3 +1,5 @@
+import logoImg from '../assets/logo.png';
+
 export default function Footer() {
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -7,9 +9,9 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <h3 className="footer-logo">
-            ELOQUENCE<span className="footer-logo-accent">26</span>
-          </h3>
+          <div className="footer-logo-container" onClick={() => scrollTo('hero')}>
+            <img src={logoImg} alt="ELOQUENCE 26" className="footer-logo-img" />
+          </div>
           <p className="footer-tagline">THE COUNTDOWN BEGINS.</p>
         </div>
         <div className="footer-links">

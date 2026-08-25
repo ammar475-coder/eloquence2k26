@@ -99,112 +99,114 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
               Prepare for the battlefield.
             </p>
             <button className="btn btn-primary" onClick={onClose}>
-              CLOSE
+              CONFIRM & CLOSE
             </button>
           </div>
         ) : (
           <>
-            <h3 className="modal-title">REGISTER — {event.name}</h3>
+            <h3 className="modal-title">REGISTER // {event.name}</h3>
             <p className="modal-meta">
-              {event.teamSize} &nbsp;|&nbsp; {event.fee}
+              {event.category === 'technical' ? 'TECHNICAL' : 'NON-TECHNICAL'} •{' '}
+              {event.teamSize} • FEE: {event.fee}
             </p>
-            <form className="reg-form" onSubmit={handleSubmit} noValidate>
-              {/* Full Name */}
+
+            <form className="reg-form" onSubmit={handleSubmit}>
               <div className="form-group">
-                <label>Full Name</label>
+                <label>Full Name *</label>
                 <input
                   type="text"
+                  placeholder="Enter your name"
                   value={fields.fullName}
                   onChange={(e) => handleChange('fullName', e.target.value)}
-                  placeholder="Enter your full name"
                 />
                 {errors.fullName && <span className="field-error">{errors.fullName}</span>}
               </div>
 
-              {/* Email */}
               <div className="form-group">
-                <label>Email</label>
+                <label>Email Address *</label>
                 <input
                   type="email"
+                  placeholder="name@college.edu"
                   value={fields.email}
                   onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder="Enter your email"
                 />
                 {errors.email && <span className="field-error">{errors.email}</span>}
               </div>
 
-              {/* Phone */}
               <div className="form-group">
-                <label>Phone Number</label>
+                <label>Mobile Number *</label>
                 <input
                   type="tel"
+                  placeholder="10-digit phone number"
                   value={fields.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
-                  placeholder="10-digit mobile number"
                 />
                 {errors.phone && <span className="field-error">{errors.phone}</span>}
               </div>
 
-              {/* College */}
               <div className="form-group">
-                <label>College Name</label>
+                <label>College / Institution *</label>
                 <input
                   type="text"
+                  placeholder="College Name"
                   value={fields.college}
                   onChange={(e) => handleChange('college', e.target.value)}
-                  placeholder="Enter your college name"
                 />
                 {errors.college && <span className="field-error">{errors.college}</span>}
               </div>
 
-              {/* Department */}
               <div className="form-group">
-                <label>Department</label>
+                <label>Department / Branch *</label>
                 <input
                   type="text"
+                  placeholder="e.g. CSE, ECE, Mechanical"
                   value={fields.department}
                   onChange={(e) => handleChange('department', e.target.value)}
-                  placeholder="Enter your department"
                 />
-                {errors.department && <span className="field-error">{errors.department}</span>}
+                {errors.department && (
+                  <span className="field-error">{errors.department}</span>
+                )}
               </div>
 
-              {/* Year */}
               <div className="form-group">
-                <label>Year</label>
+                <label>Year of Study *</label>
                 <select
                   value={fields.year}
                   onChange={(e) => handleChange('year', e.target.value)}
                 >
                   <option value="">Select Year</option>
                   {YEARS.map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
                   ))}
                 </select>
                 {errors.year && <span className="field-error">{errors.year}</span>}
               </div>
 
-              {/* Team fields */}
               {event.isTeam && event.maxMembers > 1 && (
                 <>
                   <div className="form-group">
-                    <label>Team Name</label>
+                    <label>Team Name *</label>
                     <input
                       type="text"
+                      placeholder="Enter team name"
                       value={fields.teamName}
                       onChange={(e) => handleChange('teamName', e.target.value)}
-                      placeholder="Enter your team name"
                     />
-                    {errors.teamName && <span className="field-error">{errors.teamName}</span>}
+                    {errors.teamName && (
+                      <span className="field-error">{errors.teamName}</span>
+                    )}
                   </div>
-                  {fields.teamMembers.map((member, i) => (
+
+                  {fields.teamMembers.map((m, i) => (
                     <div className="form-group" key={i}>
-                      <label>Team Member {i + 2}</label>
+                      <label>Team Member {i + 2} Name *</label>
                       <input
                         type="text"
-                        value={member}
+                        placeholder={`Member ${i + 2} Full Name`}
+                        value={m}
                         onChange={(e) => handleTeamMember(i, e.target.value)}
-                        placeholder={`Member ${i + 2} name`}
                       />
                       {errors[`teamMember_${i}`] && (
                         <span className="field-error">{errors[`teamMember_${i}`]}</span>

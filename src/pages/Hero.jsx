@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
+import logoImg from '../assets/logo.png';
+import videoSrc from '../assets/landingvideo.mp4';
 
-export default function Hero({ onExplore, onRegister }) {
+export default function Hero({ onExplore, onRegister, showBackgroundVideo = false }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -63,13 +65,28 @@ export default function Hero({ onExplore, onRegister }) {
 
   return (
     <section id="hero" className="hero">
+      {showBackgroundVideo && (
+        <video
+          src={videoSrc}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="hero-bg-video"
+        />
+      )}
       <canvas ref={canvasRef} className="hero-canvas" />
       <div className="hero-fog" />
       <div className="hero-hud-lines" />
       <div className="hero-content">
         <div className="hero-logo-wrapper">
-          <h1 className="hero-logo-text">
-            ELOQUENCE<span className="hero-logo-accent">26</span>
+          <h1 className="hero-logo-title">
+            <img
+              src={logoImg}
+              alt="ELOQUENCE 26"
+              className="hero-logo-img"
+            />
           </h1>
         </div>
         <p className="hero-countdown">THE COUNTDOWN BEGINS.</p>
@@ -85,12 +102,8 @@ export default function Hero({ onExplore, onRegister }) {
           </button>
         </div>
       </div>
-      <div className="hero-scroll">
-        <span>SCROLL TO ENTER</span>
-        <div className="scroll-arrow">
-          <span />
-        </div>
-      </div>
+
+
     </section>
   );
 }
