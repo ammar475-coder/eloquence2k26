@@ -9,17 +9,20 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <div className="footer-logo-container" onClick={() => scrollTo('hero')}>
+          <a className="footer-logo-container" href="#hero" onClick={(event) => {
+            event.preventDefault();
+            scrollTo('hero');
+          }} aria-label="Return to ELOQUENCE 26 home">
             <img src={logoImg} alt="ELOQUENCE 26" className="footer-logo-img" />
-          </div>
+          </a>
           <p className="footer-tagline">THE COUNTDOWN BEGINS.</p>
         </div>
-        <div className="footer-links">
-          <a onClick={() => scrollTo('events')}>Events</a>
-          <a onClick={() => scrollTo('final-cta')}>Register</a>
-          <a onClick={() => scrollTo('why')}>About</a>
-          <a onClick={() => scrollTo('hero')}>Contact</a>
-        </div>
+        <nav className="footer-links" aria-label="Footer navigation">
+          <a href="#events">Events</a>
+          <a href="#final-cta">Register</a>
+          <a href="#why">About</a>
+          <a href="#hero">Home</a>
+        </nav>
       </div>
       <div className="footer-bottom">
         <p>© 2026 ELOQUENCE26. All Rights Reserved.</p>
