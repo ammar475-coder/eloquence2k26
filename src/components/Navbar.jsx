@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import logo from '../assets/logo.png';
-import cahcet from '../assets/cahcet.png';
 
 export default function Navbar({ currentPage = 'home', onNavigate }) {
   const [scrolled, setScrolled] = useState(false);
@@ -12,26 +11,32 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleNav = (page, sectionId = null) => {
+  const handleNav = (page, extra = null) => {
     setMenuOpen(false);
     if (onNavigate) {
-      onNavigate(page, sectionId);
+      onNavigate(page, extra);
     } else {
-      if (sectionId) {
-        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      if (typeof extra === 'string') {
+        document.getElementById(extra)?.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };
 
+  const isEventsActive = currentPage === 'events' || currentPage === 'event-rules';
+
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="nav-container">
-        <div className="nav-logo" onClick={() => scrollTo('hero')}>
+        <div
+          className="nav-logo"
+          onClick={() => handleNav('home', 'hero')}
+          role="button"
+          tabIndex={0}
+          aria-label="ELOQUENCE 26 Home"
+        >
           <img src={logo} alt="ELOQUENCE 26" className="nav-logo-img" />
         </div>
-        {/* <div className="nav-college" aria-label="C. Abdul Hakeem College of Engineering and Technology">
-          <img src={cahcet} alt="cahcet" className="nav-logo-img" />
-        </div> */}
+
         <div className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
           <a
             className={currentPage === 'home' ? 'nav-link-active' : ''}
@@ -40,7 +45,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
             HOME
           </a>
           <a
-            className={currentPage === 'events' ? 'nav-link-active' : ''}
+            className={isEventsActive ? 'nav-link-active' : ''}
             onClick={() => handleNav('events')}
           >
             EVENTS
@@ -48,10 +53,8 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
           <a onClick={() => handleNav('home', 'why')}>
             ABOUT
           </a>
-          <a onClick={() => handleNav(currentPage === 'home' ? 'home' : 'events', currentPage === 'home' ? 'final-cta' : null)}>
-            REGISTER
-          </a>
         </div>
+
         <button
           className={`nav-burger ${menuOpen ? 'nav-burger-open' : ''}`}
           onClick={() => setMenuOpen(!menuOpen)}

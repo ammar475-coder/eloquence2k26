@@ -2,12 +2,12 @@ import logoImg from '../assets/logo.png';
 import events from '../data/events.js';
 
 export default function Footer({ onNavigate }) {
-  const handleNav = (page, sectionId = null) => {
+  const handleNav = (page, extra = null) => {
     if (onNavigate) {
-      onNavigate(page, sectionId);
+      onNavigate(page, extra);
     } else {
-      if (sectionId) {
-        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      if (typeof extra === 'string' && page === 'home') {
+        document.getElementById(extra)?.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };
@@ -39,14 +39,15 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 2: Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading"> TECHNICAL</h4>
+          <h4 className="footer-heading">⚡ TECHNICAL</h4>
           <ul className="footer-event-list">
             {techEvents.map((event) => (
               <li key={event.id}>
                 <a
+                  href={`#/events/${event.id}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    handleNav('events');
+                    handleNav('event-rules', event.id);
                   }}
                 >
                   {event.name}
@@ -58,14 +59,15 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 3: Non-Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading"> NON-TECHNICAL</h4>
+          <h4 className="footer-heading">🎮 NON-TECHNICAL</h4>
           <ul className="footer-event-list">
             {nonTechEvents.map((event) => (
               <li key={event.id}>
                 <a
+                  href={`#/events/${event.id}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    handleNav('events');
+                    handleNav('event-rules', event.id);
                   }}
                 >
                   {event.name}
@@ -77,7 +79,7 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 4: Quick Navigation */}
         <div className="footer-col">
-          <h4 className="footer-heading"> NAVIGATION</h4>
+          <h4 className="footer-heading">🧭 NAVIGATION</h4>
           <ul className="footer-nav-list">
             <li>
               <a
@@ -109,22 +111,12 @@ export default function Footer({ onNavigate }) {
                 About Fest
               </a>
             </li>
-            <li>
-              <a
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNav('events');
-                }}
-              >
-                Register Now
-              </a>
-            </li>
           </ul>
         </div>
       </div>
 
       <div className="footer-bottom">
-        <p>© 2026 ELOQUENCE26. All Rights Reserved.</p>
+        <p>© 2026 ELOQUENCE26 — C. Abdul Hakeem College of Engineering and Technology. All Rights Reserved.</p>
       </div>
     </footer>
   );

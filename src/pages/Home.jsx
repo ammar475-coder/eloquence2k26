@@ -21,10 +21,6 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
     }
   };
 
-  const scrollToRegister = () => {
-    document.getElementById('final-cta')?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <main className="home-page">
       {!hasPlayedIntro && (
@@ -32,7 +28,7 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
       )}
       <Hero
         onExplore={handleExploreEvents}
-        onRegister={scrollToRegister}
+        onRegister={handleExploreEvents}
         showBackgroundVideo={hasPlayedIntro || showHeroVideo}
       />
       <Intro />
