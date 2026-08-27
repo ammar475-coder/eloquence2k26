@@ -5,8 +5,15 @@ import Intro from './Intro.jsx';
 import WhyEloquence from './WhyEloquence.jsx';
 import FinalCTA from './FinalCTA.jsx';
 
-export default function Home({ onNavigate }) {
-  const [showHeroVideo, setShowHeroVideo] = useState(false);
+export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComplete }) {
+  const [showHeroVideo, setShowHeroVideo] = useState(hasPlayedIntro);
+
+  const handleIntroComplete = () => {
+    setShowHeroVideo(true);
+    if (onIntroComplete) {
+      onIntroComplete();
+    }
+  };
 
   const handleExploreEvents = () => {
     if (onNavigate) {
@@ -20,11 +27,13 @@ export default function Home({ onNavigate }) {
 
   return (
     <main className="home-page">
-      <OpeningVideo onComplete={() => setShowHeroVideo(true)} />
+      {!hasPlayedIntro && (
+        <OpeningVideo onComplete={handleIntroComplete} />
+      )}
       <Hero
         onExplore={handleExploreEvents}
         onRegister={scrollToRegister}
-        showBackgroundVideo={showHeroVideo}
+        showBackgroundVideo={hasPlayedIntro || showHeroVideo}
       />
       <Intro />
       <WhyEloquence />
