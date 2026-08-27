@@ -31,55 +31,12 @@ export default function Footer({ onSelectEvent }) {
             Where Ideas Collide. Skills Survive. Legends Emerge.
           </p>
         </div>
-<<<<<<< HEAD
-
-        <div className="footer-col">
-          <h4 className="footer-heading"> TECHNICAL EVENTS</h4>
-          <ul className="footer-event-list">
-            {techEvents.map((evt) => (
-              <li key={evt.id}>
-                <a onClick={() => handleEventClick(evt)}>{evt.name}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="footer-col">
-          <h4 className="footer-heading"> NON-TECHNICAL EVENTS</h4>
-          <ul className="footer-event-list">
-            {nonTechEvents.map((evt) => (
-              <li key={evt.id}>
-                <a onClick={() => handleEventClick(evt)}>{evt.name}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="footer-col">
-          <h4 className="footer-heading"> QUICK LINKS</h4>
-          <ul className="footer-nav-list">
-            <li>
-              <a onClick={() => scrollTo('hero')}>HOME</a>
-            </li>
-            <li>
-              <a onClick={() => scrollTo('events')}>EVENTS</a>
-            </li>
-            <li>
-              <a onClick={() => scrollTo('why')}>ABOUT</a>
-            </li>
-            <li>
-              <a onClick={() => scrollTo('final-cta')}>REGISTER</a>
-            </li>
-          </ul>
-        </div>
-=======
         <nav className="footer-links" aria-label="Footer navigation">
           <a href="#events">Events</a>
           <a href="#final-cta">Register</a>
           <a href="#why">About</a>
           <a href="#hero">Home</a>
         </nav>
->>>>>>> d747c38eb2c3b2f2664661c18cdd2d13ff8221c4
       </div>
 
       <div className="footer-bottom">
