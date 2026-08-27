@@ -8,6 +8,7 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
     return window.location.hash === '#/events' ? 'events' : 'home';
   });
+  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -45,7 +46,11 @@ export default function App() {
       {currentPage === 'events' ? (
         <EventsPage onNavigate={navigateTo} />
       ) : (
-        <Home onNavigate={navigateTo} />
+        <Home
+          onNavigate={navigateTo}
+          hasPlayedIntro={hasPlayedIntro}
+          onIntroComplete={() => setHasPlayedIntro(true)}
+        />
       )}
       <Footer onNavigate={navigateTo} />
     </div>
