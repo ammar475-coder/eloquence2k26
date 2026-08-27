@@ -18,13 +18,13 @@ export default function Footer({ onNavigate }) {
   return (
     <footer className="footer">
       <div className="footer-inner">
-        {/* Brand Column */}
+        {/* Col 1: Brand */}
         <div className="footer-brand">
           <a
             className="footer-logo-container"
             href="#hero"
-            onClick={(e) => {
-              e.preventDefault();
+            onClick={(event) => {
+              event.preventDefault();
               handleNav('home', 'hero');
             }}
             aria-label="Return to ELOQUENCE 26 home"
@@ -37,53 +37,50 @@ export default function Footer({ onNavigate }) {
           </p>
         </div>
 
-        {/* Technical Events Column */}
+        {/* Col 2: Technical Events */}
         <div className="footer-col">
           <h4 className="footer-heading">// TECHNICAL</h4>
           <ul className="footer-event-list">
-            {techEvents.map((ev) => (
-              <li key={ev.id}>
+            {techEvents.map((event) => (
+              <li key={event.id}>
                 <a
-                  href="#/events"
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav('events');
                   }}
                 >
-                  {ev.name}
+                  {event.name}
                 </a>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Non-Technical Events Column */}
+        {/* Col 3: Non-Technical Events */}
         <div className="footer-col">
           <h4 className="footer-heading">// NON-TECHNICAL</h4>
           <ul className="footer-event-list">
-            {nonTechEvents.map((ev) => (
-              <li key={ev.id}>
+            {nonTechEvents.map((event) => (
+              <li key={event.id}>
                 <a
-                  href="#/events"
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav('events');
                   }}
                 >
-                  {ev.name}
+                  {event.name}
                 </a>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Quick Navigation Column */}
+        {/* Col 4: Quick Navigation */}
         <div className="footer-col">
           <h4 className="footer-heading">// NAVIGATION</h4>
           <ul className="footer-nav-list">
             <li>
               <a
-                href="#hero"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('home', 'hero');
@@ -94,35 +91,32 @@ export default function Footer({ onNavigate }) {
             </li>
             <li>
               <a
-                href="#/events"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('events');
                 }}
               >
-                Events
+                All Events
               </a>
             </li>
             <li>
               <a
-                href="#why"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('home', 'why');
                 }}
               >
-                About
+                About Fest
               </a>
             </li>
             <li>
               <a
-                href="#final-cta"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNav('home', 'final-cta');
+                  handleNav('events');
                 }}
               >
-                Register
+                Register Now
               </a>
             </li>
           </ul>

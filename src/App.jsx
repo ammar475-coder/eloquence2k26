@@ -47,7 +47,7 @@ export default function App() {
       ) : (
         <Home onNavigate={navigateTo} />
       )}
-      <Footer currentPage={currentPage} onNavigate={navigateTo} />
+      <Footer onNavigate={navigateTo} />
     </div>
   );
 }
