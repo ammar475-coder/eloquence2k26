@@ -3,6 +3,45 @@ import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
 import RegistrationModal from './RegistrationModal.jsx';
 
+function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, duration = 1800 }) {
+  const [displayVal, setDisplayVal] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp = null;
+    const target = typeof value === 'number' ? value : parseInt(value, 10) || 0;
+
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // easeOutCubic
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      const current = Math.floor(easeProgress * target);
+
+      setDisplayVal(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        setDisplayVal(target);
+      }
+    };
+
+    const animId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animId);
+  }, [value, duration]);
+
+  const formattedStr =
+    padDigits > 0 ? String(displayVal).padStart(padDigits, '0') : String(displayVal);
+
+  return (
+    <span className="stat-num">
+      {prefix}
+      {formattedStr}
+      {suffix}
+    </span>
+  );
+}
+
 export default function EventsPage({ onNavigate }) {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,7 +155,7 @@ export default function EventsPage({ onNavigate }) {
             <span className="breadcrumb-current">EVENTS CATALOGUE</span>
           </div>
 
-          <div className="events-hero-tag">// CHAMPIONSHIP ARENA 2026</div>
+          <div className="events-hero-tag"> CHAMPIONSHIP ARENA 2026</div>
           <h1 className="events-page-title">
             THE BATTLEFIELD <span className="text-glow">ROSTER</span>
           </h1>
@@ -128,21 +167,18 @@ export default function EventsPage({ onNavigate }) {
           {/* Quick Stats Grid */}
           <div className="events-stats-grid">
             <div className="stat-card">
-              <span className="stat-num">12</span>
+              <AnimatedNumber value={12} padDigits={2} duration={1800} />
               <span className="stat-label">TOTAL SHOWDOWNS</span>
             </div>
             <div className="stat-card">
-              <span className="stat-num">06</span>
+              <AnimatedNumber value={6} padDigits={2} duration={1600} />
               <span className="stat-label">TECHNICAL EVENTS</span>
             </div>
             <div className="stat-card">
-              <span className="stat-num">06</span>
+              <AnimatedNumber value={6} padDigits={2} duration={1600} />
               <span className="stat-label">NON-TECHNICAL</span>
             </div>
-            <div className="stat-card">
-              <span className="stat-num">₹20K+</span>
-              <span className="stat-label">PRIZE POOL & PASSES</span>
-            </div>
+            
           </div>
         </div>
       </section>

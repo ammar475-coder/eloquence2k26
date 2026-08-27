@@ -45,7 +45,7 @@ export default function EventSection({ onRegister }) {
 
       {showTech && (
         <>
-          <div className="category-label">// TECHNICAL EVENTS</div>
+          <div className="category-label"> TECHNICAL EVENTS</div>
           <div className="events-grid">
             {techEvents.map((event) => (
               <EventCard key={event.id} event={event} onRegister={onRegister} />
@@ -56,7 +56,7 @@ export default function EventSection({ onRegister }) {
 
       {showNonTech && (
         <>
-          <div className="category-label">// NON-TECHNICAL EVENTS</div>
+          <div className="category-label"> NON-TECHNICAL EVENTS</div>
           <div className="events-grid">
             {nonTechEvents.map((event) => (
               <EventCard key={event.id} event={event} onRegister={onRegister} />
