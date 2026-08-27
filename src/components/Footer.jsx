@@ -39,7 +39,7 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 2: Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading">// TECHNICAL</h4>
+          <h4 className="footer-heading"> TECHNICAL</h4>
           <ul className="footer-event-list">
             {techEvents.map((event) => (
               <li key={event.id}>
@@ -58,7 +58,7 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 3: Non-Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading">// NON-TECHNICAL</h4>
+          <h4 className="footer-heading"> NON-TECHNICAL</h4>
           <ul className="footer-event-list">
             {nonTechEvents.map((event) => (
               <li key={event.id}>
@@ -77,7 +77,7 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 4: Quick Navigation */}
         <div className="footer-col">
-          <h4 className="footer-heading">// NAVIGATION</h4>
+          <h4 className="footer-heading"> NAVIGATION</h4>
           <ul className="footer-nav-list">
             <li>
               <a
