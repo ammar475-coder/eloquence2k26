@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import desktopVideoSrc from '../assets/landing page new.mp4';
-import portraitVideoSrc from '../assets/landing video new.mp4';
+import desktopVideoSrc from '../assets/landingpagesnew.mp4';
+import portraitVideoSrc from '../assets/landingportraitvideo.mp4';
 import logoImg from '../assets/logo.png';
 
 export default function OpeningVideo({ onComplete }) {
