@@ -31,10 +31,7 @@ export default function Footer({ onNavigate }) {
           >
             <img src={logoImg} alt="ELOQUENCE 26" className="footer-logo-img" />
           </a>
-          <p className="footer-tagline">THE COUNTDOWN BEGINS.</p>
-          <p className="footer-desc">
-            Where Ideas Collide. Skills Survive. Legends Emerge.
-          </p>
+          
         </div>
 
         {/* Col 2: Technical Events */}
