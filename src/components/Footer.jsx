@@ -1,15 +1,14 @@
 import logoImg from '../assets/logo.png';
 import events from '../data/events.js';
 
-export default function Footer({ onSelectEvent }) {
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleEventClick = (event) => {
-    scrollTo('events');
-    if (onSelectEvent) {
-      onSelectEvent(event);
+export default function Footer({ onNavigate }) {
+  const handleNav = (page, sectionId = null) => {
+    if (onNavigate) {
+      onNavigate(page, sectionId);
+    } else {
+      if (sectionId) {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
@@ -19,11 +18,17 @@ export default function Footer({ onSelectEvent }) {
   return (
     <footer className="footer">
       <div className="footer-inner">
+        {/* Col 1: Brand */}
         <div className="footer-brand">
-          <a className="footer-logo-container" href="#hero" onClick={(event) => {
-            event.preventDefault();
-            scrollTo('hero');
-          }} aria-label="Return to ELOQUENCE 26 home">
+          <a
+            className="footer-logo-container"
+            href="#hero"
+            onClick={(event) => {
+              event.preventDefault();
+              handleNav('home', 'hero');
+            }}
+            aria-label="Return to ELOQUENCE 26 home"
+          >
             <img src={logoImg} alt="ELOQUENCE 26" className="footer-logo-img" />
           </a>
           <p className="footer-tagline">THE COUNTDOWN BEGINS.</p>
@@ -32,42 +37,87 @@ export default function Footer({ onSelectEvent }) {
           </p>
         </div>
 
+        {/* Col 2: Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading"> TECHNICAL EVENTS</h4>
+          <h4 className="footer-heading">// TECHNICAL</h4>
           <ul className="footer-event-list">
-            {techEvents.map((evt) => (
-              <li key={evt.id}>
-                <a onClick={() => handleEventClick(evt)}>{evt.name}</a>
+            {techEvents.map((event) => (
+              <li key={event.id}>
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav('events');
+                  }}
+                >
+                  {event.name}
+                </a>
               </li>
             ))}
           </ul>
         </div>
 
+        {/* Col 3: Non-Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading"> NON-TECHNICAL EVENTS</h4>
+          <h4 className="footer-heading">// NON-TECHNICAL</h4>
           <ul className="footer-event-list">
-            {nonTechEvents.map((evt) => (
-              <li key={evt.id}>
-                <a onClick={() => handleEventClick(evt)}>{evt.name}</a>
+            {nonTechEvents.map((event) => (
+              <li key={event.id}>
+                <a
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav('events');
+                  }}
+                >
+                  {event.name}
+                </a>
               </li>
             ))}
           </ul>
         </div>
 
+        {/* Col 4: Quick Navigation */}
         <div className="footer-col">
-          <h4 className="footer-heading"> QUICK LINKS</h4>
+          <h4 className="footer-heading">// NAVIGATION</h4>
           <ul className="footer-nav-list">
             <li>
-              <a onClick={() => scrollTo('hero')}>HOME</a>
+              <a
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNav('home', 'hero');
+                }}
+              >
+                Home
+              </a>
             </li>
             <li>
-              <a onClick={() => scrollTo('events')}>EVENTS</a>
+              <a
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNav('events');
+                }}
+              >
+                All Events
+              </a>
             </li>
             <li>
-              <a onClick={() => scrollTo('why')}>ABOUT</a>
+              <a
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNav('home', 'why');
+                }}
+              >
+                About Fest
+              </a>
             </li>
             <li>
-              <a onClick={() => scrollTo('final-cta')}>REGISTER</a>
+              <a
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNav('events');
+                }}
+              >
+                Register Now
+              </a>
             </li>
           </ul>
         </div>

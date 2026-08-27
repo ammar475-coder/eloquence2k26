@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import navbarLogo from '../assets/navbarlogo.png';
 
-export default function Navbar() {
+export default function Navbar({ currentPage = 'home', onNavigate }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -11,22 +11,42 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  const handleNav = (page, sectionId = null) => {
     setMenuOpen(false);
+    if (onNavigate) {
+      onNavigate(page, sectionId);
+    } else {
+      if (sectionId) {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   };
 
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="nav-container">
-        <div className="nav-logo" onClick={() => scrollTo('hero')}>
+        <div className="nav-logo" onClick={() => handleNav('home', 'hero')}>
           <img src={navbarLogo} alt="ELOQUENCE 26" className="nav-logo-img" />
         </div>
         <div className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
-          <a onClick={() => scrollTo('hero')}>HOME</a>
-          <a onClick={() => scrollTo('events')}>EVENTS</a>
-          <a onClick={() => scrollTo('why')}>ABOUT</a>
-          <a onClick={() => scrollTo('final-cta')}>REGISTER</a>
+          <a
+            className={currentPage === 'home' ? 'nav-link-active' : ''}
+            onClick={() => handleNav('home', 'hero')}
+          >
+            HOME
+          </a>
+          <a
+            className={currentPage === 'events' ? 'nav-link-active' : ''}
+            onClick={() => handleNav('events')}
+          >
+            EVENTS
+          </a>
+          <a onClick={() => handleNav('home', 'why')}>
+            ABOUT
+          </a>
+          <a onClick={() => handleNav(currentPage === 'home' ? 'home' : 'events', currentPage === 'home' ? 'final-cta' : null)}>
+            REGISTER
+          </a>
         </div>
         <button
           className={`nav-burger ${menuOpen ? 'nav-burger-open' : ''}`}

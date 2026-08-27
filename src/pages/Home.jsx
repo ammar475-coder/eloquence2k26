@@ -2,29 +2,16 @@ import { useState } from 'react';
 import OpeningVideo from './OpeningVideo.jsx';
 import Hero from './Hero.jsx';
 import Intro from './Intro.jsx';
-import EventSection from './EventSection.jsx';
-import RegistrationModal from './RegistrationModal.jsx';
 import WhyEloquence from './WhyEloquence.jsx';
 import FinalCTA from './FinalCTA.jsx';
-import Footer from '../components/Footer.jsx';
 
-export default function Home() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+export default function Home({ onNavigate }) {
   const [showHeroVideo, setShowHeroVideo] = useState(false);
 
-  const openModal = (event) => {
-    setSelectedEvent(event);
-    setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setSelectedEvent(null);
-  };
-
-  const scrollToEvents = () => {
-    document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' });
+  const handleExploreEvents = () => {
+    if (onNavigate) {
+      onNavigate('events');
+    }
   };
 
   const scrollToRegister = () => {
@@ -35,20 +22,13 @@ export default function Home() {
     <main className="home-page">
       <OpeningVideo onComplete={() => setShowHeroVideo(true)} />
       <Hero
-        onExplore={scrollToEvents}
+        onExplore={handleExploreEvents}
         onRegister={scrollToRegister}
         showBackgroundVideo={showHeroVideo}
       />
       <Intro />
-      <EventSection onRegister={openModal} />
       <WhyEloquence />
-      <FinalCTA onRegister={scrollToEvents} />
-      <Footer onSelectEvent={openModal} />
-      <RegistrationModal
-        event={selectedEvent}
-        isOpen={modalOpen}
-        onClose={closeModal}
-      />
+      <FinalCTA onRegister={handleExploreEvents} />
     </main>
   );
 }
