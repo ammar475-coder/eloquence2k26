@@ -106,7 +106,7 @@ export default function OpeningVideo({ onComplete }) {
       <div className="opening-video-vignette" />
       <div className="opening-hud-top">
         <img src={logoImg} alt="ELOQUENCE 26" className="opening-hud-logo" />
-        <span className="opening-hud-status">// INITIALIZING ELOQUENCE26</span>
+        <span className="opening-hud-status">// INITIALIZING ELOQUENCE'26</span>
       </div>
 
       <div className="opening-hud-bottom">
