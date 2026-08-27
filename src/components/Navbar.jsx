@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import navbarLogo from '../assets/navbarlogo.png';
+import logo from '../assets/logo.png';
+import cahcet from '../assets/cahcet.png';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -20,13 +21,16 @@ export default function Navbar() {
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="nav-container">
         <div className="nav-logo" onClick={() => scrollTo('hero')}>
-          <img src={navbarLogo} alt="ELOQUENCE 26" className="nav-logo-img" />
+          <img src={logo} alt="ELOQUENCE 26" className="nav-logo-img" />
         </div>
+        {/* <div className="nav-college" aria-label="C. Abdul Hakeem College of Engineering and Technology">
+          <img src={cahcet} alt="cahcet" className="nav-logo-img" />
+        </div> */}
         <div className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
           <a onClick={() => scrollTo('hero')}>HOME</a>
           <a onClick={() => scrollTo('events')}>EVENTS</a>
           <a onClick={() => scrollTo('why')}>ABOUT</a>
-          <a onClick={() => scrollTo('final-cta')}>REGISTER</a>
+          <a className="nav-register" onClick={() => scrollTo('final-cta')}>REGISTER NOW <span aria-hidden="true">→</span></a>
         </div>
         <button
           className={`nav-burger ${menuOpen ? 'nav-burger-open' : ''}`}

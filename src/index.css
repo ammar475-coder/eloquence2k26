@@ -226,6 +226,141 @@ img {
   }
 }
 
+/* ELOQUENCE'26 — architectural emerald/metal hero refresh */
+:root {
+  --bronze: #b99358;
+  --steel: #d6dbd5;
+  --armor: #111513;
+  --void: #050706;
+}
+
+.navbar {
+  padding: 0.55rem 2rem;
+  background: linear-gradient(90deg, rgba(4, 7, 5, 0.92), rgba(16, 23, 18, 0.76), rgba(4, 7, 5, 0.92));
+  border-bottom: 1px solid rgba(185, 147, 88, 0.22);
+}
+
+.navbar::before {
+  content: '';
+  position: absolute;
+  inset: auto 8% 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(57, 255, 136, 0.5), transparent);
+}
+
+.nav-container { gap: 1.25rem; }
+.nav-logo-img { height: clamp(38px, 5vw, 52px); }
+
+.nav-college {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-right: auto;
+  color: rgba(214, 219, 213, 0.82);
+  font-family: var(--font-display);
+  font-size: clamp(0.42rem, 0.7vw, 0.58rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.nav-college-mark,
+.hero-college-mark {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(185, 147, 88, 0.75);
+  background: linear-gradient(145deg, rgba(185, 147, 88, 0.24), rgba(7, 19, 12, 0.78));
+  color: #e2c288;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 0 12px rgba(185, 147, 88, 0.12), 0 0 12px rgba(0, 0, 0, 0.45);
+}
+
+.nav-college-mark { width: 38px; height: 38px; font-size: 0.4rem; }
+.nav-links { gap: clamp(1rem, 2.4vw, 2.4rem); }
+.nav-links a { color: rgba(214, 219, 213, 0.8); padding-top:10px; }
+
+.hero {
+  min-height: 740px;
+  height: max(100vh, 740px);
+  padding: 7.5rem 1.5rem 3.5rem;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.46) 1px, transparent 1px) 0 0 / 70px 70px,
+    linear-gradient(0deg, rgba(0,0,0,.4) 1px, transparent 1px) 0 0 / 70px 70px,
+    radial-gradient(ellipse at 50% 30%, rgba(30, 92, 57, .29), transparent 42%),
+    radial-gradient(ellipse at 50% 105%, rgba(0, 99, 46, .34), transparent 50%),
+    linear-gradient(135deg, #050806 0%, #101711 48%, #050705 100%);
+}
+
+.hero::before,
+.hero::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hero::before {
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(224, 241, 226, 0.05) 47%, transparent 58%);
+  transform: translateX(-110%);
+  animation: armorSweep 12s ease-in-out infinite;
+}
+
+.hero::after {
+  inset: 1.6rem;
+  border: 1px solid rgba(185, 147, 88, 0.16);
+  clip-path: polygon(0 34px, 34px 0, calc(100% - 34px) 0, 100% 34px, 100% calc(100% - 34px), calc(100% - 34px) 100%, 34px 100%, 0 calc(100% - 34px));
+}
+
+.hero-hud-lines { margin: 2.35rem; border-color: rgba(57, 255, 136, 0.11); }
+.hero-fog { background: radial-gradient(ellipse at 50% 75%, rgba(2, 76, 34, 0.42), transparent 57%), radial-gradient(ellipse at 20% 15%, rgba(185, 147, 88, 0.09), transparent 37%); }
+.hero-content { width: min(100%, 960px); padding: 0; }
+
+.hero-college-intro { animation: textReveal .9s ease-out both; }
+.hero-college-mark { width: 50px; height: 50px; margin: 0 auto 0.65rem; font-size: .52rem; }
+.hero-college-name { max-width: 720px; margin: 0 auto; color: var(--steel); font-family: var(--font-display); font-size: clamp(.66rem, 1.25vw, .95rem); font-weight: 700; letter-spacing: .11em; line-height: 1.55; text-transform: uppercase; }
+.hero-presents { margin: .65rem 0 .5rem; color: #c2b28d; font-family: Georgia, serif; font-size: clamp(.9rem, 1.5vw, 1.15rem); font-style: italic; letter-spacing: .05em; }
+.hero-logo-wrapper { margin: 0 auto .45rem; }
+.hero-logo-img { max-width: clamp(300px, 55vw, 650px); filter: drop-shadow(0 0 18px rgba(57, 255, 136, .3)) drop-shadow(0 10px 26px rgba(0,0,0,.8)); }
+.hero-tagline { margin: 0 auto 1rem; color: #d8ded9; font-family: var(--font-display); font-size: clamp(.68rem, 1.1vw, .88rem); font-weight: 600; letter-spacing: .2em; opacity: .88; text-transform: uppercase; }
+
+.countdown { width: min(100%, 490px); margin: 0 auto 1rem; padding: .8rem 1rem .72rem; border-top: 1px solid rgba(185, 147, 88, .55); border-bottom: 1px solid rgba(57, 255, 136, .35); background: linear-gradient(90deg, rgba(3, 11, 7, .66), rgba(21, 42, 27, .58), rgba(3, 11, 7, .66)); box-shadow: inset 0 0 24px rgba(0, 0, 0, .55), 0 0 24px rgba(0, 168, 59, .1); animation: countdownPulse 4s ease-in-out infinite; }
+.countdown-value { display: flex; align-items: baseline; justify-content: center; gap: clamp(.3rem, 1.2vw, .9rem); color: #d9eadb; font-family: var(--font-display); font-size: clamp(1.6rem, 4vw, 3rem); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .06em; line-height: 1; text-shadow: 0 0 16px rgba(57,255,136,.25); }
+.countdown-value b { color: var(--bronze); font-weight: 400; }
+.countdown-labels { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: .5rem; color: rgba(214, 219, 213, .64); font-family: var(--font-display); font-size: clamp(.43rem, .75vw, .58rem); font-weight: 600; letter-spacing: .15em; text-transform: uppercase; }
+.hero-date { margin-bottom: 1.45rem; color: #d6b678; font-family: var(--font-display); font-size: clamp(.7rem, 1vw, .82rem); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.hero-buttons { animation-delay: .5s; }
+.btn { border-color: rgba(185, 147, 88, .7); background: linear-gradient(135deg, rgba(26, 38, 28, .92), rgba(4, 10, 6, .92)); color: #e0e6e0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); }
+.btn-primary { border-color: #9ecf9e; background: linear-gradient(135deg, #1a5130, #08170e); color: #edfff0; }
+.btn-secondary { border-color: rgba(185, 147, 88, .62); color: #e1c996; background: rgba(18, 20, 16, .82); }
+.btn:hover { border-color: #b99358; background: linear-gradient(135deg, #225f39, #0c2414); box-shadow: 0 0 20px rgba(0, 168, 59, .25), inset 0 0 22px rgba(185, 147, 88, .1); }
+
+@keyframes armorSweep { 0%, 65%, 100% { transform: translateX(-110%); } 82% { transform: translateX(110%); } }
+@keyframes countdownPulse { 0%, 100% { box-shadow: inset 0 0 24px rgba(0,0,0,.55), 0 0 16px rgba(0,168,59,.08); } 50% { box-shadow: inset 0 0 24px rgba(0,0,0,.55), 0 0 28px rgba(0,168,59,.2); } }
+
+@media (max-width: 768px) {
+  .navbar { padding: .55rem 1rem; }
+  .nav-college { display: none; }
+  .hero { min-height: 700px; height: auto; padding-top: 6.8rem; }
+  .hero::after { inset: .75rem; }
+  .hero-hud-lines { margin: 1.1rem; }
+}
+
+@media (max-width: 480px) {
+  .hero { min-height: 680px; padding-inline: 1rem; }
+  .hero-college-name { max-width: 330px; letter-spacing: .08em; }
+  .hero-logo-img { max-width: 92vw; }
+  .countdown { padding-inline: .5rem; }
+  .countdown-value { gap: .24rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    2. HERO
    ═══════════════════════════════════════════════════════════════ */
