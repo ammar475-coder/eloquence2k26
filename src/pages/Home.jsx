@@ -6,6 +6,7 @@ import EventSection from './EventSection.jsx';
 import RegistrationModal from './RegistrationModal.jsx';
 import WhyEloquence from './WhyEloquence.jsx';
 import FinalCTA from './FinalCTA.jsx';
+import Footer from '../components/Footer.jsx';
 
 export default function Home() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function Home() {
       <EventSection onRegister={openModal} />
       <WhyEloquence />
       <FinalCTA onRegister={scrollToEvents} />
+      <Footer onSelectEvent={openModal} />
       <RegistrationModal
         event={selectedEvent}
         isOpen={modalOpen}
