@@ -1242,6 +1242,13 @@ img {
   text-shadow: 0 0 8px rgba(57, 255, 136, 0.4);
 }
 
+.footer-logo-container:focus-visible,
+.footer-links a:focus-visible {
+  outline: 1px solid var(--bright-green);
+  outline-offset: 0.45rem;
+  opacity: 1;
+}
+
 .footer-links a:hover {
   opacity: 1;
   color: var(--bright-green);
@@ -1520,10 +1527,12 @@ img {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    gap: 1.5rem;
   }
 
   .footer-links {
     justify-content: center;
+    gap: 1rem 1.5rem;
   }
 
   .modal {

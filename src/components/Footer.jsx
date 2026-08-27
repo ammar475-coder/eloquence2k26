@@ -20,14 +20,18 @@ export default function Footer({ onSelectEvent }) {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <div className="footer-logo-container" onClick={() => scrollTo('hero')}>
+          <a className="footer-logo-container" href="#hero" onClick={(event) => {
+            event.preventDefault();
+            scrollTo('hero');
+          }} aria-label="Return to ELOQUENCE 26 home">
             <img src={logoImg} alt="ELOQUENCE 26" className="footer-logo-img" />
-          </div>
+          </a>
           <p className="footer-tagline">THE COUNTDOWN BEGINS.</p>
           <p className="footer-desc">
             Where Ideas Collide. Skills Survive. Legends Emerge.
           </p>
         </div>
+<<<<<<< HEAD
 
         <div className="footer-col">
           <h4 className="footer-heading"> TECHNICAL EVENTS</h4>
@@ -68,6 +72,14 @@ export default function Footer({ onSelectEvent }) {
             </li>
           </ul>
         </div>
+=======
+        <nav className="footer-links" aria-label="Footer navigation">
+          <a href="#events">Events</a>
+          <a href="#final-cta">Register</a>
+          <a href="#why">About</a>
+          <a href="#hero">Home</a>
+        </nav>
+>>>>>>> d747c38eb2c3b2f2664661c18cdd2d13ff8221c4
       </div>
 
       <div className="footer-bottom">
