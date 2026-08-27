@@ -1,9 +1,32 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
 import videoSrc from '../assets/landingvideo.mp4';
 
+const EVENT_START = new Date('2026-09-29T00:00:00+05:30').getTime();
+
+function getTimeRemaining() {
+  const remainingSeconds = Math.max(0, Math.floor((EVENT_START - Date.now()) / 1000));
+  const days = Math.floor(remainingSeconds / 86400);
+  const hours = Math.floor((remainingSeconds % 86400) / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+
+  return {
+    days: String(days).padStart(2, '0'),
+    hours: String(hours).padStart(2, '0'),
+    minutes: String(minutes).padStart(2, '0'),
+    seconds: String(seconds).padStart(2, '0'),
+  };
+}
+
 export default function Hero({ onExplore, onRegister, showBackgroundVideo = false }) {
   const canvasRef = useRef(null);
+  const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setTimeRemaining(getTimeRemaining()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -80,6 +103,11 @@ export default function Hero({ onExplore, onRegister, showBackgroundVideo = fals
       <div className="hero-fog" />
       <div className="hero-hud-lines" />
       <div className="hero-content">
+        <div className="hero-college-intro">
+          <p className="hero-college-name">C. Abdul Hakeem College of Engineering and Technology</p>
+          <p className="hero-department">Department of Computer Science and Engineering</p>
+          <p className="hero-presents"><span>cordially presents</span></p>
+        </div>
         <div className="hero-logo-wrapper">
           <h1 className="hero-logo-title">
             <img
@@ -89,16 +117,20 @@ export default function Hero({ onExplore, onRegister, showBackgroundVideo = fals
             />
           </h1>
         </div>
-        <p className="hero-countdown">THE COUNTDOWN BEGINS.</p>
-        <p className="hero-tagline">
-          Where Ideas Collide. Skills Survive. Legends Emerge.
-        </p>
+        <p className="hero-tagline">National Level Technical Symposium</p>
+        <div className="countdown countdown-days" aria-label={`Countdown: ${timeRemaining.days} days, ${timeRemaining.hours} hours, ${timeRemaining.minutes} minutes, ${timeRemaining.seconds} seconds`}>
+          <div className="countdown-value">
+            <span>{timeRemaining.days}</span><b>:</b><span>{timeRemaining.hours}</span><b>:</b><span>{timeRemaining.minutes}</span><b>:</b><span>{timeRemaining.seconds}</span>
+          </div>
+          <div className="countdown-labels"><span>Days</span><span>Hours</span><span>Minutes</span><span>Seconds</span></div>
+        </div>
+        <p className="hero-date">September 29, 2026</p>
         <div className="hero-buttons">
-          <button className="btn btn-primary" onClick={onExplore}>
-            EXPLORE EVENTS
+          <button className="btn btn-primary" onClick={onRegister}>
+            REGISTER NOW <span aria-hidden="true">→</span>
           </button>
-          <button className="btn btn-secondary" onClick={onRegister}>
-            REGISTER NOW
+          <button className="btn btn-secondary" onClick={onExplore}>
+            EXPLORE EVENTS <span aria-hidden="true">→</span>
           </button>
         </div>
       </div>

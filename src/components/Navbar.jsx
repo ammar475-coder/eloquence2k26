@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import navbarLogo from '../assets/navbarlogo.png';
+import logo from '../assets/logo.png';
+import cahcet from '../assets/cahcet.png';
 
 export default function Navbar({ currentPage = 'home', onNavigate }) {
   const [scrolled, setScrolled] = useState(false);
@@ -25,9 +26,12 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="nav-container">
-        <div className="nav-logo" onClick={() => handleNav('home', 'hero')}>
-          <img src={navbarLogo} alt="ELOQUENCE 26" className="nav-logo-img" />
+        <div className="nav-logo" onClick={() => scrollTo('hero')}>
+          <img src={logo} alt="ELOQUENCE 26" className="nav-logo-img" />
         </div>
+        {/* <div className="nav-college" aria-label="C. Abdul Hakeem College of Engineering and Technology">
+          <img src={cahcet} alt="cahcet" className="nav-logo-img" />
+        </div> */}
         <div className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
           <a
             className={currentPage === 'home' ? 'nav-link-active' : ''}
