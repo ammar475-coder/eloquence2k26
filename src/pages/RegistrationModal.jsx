@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate'];
 
 function validate(fields, event) {
   const errors = {};
@@ -12,10 +12,18 @@ function validate(fields, event) {
   if (!fields.college.trim()) errors.college = 'Please enter your college name.';
   if (!fields.department.trim()) errors.department = 'Please enter your department.';
   if (!fields.year) errors.year = 'Please select your year.';
-  if (event.isTeam && event.maxMembers > 1) {
-    if (!fields.teamName.trim()) errors.teamName = 'Please enter your team name.';
+
+  if (event.isTeam) {
+    if (event.maxMembers > 1 && fields.teamMembers.length > 0) {
+      if (!fields.teamName.trim()) errors.teamName = 'Please enter your team/squad name.';
+    } else if (event.feeType === 'per_squad') {
+      if (!fields.teamName.trim()) errors.teamName = 'Please enter your squad name.';
+    }
+
     fields.teamMembers.forEach((m, i) => {
-      if (!m.trim()) errors[`teamMember_${i}`] = `Please enter team member ${i + 2}'s name.`;
+      if (!m.trim()) {
+        errors[`teamMember_${i}`] = `Please enter Team Member ${i + 2}'s full name.`;
+      }
     });
   }
   return errors;
@@ -36,13 +44,20 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
   const [fields, setFields] = useState(initialFields);
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
+  const [regCode, setRegCode] = useState('');
 
   useEffect(() => {
     if (isOpen && event) {
-      const memberCount = event.isTeam && event.maxMembers > 1 ? event.maxMembers - 1 : 0;
-      setFields({ ...initialFields, teamMembers: Array(memberCount).fill('') });
+      // Default team members setup
+      let defaultMembers = [];
+      if (event.feeType === 'per_squad' && event.maxMembers > 1) {
+        // Squad requires full team (e.g. 4 members total = 3 extra members)
+        defaultMembers = Array(event.maxMembers - 1).fill('');
+      }
+      setFields({ ...initialFields, teamMembers: defaultMembers });
       setErrors({});
       setSuccess(false);
+      setRegCode(`ELQ26-${event.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(1000 + Math.random() * 9000)}`);
     }
   }, [isOpen, event]);
 
@@ -68,6 +83,33 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
     setErrors((prev) => ({ ...prev, [`teamMember_${index}`]: undefined }));
   };
 
+  const addTeamMember = () => {
+    if (fields.teamMembers.length + 1 < event.maxMembers) {
+      setFields((prev) => ({
+        ...prev,
+        teamMembers: [...prev.teamMembers, ''],
+      }));
+    }
+  };
+
+  const removeTeamMember = (index) => {
+    setFields((prev) => {
+      const updated = prev.teamMembers.filter((_, i) => i !== index);
+      return { ...prev, teamMembers: updated };
+    });
+    setErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[`teamMember_${index}`];
+      return updated;
+    });
+  };
+
+  // Calculate total fee dynamically
+  const totalParticipants = 1 + fields.teamMembers.length;
+  const calculatedFee = event.feeType === 'per_squad'
+    ? '₹200 (Squad Flat)'
+    : `₹${totalParticipants * (event.feePerHead || 50)} (${totalParticipants} participant${totalParticipants > 1 ? 's' : ''} × ₹${event.feePerHead || 50})`;
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const errs = validate(fields, event);
@@ -81,7 +123,7 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="Close">
+        <button className="modal-close" onClick={onClose} aria-label="Close modal">
           ✕
         </button>
 
@@ -93,104 +135,157 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
                 <path fill="none" stroke="#39FF88" strokeWidth="3" d="M14 27l7 7 16-16" />
               </svg>
             </div>
-            <h3 className="success-heading">REGISTRATION INITIALIZED</h3>
+            <h3 className="success-heading">REGISTRATION CONFIRMED</h3>
             <p className="success-sub">
-              You have been registered for <strong>{event.name}</strong>.
-              Prepare for the battlefield.
+              You are registered for <strong>{event.name}</strong>.
             </p>
-            <button className="btn btn-primary" onClick={onClose}>
-              CONFIRM & CLOSE
+
+            <div className="success-ticket">
+              <div className="ticket-item">
+                <span className="ticket-label">PASS ID</span>
+                <span className="ticket-val ticket-code">{regCode}</span>
+              </div>
+              <div className="ticket-item">
+                <span className="ticket-label">LEAD PARTICIPANT</span>
+                <span className="ticket-val">{fields.fullName}</span>
+              </div>
+              <div className="ticket-item">
+                <span className="ticket-label">COLLEGE</span>
+                <span className="ticket-val">{fields.college} ({fields.department})</span>
+              </div>
+              {fields.teamName && (
+                <div className="ticket-item">
+                  <span className="ticket-label">TEAM / SQUAD</span>
+                  <span className="ticket-val">{fields.teamName} ({totalParticipants} Members)</span>
+                </div>
+              )}
+              <div className="ticket-item">
+                <span className="ticket-label">ENTRY FEE PAYABLE</span>
+                <span className="ticket-val ticket-fee">{calculatedFee}</span>
+              </div>
+            </div>
+
+            <p className="ticket-instructions">
+              Please present this Pass ID / screenshot at the registration desk on the event day.
+            </p>
+
+            <button className="btn btn-primary btn-block" onClick={onClose}>
+              DONE & BACK TO ARENA
             </button>
           </div>
         ) : (
           <>
-            <h3 className="modal-title">REGISTER // {event.name}</h3>
-            <p className="modal-meta">
-              {event.category === 'technical' ? 'TECHNICAL' : 'NON-TECHNICAL'} •{' '}
-              {event.teamSize} • FEE: {event.fee}
-            </p>
+            <div className="modal-header-tag">
+              <span className={`modal-badge ${event.category === 'technical' ? 'badge-tech' : 'badge-nontech'}`}>
+                {event.category === 'technical' ? 'TECHNICAL' : 'NON-TECHNICAL'}
+              </span>
+              <span className="modal-num-tag">EVENT #{event.number}</span>
+            </div>
+
+            <h3 className="modal-title">{event.name}</h3>
+            {event.subtitle && <p className="modal-subtitle">{event.subtitle}</p>}
+
+            <div className="modal-meta-bar">
+              <div className="meta-box">
+                <span className="m-label">TEAM SIZE</span>
+                <span className="m-val">{event.teamSize}</span>
+              </div>
+              <div className="meta-box">
+                <span className="m-label">ENTRY FEE</span>
+                <span className="m-val highlight">{event.fee}</span>
+              </div>
+            </div>
 
             <form className="reg-form" onSubmit={handleSubmit}>
+              <div className="form-section-title">// PRIMARY PARTICIPANT (LEAD)</div>
+              
               <div className="form-group">
                 <label>Full Name *</label>
                 <input
                   type="text"
-                  placeholder="Enter your name"
+                  placeholder="Enter full name"
                   value={fields.fullName}
                   onChange={(e) => handleChange('fullName', e.target.value)}
                 />
                 {errors.fullName && <span className="field-error">{errors.fullName}</span>}
               </div>
 
-              <div className="form-group">
-                <label>Email Address *</label>
-                <input
-                  type="email"
-                  placeholder="name@college.edu"
-                  value={fields.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                />
-                {errors.email && <span className="field-error">{errors.email}</span>}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email Address *</label>
+                  <input
+                    type="email"
+                    placeholder="name@gmail.com"
+                    value={fields.email}
+                    onChange={(e) => handleChange('email', e.target.value)}
+                  />
+                  {errors.email && <span className="field-error">{errors.email}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label>WhatsApp / Mobile No *</label>
+                  <input
+                    type="tel"
+                    placeholder="10-digit number"
+                    value={fields.phone}
+                    onChange={(e) => handleChange('phone', e.target.value)}
+                  />
+                  {errors.phone && <span className="field-error">{errors.phone}</span>}
+                </div>
               </div>
 
               <div className="form-group">
-                <label>Mobile Number *</label>
-                <input
-                  type="tel"
-                  placeholder="10-digit phone number"
-                  value={fields.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                />
-                {errors.phone && <span className="field-error">{errors.phone}</span>}
-              </div>
-
-              <div className="form-group">
-                <label>College / Institution *</label>
+                <label>College / University Name *</label>
                 <input
                   type="text"
-                  placeholder="College Name"
+                  placeholder="Your College Name"
                   value={fields.college}
                   onChange={(e) => handleChange('college', e.target.value)}
                 />
                 {errors.college && <span className="field-error">{errors.college}</span>}
               </div>
 
-              <div className="form-group">
-                <label>Department / Branch *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. CSE, ECE, Mechanical"
-                  value={fields.department}
-                  onChange={(e) => handleChange('department', e.target.value)}
-                />
-                {errors.department && (
-                  <span className="field-error">{errors.department}</span>
-                )}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Department / Branch *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. CSE, IT, ECE, Mech"
+                    value={fields.department}
+                    onChange={(e) => handleChange('department', e.target.value)}
+                  />
+                  {errors.department && (
+                    <span className="field-error">{errors.department}</span>
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label>Year of Study *</label>
+                  <select
+                    value={fields.year}
+                    onChange={(e) => handleChange('year', e.target.value)}
+                  >
+                    <option value="">Select Year</option>
+                    {YEARS.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.year && <span className="field-error">{errors.year}</span>}
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Year of Study *</label>
-                <select
-                  value={fields.year}
-                  onChange={(e) => handleChange('year', e.target.value)}
-                >
-                  <option value="">Select Year</option>
-                  {YEARS.map((y) => (
-                    <option key={y} value={y}>
-                      {y}
-                    </option>
-                  ))}
-                </select>
-                {errors.year && <span className="field-error">{errors.year}</span>}
-              </div>
-
+              {/* Team Section for Team Events */}
               {event.isTeam && event.maxMembers > 1 && (
-                <>
+                <div className="team-form-section">
+                  <div className="form-section-title">// SQUAD / TEAM MEMBERS ({totalParticipants} of max {event.maxMembers})</div>
+
                   <div className="form-group">
-                    <label>Team Name *</label>
+                    <label>Team / Squad Name *</label>
                     <input
                       type="text"
-                      placeholder="Enter team name"
+                      placeholder="e.g. CyberKnights / ByteBandits"
                       value={fields.teamName}
                       onChange={(e) => handleChange('teamName', e.target.value)}
                     />
@@ -200,8 +295,19 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
                   </div>
 
                   {fields.teamMembers.map((m, i) => (
-                    <div className="form-group" key={i}>
-                      <label>Team Member {i + 2} Name *</label>
+                    <div className="form-group team-member-row" key={i}>
+                      <div className="team-member-header">
+                        <label>Teammate #{i + 2} Full Name *</label>
+                        {event.feeType !== 'per_squad' && (
+                          <button
+                            type="button"
+                            className="btn-remove-member"
+                            onClick={() => removeTeamMember(i)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         placeholder={`Member ${i + 2} Full Name`}
@@ -213,8 +319,26 @@ export default function RegistrationModal({ event, isOpen, onClose }) {
                       )}
                     </div>
                   ))}
-                </>
+
+                  {event.feeType !== 'per_squad' && fields.teamMembers.length + 1 < event.maxMembers && (
+                    <button
+                      type="button"
+                      className="btn-add-member"
+                      onClick={addTeamMember}
+                    >
+                      + ADD TEAM MEMBER ({fields.teamMembers.length + 2} of {event.maxMembers})
+                    </button>
+                  )}
+                </div>
               )}
+
+              {/* Fee Summary Box */}
+              <div className="fee-summary-box">
+                <div className="fee-calc-line">
+                  <span>Calculated Registration Fee:</span>
+                  <span className="total-fee-val">{calculatedFee}</span>
+                </div>
+              </div>
 
               <button type="submit" className="btn btn-primary btn-submit">
                 SUBMIT REGISTRATION
