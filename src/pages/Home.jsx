@@ -2,28 +2,23 @@ import { useState } from 'react';
 import OpeningVideo from './OpeningVideo.jsx';
 import Hero from './Hero.jsx';
 import Intro from './Intro.jsx';
-import EventSection from './EventSection.jsx';
-import RegistrationModal from './RegistrationModal.jsx';
 import WhyEloquence from './WhyEloquence.jsx';
 import FinalCTA from './FinalCTA.jsx';
 
-export default function Home() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [showHeroVideo, setShowHeroVideo] = useState(false);
+export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComplete }) {
+  const [showHeroVideo, setShowHeroVideo] = useState(hasPlayedIntro);
 
-  const openModal = (event) => {
-    setSelectedEvent(event);
-    setModalOpen(true);
+  const handleIntroComplete = () => {
+    setShowHeroVideo(true);
+    if (onIntroComplete) {
+      onIntroComplete();
+    }
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setSelectedEvent(null);
-  };
-
-  const scrollToEvents = () => {
-    document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' });
+  const handleExploreEvents = () => {
+    if (onNavigate) {
+      onNavigate('events');
+    }
   };
 
   const scrollToRegister = () => {
@@ -32,21 +27,17 @@ export default function Home() {
 
   return (
     <main className="home-page">
-      <OpeningVideo onComplete={() => setShowHeroVideo(true)} />
+      {!hasPlayedIntro && (
+        <OpeningVideo onComplete={handleIntroComplete} />
+      )}
       <Hero
-        onExplore={scrollToEvents}
+        onExplore={handleExploreEvents}
         onRegister={scrollToRegister}
-        showBackgroundVideo={showHeroVideo}
+        showBackgroundVideo={hasPlayedIntro || showHeroVideo}
       />
       <Intro />
-      <EventSection onRegister={openModal} />
       <WhyEloquence />
-      <FinalCTA onRegister={scrollToEvents} />
-      <RegistrationModal
-        event={selectedEvent}
-        isOpen={modalOpen}
-        onClose={closeModal}
-      />
+      <FinalCTA onRegister={handleExploreEvents} />
     </main>
   );
 }

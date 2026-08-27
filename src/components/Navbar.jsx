@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import logo from '../assets/logo.png';
 import cahcet from '../assets/cahcet.png';
 
-export default function Navbar() {
+export default function Navbar({ currentPage = 'home', onNavigate }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -12,9 +12,15 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  const handleNav = (page, sectionId = null) => {
     setMenuOpen(false);
+    if (onNavigate) {
+      onNavigate(page, sectionId);
+    } else {
+      if (sectionId) {
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   };
 
   return (
@@ -27,10 +33,24 @@ export default function Navbar() {
           <img src={cahcet} alt="cahcet" className="nav-logo-img" />
         </div> */}
         <div className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
-          <a onClick={() => scrollTo('hero')}>HOME</a>
-          <a onClick={() => scrollTo('events')}>EVENTS</a>
-          <a onClick={() => scrollTo('why')}>ABOUT</a>
-          <a className="nav-register" onClick={() => scrollTo('final-cta')}>REGISTER NOW <span aria-hidden="true">→</span></a>
+          <a
+            className={currentPage === 'home' ? 'nav-link-active' : ''}
+            onClick={() => handleNav('home', 'hero')}
+          >
+            HOME
+          </a>
+          <a
+            className={currentPage === 'events' ? 'nav-link-active' : ''}
+            onClick={() => handleNav('events')}
+          >
+            EVENTS
+          </a>
+          <a onClick={() => handleNav('home', 'why')}>
+            ABOUT
+          </a>
+          <a onClick={() => handleNav(currentPage === 'home' ? 'home' : 'events', currentPage === 'home' ? 'final-cta' : null)}>
+            REGISTER
+          </a>
         </div>
         <button
           className={`nav-burger ${menuOpen ? 'nav-burger-open' : ''}`}
