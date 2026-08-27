@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import videoSrc from '../assets/landingvideo.mp4';
+import videoSrc from '../assets/portraitvideo.mp4';
 import logoImg from '../assets/logo.png';
 
 export default function OpeningVideo({ onComplete }) {
