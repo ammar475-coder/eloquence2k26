@@ -3,6 +3,9 @@ import OpeningVideo from './OpeningVideo.jsx';
 import Hero from './Hero.jsx';
 import Intro from './Intro.jsx';
 import WhyEloquence from './WhyEloquence.jsx';
+import PatronsSection from './PatronsSection.jsx';
+import Sponsors from './Sponsors.jsx';
+import LocationMap from './LocationMap.jsx';
 import FinalCTA from './FinalCTA.jsx';
 
 export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComplete }) {
@@ -21,6 +24,10 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
     }
   };
 
+  const scrollToRegister = () => {
+    document.getElementById('final-cta')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <main className="home-page">
       {!hasPlayedIntro && (
@@ -28,11 +35,14 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
       )}
       <Hero
         onExplore={handleExploreEvents}
-        onRegister={handleExploreEvents}
+        onRegister={scrollToRegister}
         showBackgroundVideo={hasPlayedIntro || showHeroVideo}
       />
       <Intro />
       <WhyEloquence />
+      <PatronsSection />
+      <Sponsors />
+      <LocationMap />
       <FinalCTA onRegister={handleExploreEvents} />
     </main>
   );
