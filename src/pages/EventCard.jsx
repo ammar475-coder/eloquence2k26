@@ -1,5 +1,4 @@
 import { FaBolt, FaGamepad, FaArrowRight } from 'react-icons/fa';
-import ShaderCard from '../components/ShaderCard.jsx';
 
 export default function EventCard({ event, onRegister, onViewRules }) {
   const handleRegister = (e) => {
@@ -17,17 +16,10 @@ export default function EventCard({ event, onRegister, onViewRules }) {
   };
 
   const isTech = event.category === 'technical';
-  const color1 = isTech ? '#00a83b' : '#0066cc';
-  const color2 = isTech ? '#39ff88' : '#00f0ff';
-  const color3 = isTech ? '#050a07' : '#040914';
 
   return (
-    <ShaderCard
-      color1={color1}
-      color2={color2}
-      color3={color3}
-      className="event-card"
-    >
+    <div className={`event-card ${isTech ? 'event-card-tech' : 'event-card-nontech'}`}>
+      <div className="event-card-glow-bg" />
       <div className="event-card-inner">
         <div className="event-card-top">
           <span className="event-number">#{event.number}</span>
@@ -93,6 +85,6 @@ export default function EventCard({ event, onRegister, onViewRules }) {
           </button>
         </div>
       </div>
-    </ShaderCard>
+    </div>
   );
 }

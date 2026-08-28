@@ -856,63 +856,70 @@ img {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   5. SHADER CARD & EVENT CARD (WebGL WebGL Shader Theme)
+   5. CYBERPUNK EVENT CARD (Pure High-Performance CSS)
    ═══════════════════════════════════════════════════════════════ */
-.shader-card-wrapper {
+.shader-card-wrapper,
+.event-card {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(200, 200, 200, 0.12);
-  background: rgba(6, 10, 8, 0.88);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(57, 255, 136, 0.2);
+  background-color: #080c0a !important;
+  background: linear-gradient(165deg, rgba(16, 22, 18, 0.98) 0%, rgba(6, 12, 9, 0.96) 100%) !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s ease, box-shadow 0.35s ease;
-  cursor: pointer;
   display: flex;
   flex-direction: column;
 }
 
-.shader-card-wrapper:hover {
-  transform: translateY(-6px) scale(1.015);
-  border-color: rgba(57, 255, 136, 0.5);
-  box-shadow: 0 20px 45px rgba(0, 168, 59, 0.28), 0 0 25px rgba(57, 255, 136, 0.22);
+.event-card-tech {
+  border-color: rgba(57, 255, 136, 0.25);
+  background: linear-gradient(165deg, rgba(14, 24, 18, 0.98) 0%, rgba(5, 14, 9, 0.96) 100%) !important;
 }
 
-.shader-card-canvas {
+.event-card-nontech {
+  border-color: rgba(0, 240, 255, 0.25);
+  background: linear-gradient(165deg, rgba(12, 20, 28, 0.98) 0%, rgba(4, 12, 20, 0.96) 100%) !important;
+}
+
+.shader-card-wrapper:hover,
+.event-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(57, 255, 136, 0.6);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(57, 255, 136, 0.22), inset 0 0 15px rgba(57, 255, 136, 0.06);
+}
+
+.event-card-nontech:hover {
+  border-color: rgba(0, 240, 255, 0.6);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 240, 255, 0.22), inset 0 0 15px rgba(0, 240, 255, 0.06);
+}
+
+.shader-card-cyber-bg,
+.event-card-glow-bg {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(57, 255, 136, 0.12), transparent 60%);
   pointer-events: none;
-  opacity: 0.85;
-  transition: opacity 0.3s ease;
+  opacity: 0.5;
+  transition: opacity 0.4s ease;
+  z-index: 1;
+}
+
+.event-card-nontech .event-card-glow-bg {
+  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(0, 240, 255, 0.12), transparent 60%);
+}
+
+.shader-card-wrapper:hover .shader-card-cyber-bg,
+.event-card:hover .event-card-glow-bg {
+  opacity: 1;
 }
 
 .shader-card-glass-glow {
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 65%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 60%);
   pointer-events: none;
-}
-
-.shader-card-content {
-  position: relative;
-  z-index: 3;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.event-card {
-  position: relative;
-  border: 1px solid rgba(200, 200, 200, 0.08);
-  background: linear-gradient(160deg,
-      rgba(10, 10, 10, 0.9) 0%,
-      rgba(6, 43, 24, 0.15) 100%);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
 }
 
 .event-card::before {
@@ -923,40 +930,28 @@ img {
   width: 100%;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--emerald), transparent);
-  opacity: 0.4;
+  opacity: 0.6;
   transition: opacity 0.4s;
+  z-index: 4;
 }
 
-.event-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(57, 255, 136, 0.03), transparent);
-  transition: left 0.6s;
-  pointer-events: none;
-}
-
-.event-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(0, 168, 59, 0.35);
-  box-shadow: 0 10px 40px rgba(0, 168, 59, 0.1), 0 0 0 1px rgba(0, 168, 59, 0.1);
+.event-card-nontech::before {
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
 }
 
 .event-card:hover::before {
   opacity: 1;
 }
 
-.event-card:hover::after {
-  left: 100%;
-}
-
+.shader-card-content,
 .event-card-inner {
   padding: 2rem;
   position: relative;
-  z-index: 1;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .event-number {
