@@ -1,3 +1,5 @@
+import ShaderCard from '../components/ShaderCard.jsx';
+
 export default function EventCard({ event, onViewRules, onRegister }) {
   const handleViewRules = (e) => {
     if (e) e.stopPropagation();
@@ -13,25 +15,26 @@ export default function EventCard({ event, onViewRules, onRegister }) {
     }
   };
 
+  const isTech = event.category === 'technical';
+  const color1 = isTech ? '#00a83b' : '#0066cc';
+  const color2 = isTech ? '#39ff88' : '#00f0ff';
+  const color3 = isTech ? '#050a07' : '#040914';
+
   return (
-    <div
+    <ShaderCard
+      color1={color1}
+      color2={color2}
+      color3={color3}
       className="event-card"
       onClick={handleViewRules}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          handleViewRules(e);
-        }
-      }}
     >
       <div className="event-card-inner">
         <div className="event-card-top">
           <span className="event-number">#{event.number}</span>
           <div className="event-badges-row">
             {event.tag && <span className="event-tag-badge">{event.tag}</span>}
-            <div className={`event-category-badge ${event.category === 'technical' ? 'badge-tech' : 'badge-nontech'}`}>
-              {event.category === 'technical' ? 'TECH' : 'NON-TECH'}
+            <div className={`event-category-badge ${isTech ? 'badge-tech' : 'badge-nontech'}`}>
+              {isTech ? 'TECH' : 'NON-TECH'}
             </div>
           </div>
         </div>
@@ -78,6 +81,6 @@ export default function EventCard({ event, onViewRules, onRegister }) {
           </button>
         </div>
       </div>
-    </div>
+    </ShaderCard>
   );
 }

@@ -6,10 +6,8 @@ import WhyEloquence from './WhyEloquence.jsx';
 import FinalCTA from './FinalCTA.jsx';
 
 export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComplete }) {
-  const [showHeroVideo, setShowHeroVideo] = useState(hasPlayedIntro);
 
   const handleIntroComplete = () => {
-    setShowHeroVideo(true);
     if (onIntroComplete) {
       onIntroComplete();
     }
@@ -29,7 +27,6 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
       <Hero
         onExplore={handleExploreEvents}
         onRegister={handleExploreEvents}
-        showBackgroundVideo={hasPlayedIntro || showHeroVideo}
       />
       <Intro />
       <WhyEloquence />

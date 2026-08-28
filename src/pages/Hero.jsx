@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
-import videoSrc from '../assets/landingvideo.mp4';
 
 const EVENT_START = new Date('2026-09-29T00:00:00+05:30').getTime();
 
@@ -19,7 +18,7 @@ function getTimeRemaining() {
   };
 }
 
-export default function Hero({ onExplore, onRegister, showBackgroundVideo = false }) {
+export default function Hero({ onExplore, onRegister }) {
   const canvasRef = useRef(null);
   const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining);
 
@@ -30,13 +29,16 @@ export default function Hero({ onExplore, onRegister, showBackgroundVideo = fals
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animationId;
-    const particles = [];
+    let particles = [];
+    let mouse = { x: null, y: null, radius: 150 };
 
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      initParticles();
     };
 
     class Particle {
@@ -46,61 +48,126 @@ export default function Hero({ onExplore, onRegister, showBackgroundVideo = fals
       reset() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 2 + 0.5;
-        this.speedX = (Math.random() - 0.5) * 0.4;
-        this.speedY = (Math.random() - 0.5) * 0.4;
-        this.opacity = Math.random() * 0.5 + 0.1;
-        this.color = Math.random() > 0.5 ? '#39FF88' : '#00A83B';
+        this.size = Math.random() * 2.2 + 0.8;
+        this.speedX = (Math.random() - 0.5) * 0.6;
+        this.speedY = (Math.random() - 0.5) * 0.6;
+        this.baseAlpha = Math.random() * 0.45 + 0.25;
+        this.color = Math.random() > 0.35 ? '#39FF88' : Math.random() > 0.5 ? '#00A83B' : '#85FFB8';
+        this.pulse = Math.random() * Math.PI;
       }
       update() {
         this.x += this.speedX;
         this.y += this.speedY;
+        this.pulse += 0.03;
+
         if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
           this.reset();
+        }
+
+        if (mouse.x !== null && mouse.y !== null) {
+          const dx = mouse.x - this.x;
+          const dy = mouse.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < mouse.radius) {
+            const force = (mouse.radius - dist) / mouse.radius;
+            this.x -= (dx / dist) * force * 2.2;
+            this.y -= (dy / dist) * force * 2.2;
+          }
         }
       }
       draw() {
         ctx.beginPath();
+        const currentAlpha = this.baseAlpha + Math.sin(this.pulse) * 0.15;
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fillStyle = this.color;
-        ctx.globalAlpha = this.opacity;
+        ctx.globalAlpha = Math.max(0.1, Math.min(1, currentAlpha));
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur = 8;
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
       }
     }
 
+    const initParticles = () => {
+      particles = [];
+      const particleCount = Math.min(90, Math.floor((canvas.width * canvas.height) / 14000));
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+    };
+
+    const drawConnections = () => {
+      const maxDistance = canvas.width < 768 ? 95 : 130;
+      for (let a = 0; a < particles.length; a++) {
+        for (let b = a + 1; b < particles.length; b++) {
+          const dx = particles[a].x - particles[b].x;
+          const dy = particles[a].y - particles[b].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (dist < maxDistance) {
+            const alpha = (1 - dist / maxDistance) * 0.28;
+            ctx.beginPath();
+            ctx.moveTo(particles[a].x, particles[a].y);
+            ctx.lineTo(particles[b].x, particles[b].y);
+            ctx.strokeStyle = '#39FF88';
+            ctx.globalAlpha = alpha;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        }
+      }
+    };
+
     resize();
-    for (let i = 0; i < 80; i++) particles.push(new Particle());
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((p) => { p.update(); p.draw(); });
+      drawConnections();
+      particles.forEach((p) => {
+        p.update();
+        p.draw();
+      });
       animationId = requestAnimationFrame(animate);
     };
+
     animate();
+
+    const handleMouseMove = (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    };
+    const handleTouchMove = (e) => {
+      if (e.touches[0]) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+      }
+    };
+    const handleMouseLeave = () => {
+      mouse.x = null;
+      mouse.y = null;
+    };
+
     window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, []);
 
   return (
     <section id="hero" className="hero">
-      {showBackgroundVideo && (
-        <video
-          src={videoSrc}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="hero-bg-video"
-        />
-      )}
       <canvas ref={canvasRef} className="hero-canvas" />
-      <div className="hero-fog" />
+      <div className="hero-cyber-grid" />
+      <div className="hero-ambient-glow" />
       <div className="hero-hud-lines" />
       <div className="hero-content">
         <div className="hero-college-intro">
@@ -134,8 +201,6 @@ export default function Hero({ onExplore, onRegister, showBackgroundVideo = fals
           </button>
         </div>
       </div>
-
-
     </section>
   );
 }
