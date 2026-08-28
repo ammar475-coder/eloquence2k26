@@ -11,16 +11,18 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleNav = (page, sectionId = null) => {
+  const handleNav = (page, extra = null) => {
     setMenuOpen(false);
     if (onNavigate) {
-      onNavigate(page, sectionId);
+      onNavigate(page, extra);
     } else {
-      if (sectionId) {
-        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+      if (typeof extra === 'string') {
+        document.getElementById(extra)?.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };
+
+  const isEventsActive = currentPage === 'events' || currentPage === 'event-rules' || currentPage === 'register';
 
   return (
     <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
@@ -36,7 +38,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
             HOME
           </a>
           <a
-            className={currentPage === 'events' ? 'nav-link-active' : ''}
+            className={isEventsActive ? 'nav-link-active' : ''}
             onClick={() => handleNav('events')}
           >
             EVENTS
@@ -53,7 +55,10 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
           <a onClick={() => handleNav('home', 'location')}>
             LOCATION
           </a>
-          <a onClick={() => handleNav(currentPage === 'home' ? 'home' : 'events', currentPage === 'home' ? 'final-cta' : null)}>
+          <a
+            className={currentPage === 'register' ? 'nav-link-active' : ''}
+            onClick={() => handleNav('events')}
+          >
             REGISTER
           </a>
         </div>
