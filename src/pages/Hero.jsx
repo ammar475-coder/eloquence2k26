@@ -215,10 +215,7 @@ export default function Hero({ onExplore, onRegister }) {
         <p className="hero-date">SEPTEMBER 29, 2026</p>
 
         <div className="hero-buttons">
-          <button className="btn btn-primary" onClick={onRegister}>
-            REGISTER NOW <span aria-hidden="true">→</span>
-          </button>
-          <button className="btn btn-secondary" onClick={onExplore}>
+          <button className="btn btn-primary btn-large" onClick={onExplore || onRegister}>
             EXPLORE EVENTS <span aria-hidden="true">→</span>
           </button>
         </div>
