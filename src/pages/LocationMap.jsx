@@ -1,12 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import {
-  FaUniversity,
-  FaMapMarkerAlt,
-  FaCalendarAlt,
-  FaCalendarCheck,
-  FaClock,
-  FaDirections
-} from 'react-icons/fa';
 
 const VENUE_NAME = 'C. Abdul Hakeem College of Engineering and Technology';
 const VENUE_ADDRESS = 'Hakeem Nagar, Melvisharam, Ranipet District, Tamil Nadu - 632509';
@@ -15,7 +7,6 @@ const MAP_EMBED_SRC = `https://www.google.com/maps?q=${MAP_QUERY}&output=embed`;
 const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${MAP_QUERY}`;
 
 const infoItems = [
-<<<<<<< HEAD
   {
     key: 'venue',
     label: 'VENUE',
@@ -86,13 +77,6 @@ const infoItems = [
       </svg>
     ),
   },
-=======
-  { icon: <FaUniversity />, label: 'VENUE', value: VENUE_NAME },
-  { icon: <FaMapMarkerAlt />, label: 'ADDRESS', value: VENUE_ADDRESS },
-  { icon: <FaCalendarAlt />, label: 'DATE', value: '29-09-2026' },
-  { icon: <FaCalendarCheck />, label: 'DAY', value: 'Tuesday' },
-  { icon: <FaClock />, label: 'TIME', value: '9:30 AM' },
->>>>>>> d468dbf1af326be9567cdb4484aa3123f8ffb8a3
 ];
 
 export default function LocationMap() {
@@ -123,15 +107,8 @@ export default function LocationMap() {
         <div className="location-info-card">
           <ul className="location-info-list">
             {infoItems.map((item) => (
-<<<<<<< HEAD
               <li className="location-info-item" key={item.key}>
                 <span className="location-info-icon">{item.icon}</span>
-=======
-              <li className="location-info-item" key={item.label}>
-                <span className="location-info-icon" style={{ color: 'var(--bright-green)', display: 'flex', alignItems: 'center' }}>
-                  {item.icon}
-                </span>
->>>>>>> d468dbf1af326be9567cdb4484aa3123f8ffb8a3
                 <div>
                   <span className="location-info-label">{item.label}</span>
                   <p className="location-info-value">{item.value}</p>
@@ -145,12 +122,7 @@ export default function LocationMap() {
             target="_blank"
             rel="noopener noreferrer"
           >
-<<<<<<< HEAD
             GET DIRECTIONS →
-=======
-            <FaDirections style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
-            GET DIRECTIONS
->>>>>>> d468dbf1af326be9567cdb4484aa3123f8ffb8a3
           </a>
         </div>
 

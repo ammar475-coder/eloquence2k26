@@ -3,35 +3,67 @@ import Navbar from '../components/Navbar.jsx';
 import Footer from '../components/Footer.jsx';
 import Home from '../pages/Home.jsx';
 import EventsPage from '../pages/EventsPage.jsx';
+import EventRulesPage from '../pages/EventRulesPage.jsx';
+import RegistrationPage from '../pages/RegistrationPage.jsx';
+import events from '../data/events.js';
+
+function parseHash(hash) {
+  if (!hash || hash === '#' || hash === '#/') {
+    return { page: 'home', eventId: null, sectionId: null };
+  }
+  if (hash.startsWith('#/register/') || hash === '#/register' || hash.startsWith('#register')) {
+    const parts = hash.split('/');
+    const id = parts[2];
+    const found = events.find((e) => e.id === id || e.id.toLowerCase() === id?.toLowerCase());
+    return { page: 'register', eventId: found ? found.id : events[0].id, sectionId: null };
+  }
+  if (hash.startsWith('#/events/') || hash.startsWith('#/event/')) {
+    const parts = hash.split('/');
+    const id = parts[2];
+    const found = events.find((e) => e.id === id || e.id.toLowerCase() === id?.toLowerCase());
+    return { page: 'event-rules', eventId: found ? found.id : events[0].id, sectionId: null };
+  }
+  if (hash === '#/events' || hash === '#events') {
+    return { page: 'events', eventId: null, sectionId: null };
+  }
+  if (hash.startsWith('#')) {
+    const section = hash.replace(/^#\/?/, '');
+    return { page: 'home', eventId: null, sectionId: section };
+  }
+  return { page: 'home', eventId: null, sectionId: null };
+}
 
 export default function AppRouter() {
-  const [currentPage, setCurrentPage] = useState(() => {
-    const hash = window.location.hash;
-    return hash === '#/events' || hash === '#events' ? 'events' : 'home';
-  });
+  const [route, setRoute] = useState(() => parseHash(window.location.hash));
   const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash;
-      if (hash === '#/events' || hash === '#events') {
-        setCurrentPage('events');
-      } else {
-        setCurrentPage('home');
-      }
+      setRoute(parseHash(window.location.hash));
     };
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const navigateTo = (page, sectionId = null) => {
-    setCurrentPage(page);
-
-    if (page === 'events') {
+  const navigateTo = (page, extra = null) => {
+    if (page === 'event-rules') {
+      const eventId = extra || 'tech-01';
+      setRoute({ page: 'event-rules', eventId, sectionId: null });
+      window.location.hash = `/events/${eventId}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (page === 'register') {
+      const eventId = extra || 'tech-01';
+      setRoute({ page: 'register', eventId, sectionId: null });
+      window.location.hash = `/register/${eventId}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (page === 'events') {
+      setRoute({ page: 'events', eventId: null, sectionId: null });
       window.location.hash = '/events';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
+      const sectionId = typeof extra === 'string' ? extra : null;
+      setRoute({ page: 'home', eventId: null, sectionId });
       window.location.hash = sectionId ? `#${sectionId}` : '/';
       if (sectionId) {
         setTimeout(() => {
@@ -45,10 +77,13 @@ export default function AppRouter() {
 
   return (
     <div className="app-container">
-      <Navbar currentPage={currentPage} onNavigate={navigateTo} />
-
+      <Navbar currentPage={route.page} onNavigate={navigateTo} />
       <main className="router-content">
-        {currentPage === 'events' ? (
+        {route.page === 'event-rules' ? (
+          <EventRulesPage eventId={route.eventId} onNavigate={navigateTo} />
+        ) : route.page === 'register' ? (
+          <RegistrationPage eventId={route.eventId} onNavigate={navigateTo} />
+        ) : route.page === 'events' ? (
           <EventsPage onNavigate={navigateTo} />
         ) : (
           <Home
@@ -58,7 +93,6 @@ export default function AppRouter() {
           />
         )}
       </main>
-
       <Footer onNavigate={navigateTo} />
     </div>
   );
