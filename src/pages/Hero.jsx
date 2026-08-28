@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
+import cahcetLogo from '../assets/cahcet.png';
 
 const EVENT_START = new Date('2026-09-29T00:00:00+05:30').getTime();
 
@@ -172,16 +173,25 @@ export default function Hero({ onExplore, onRegister }) {
       <div className="hero-hud-lines" />
       
       <div className="hero-content">
+        {/* Centered College Crest Badge */}
+        <div className="hero-college-crest-container">
+          <div className="hero-college-crest-card">
+            <img src={cahcetLogo} alt="CAHCET College Logo" className="hero-college-crest-img" />
+          </div>
+        </div>
+
+        {/* College & Department Titles */}
         <div className="hero-college-intro">
           <h2 className="hero-college-name">C. ABDUL HAKEEM COLLEGE OF ENGINEERING AND TECHNOLOGY</h2>
-          <p className="hero-department">DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING</p>
+          <p className="hero-department">Department of Computer Science and Engineering</p>
           <div className="hero-presents-flourish">
             <span className="flourish-line" />
-            <span className="hero-presents">cordially presents</span>
+            <span className="hero-presents">proudly presents</span>
             <span className="flourish-line" />
           </div>
         </div>
 
+        {/* ELOQUENCE Logo */}
         <div className="hero-logo-wrapper">
           <h1 className="hero-logo-title">
             <img
@@ -192,8 +202,10 @@ export default function Hero({ onExplore, onRegister }) {
           </h1>
         </div>
 
-        <p className="hero-tagline">NATIONAL LEVEL TECHNICAL SYMPOSIUM</p>
+        {/* Symposium Tagline */}
+        <p className="hero-tagline">8TH NATIONAL LEVEL TECHNICAL SYMPOSIUM</p>
 
+        {/* Unified Countdown Timer in Same Hero Section */}
         <div className="countdown countdown-days" aria-label={`Countdown: ${timeRemaining.days} days, ${timeRemaining.hours} hours, ${timeRemaining.minutes} minutes, ${timeRemaining.seconds} seconds`}>
           <div className="countdown-value">
             <span>{timeRemaining.days}</span>
@@ -212,10 +224,12 @@ export default function Hero({ onExplore, onRegister }) {
           </div>
         </div>
 
+        {/* Event Date */}
         <p className="hero-date">SEPTEMBER 29, 2026</p>
 
+        {/* Explore / Register Action Button */}
         <div className="hero-buttons">
-          <button className="btn btn-primary btn-large" onClick={onExplore || onRegister}>
+          <button className="btn btn-primary btn-large hero-explore-btn" onClick={onExplore || onRegister}>
             EXPLORE EVENTS <span aria-hidden="true">→</span>
           </button>
         </div>
@@ -223,3 +237,4 @@ export default function Hero({ onExplore, onRegister }) {
     </section>
   );
 }
+
