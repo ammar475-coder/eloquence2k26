@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import desktopVideoSrc from '../assets/landingpagesnew.mp4';
-import portraitVideoSrc from '../assets/landingportraitvideo.mp4';
+import desktopVideoSrc from '../assets/landing page new.mp4';
+import portraitVideoSrc from '../assets/landing video new.mp4';
 import logoImg from '../assets/logo.png';
 
 export default function OpeningVideo({ onComplete }) {
@@ -106,7 +106,7 @@ export default function OpeningVideo({ onComplete }) {
       <div className="opening-video-vignette" />
       <div className="opening-hud-top">
         <img src={logoImg} alt="ELOQUENCE 26" className="opening-hud-logo" />
-        <span className="opening-hud-status">// INITIALIZING ELOQUENCE'26</span>
+        <span className="opening-hud-status">// INITIALIZING ELOQUENCE26</span>
       </div>
 
       <div className="opening-hud-bottom">
