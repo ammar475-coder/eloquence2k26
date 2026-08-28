@@ -1,0 +1,65 @@
+import { useState, useEffect } from 'react';
+import Navbar from '../components/Navbar.jsx';
+import Footer from '../components/Footer.jsx';
+import Home from '../pages/Home.jsx';
+import EventsPage from '../pages/EventsPage.jsx';
+
+export default function AppRouter() {
+  const [currentPage, setCurrentPage] = useState(() => {
+    const hash = window.location.hash;
+    return hash === '#/events' || hash === '#events' ? 'events' : 'home';
+  });
+  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#/events' || hash === '#events') {
+        setCurrentPage('events');
+      } else {
+        setCurrentPage('home');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const navigateTo = (page, sectionId = null) => {
+    setCurrentPage(page);
+
+    if (page === 'events') {
+      window.location.hash = '/events';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.location.hash = sectionId ? `#${sectionId}` : '/';
+      if (sectionId) {
+        setTimeout(() => {
+          document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+  };
+
+  return (
+    <div className="app-container">
+      <Navbar currentPage={currentPage} onNavigate={navigateTo} />
+
+      <main className="router-content">
+        {currentPage === 'events' ? (
+          <EventsPage onNavigate={navigateTo} />
+        ) : (
+          <Home
+            onNavigate={navigateTo}
+            hasPlayedIntro={hasPlayedIntro}
+            onIntroComplete={() => setHasPlayedIntro(true)}
+          />
+        )}
+      </main>
+
+      <Footer onNavigate={navigateTo} />
+    </div>
+  );
+}
