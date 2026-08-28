@@ -6,8 +6,8 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 25);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -22,50 +22,90 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
     }
   };
 
-  const isEventsActive = currentPage === 'events' || currentPage === 'event-rules' || currentPage === 'register';
+  const isEventsActive = currentPage === 'events' || currentPage === 'event-rules';
+  const isRegisterActive = currentPage === 'register';
 
   return (
-    <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
-      <div className="nav-container">
-        <div className="nav-logo" onClick={() => handleNav('home', 'hero')}>
-          <img src={navbarLogo} alt="ELOQUENCE 26" className="nav-logo-img" />
+    <header className="navbar-fixed-wrapper">
+      <nav className={`navbar-pill ${scrolled ? 'navbar-pill-scrolled' : ''}`}>
+        {/* Left: Brand Logo */}
+        <div className="nav-pill-logo" onClick={() => handleNav('home', 'hero')}>
+          <img src={navbarLogo} alt="ELOQUENCE 26" className="nav-pill-logo-img" />
+          <span className="nav-pill-logo-text">ELOQUENCE'26</span>
         </div>
-        <div className={`nav-links ${menuOpen ? 'nav-links-open' : ''}`}>
+
+        {/* Center: Simplified Nav Links */}
+        <div className="nav-pill-links">
           <a
-            className={currentPage === 'home' ? 'nav-link-active' : ''}
+            className={`nav-pill-link ${currentPage === 'home' ? 'active' : ''}`}
             onClick={() => handleNav('home', 'hero')}
           >
-            HOME
+            Home
           </a>
           <a
-            className={isEventsActive ? 'nav-link-active' : ''}
+            className={`nav-pill-link ${isEventsActive ? 'active' : ''}`}
             onClick={() => handleNav('events')}
           >
-            EVENTS
+            Events
           </a>
-          <a onClick={() => handleNav('home', 'why')}>
-            ABOUT
-          </a>
-          <a onClick={() => handleNav('home', 'patrons')}>
-            PATRONS
-          </a>
-          <a onClick={() => handleNav('home', 'sponsors')}>
-            SPONSORS
-          </a>
-          <a onClick={() => handleNav('home', 'location')}>
-            LOCATION
+          <a
+            className="nav-pill-link"
+            onClick={() => handleNav('home', 'why')}
+          >
+            About
           </a>
         </div>
+
+        {/* Right: Pill Register Button */}
+        <div className="nav-pill-actions">
+          <button
+            className={`nav-pill-register-btn ${isRegisterActive ? 'active' : ''}`}
+            onClick={() => handleNav('events')}
+          >
+            Register Now
+          </button>
+        </div>
+
+        {/* Mobile Hamburger Toggle */}
         <button
-          className={`nav-burger ${menuOpen ? 'nav-burger-open' : ''}`}
+          className={`nav-pill-burger ${menuOpen ? 'open' : ''}`}
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle navigation menu"
+          aria-expanded={menuOpen}
         >
           <span />
           <span />
           <span />
         </button>
+      </nav>
+
+      {/* Mobile Drawer Menu */}
+      <div className={`nav-mobile-dropdown ${menuOpen ? 'open' : ''}`}>
+        <a
+          className={currentPage === 'home' ? 'active' : ''}
+          onClick={() => handleNav('home', 'hero')}
+        >
+          Home
+        </a>
+        <a
+          className={isEventsActive ? 'active' : ''}
+          onClick={() => handleNav('events')}
+        >
+          Events
+        </a>
+        <a
+          onClick={() => handleNav('home', 'why')}
+        >
+          About
+        </a>
+        <button
+          className="nav-pill-register-btn mobile-reg-btn"
+          onClick={() => handleNav('events')}
+        >
+          Register Now
+        </button>
       </div>
-    </nav>
+    </header>
   );
 }
+

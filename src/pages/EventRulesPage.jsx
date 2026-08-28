@@ -1,15 +1,16 @@
 import { useEffect } from 'react';
 import {
+  FaArrowLeft,
+  FaArrowRight,
+  FaPhoneAlt,
   FaMapMarkerAlt,
   FaClock,
   FaMoneyBillWave,
   FaUsers,
-  FaBolt,
-  FaGamepad,
-  FaPhoneAlt,
-  FaArrowLeft,
-  FaArrowRight
+  FaListOl,
+  FaHeadset
 } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 import events from '../data/events.js';
 
 export default function EventRulesPage({ eventId, onNavigate }) {
@@ -33,228 +34,176 @@ export default function EventRulesPage({ eventId, onNavigate }) {
 
   return (
     <div className="event-rules-page">
-      <div className="event-rules-container">
-        {/* Breadcrumb Navigation */}
-        <div className="event-rules-breadcrumb">
-          <button className="rules-back-link" onClick={handleBackToEvents}>
-            <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+      <div className="event-rules-full-container">
+        {/* Top Navigation & Breadcrumbs */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="rules-clean-top-nav"
+        >
+          <button className="rules-back-btn" onClick={handleBackToEvents}>
+            <FaArrowLeft style={{ marginRight: '0.45rem', verticalAlign: '-1px' }} />
             Back to Events
           </button>
-          <span className="breadcrumb-sep">/</span>
-          <span className="breadcrumb-cat">{event.category.toUpperCase()}</span>
-          <span className="breadcrumb-sep">/</span>
-          <span className="breadcrumb-active">{event.name}</span>
-        </div>
+          <button className="rules-register-top-btn" onClick={handleRegister}>
+            Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+          </button>
+        </motion.div>
 
-        {/* 2-Column Rules Layout with In-Flow Cards */}
-        <div className="event-rules-layout">
-          {/* Left Column: Simple Cards for Overview, Rules, Rounds, and Coordinators */}
-          <div className="event-rules-content">
-            {/* Header Title Card */}
-            <div className="rules-header-card">
-              <div className="rules-header-top">
-                <span className="rules-event-number">#{event.number}</span>
-                <span className={`event-category-badge ${event.category === 'technical' ? 'badge-tech' : 'badge-nontech'}`}>
-                  {event.category === 'technical' ? (
-                    <>
-                      <FaBolt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                      TECHNICAL EVENT
-                    </>
-                  ) : (
-                    <>
-                      <FaGamepad style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                      NON-TECHNICAL EVENT
-                    </>
-                  )}
-                </span>
-              </div>
-              <h1 className="event-rules-heading">{event.name}</h1>
-              {event.alias && <p className="event-rules-alias">// {event.alias}</p>}
-              <p className="event-rules-description-text">{event.description}</p>
+        {/* Main Title & Category Tag Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="rules-title-header-wrap"
+        >
+          <span className="rules-category-tag">
+            {event.category === 'technical' ? '⚡ TECHNICAL EVENT' : '🎮 NON-TECHNICAL EVENT'}
+          </span>
+          <h1 className="rules-clean-main-title">{event.name}</h1>
+          {event.alias && <p className="rules-alias-sub">// {event.alias}</p>}
+        </motion.div>
 
-              {/* Overview Metrics Mini-Cards */}
-              <div className="overview-mini-cards-grid">
-                {event.venue && (
-                  <div className="overview-mini-card">
-                    <span className="omc-icon">
-                      <FaMapMarkerAlt style={{ color: 'var(--bright-green)' }} />
-                    </span>
-                    <div className="omc-body">
-                      <span className="omc-label">VENUE</span>
-                      <span className="omc-val">{event.venue}</span>
-                    </div>
-                  </div>
-                )}
-                {event.timing && (
-                  <div className="overview-mini-card">
-                    <span className="omc-icon">
-                      <FaClock style={{ color: 'var(--bright-green)' }} />
-                    </span>
-                    <div className="omc-body">
-                      <span className="omc-label">TIMING</span>
-                      <span className="omc-val">{event.timing}</span>
-                    </div>
-                  </div>
-                )}
-                <div className="overview-mini-card">
-                  <span className="omc-icon">
-                    <FaMoneyBillWave style={{ color: 'var(--bright-green)' }} />
-                  </span>
-                  <div className="omc-body">
-                    <span className="omc-label">REGISTRATION FEE</span>
-                    <span className="omc-val fee-highlight">{event.fee}</span>
-                  </div>
+        {/* 2-Column Split: Overview (Left) & Rules (Right) */}
+        <div className="rules-split-grid">
+          {/* Left Side: Overview Card */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="rules-card-glass rules-left-overview-card"
+          >
+            <div className="rules-card-header">
+              <h2 className="rules-card-title">
+                <FaMapMarkerAlt className="rules-card-icon" /> Overview
+              </h2>
+            </div>
+
+            <div className="rules-clean-meta-list">
+              <div className="rules-meta-row">
+                <span className="rules-meta-icon"><FaMapMarkerAlt /></span>
+                <div className="rules-meta-content">
+                  <strong className="rules-meta-key">Venue:</strong>
+                  <span className="rules-meta-val">{event.venue || 'CSE Department Labs'}</span>
                 </div>
-                <div className="overview-mini-card">
-                  <span className="omc-icon">
-                    <FaUsers style={{ color: 'var(--bright-green)' }} />
-                  </span>
-                  <div className="omc-body">
-                    <span className="omc-label">TEAM STRUCTURE</span>
-                    <span className="omc-val">{event.teamSize}</span>
-                  </div>
+              </div>
+
+              <div className="rules-meta-row">
+                <span className="rules-meta-icon"><FaClock /></span>
+                <div className="rules-meta-content">
+                  <strong className="rules-meta-key">Timing:</strong>
+                  <span className="rules-meta-val">{event.timing || '10:40 AM – 12:40 PM'}</span>
+                </div>
+              </div>
+
+              <div className="rules-meta-row">
+                <span className="rules-meta-icon"><FaMoneyBillWave /></span>
+                <div className="rules-meta-content">
+                  <strong className="rules-meta-key">Registration Fee:</strong>
+                  <span className="rules-meta-val fee-highlight">{event.fee}</span>
+                </div>
+              </div>
+
+              <div className="rules-meta-row">
+                <span className="rules-meta-icon"><FaUsers /></span>
+                <div className="rules-meta-content">
+                  <strong className="rules-meta-key">Members:</strong>
+                  <span className="rules-meta-val">{event.teamSize}</span>
+                </div>
+              </div>
+
+              <div className="rules-meta-row desc-row">
+                <div className="rules-meta-content">
+                  <strong className="rules-meta-key">Description:</strong>
+                  <p className="rules-meta-desc-text">{event.subtitle || event.description}</p>
                 </div>
               </div>
             </div>
 
-            {/* Official Competition Rules Section - Simple Cards */}
-            <div className="rules-section-block">
-              <div className="rules-block-header">
-                <span className="rules-section-tag">// COMPETITION GUIDELINES</span>
-                <h2 className="rules-block-title">Official Event Rules</h2>
-              </div>
-              <div className="rules-simple-cards-grid">
+            <div className="overview-card-cta-wrap">
+              <button className="btn btn-primary btn-full-width" onClick={handleRegister}>
+                REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.4rem' }} />
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Right Side: Single Unified Rules Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="rules-card-glass rules-right-rules-card"
+          >
+            <div className="rules-card-header">
+              <h2 className="rules-card-title">
+                <FaListOl className="rules-card-icon" /> Rules & Guidelines
+              </h2>
+              {event.rules && (
+                <span className="rules-count-badge">{event.rules.length} Rules</span>
+              )}
+            </div>
+
+            {event.rules && event.rules.length > 0 ? (
+              <ol className="rules-unified-list">
                 {event.rules.map((rule, idx) => (
-                  <div key={idx} className="rule-simple-card">
-                    <div className="rule-card-num-badge">
-                      {String(idx + 1).padStart(2, '0')}
-                    </div>
-                    <p className="rule-card-text">{rule}</p>
-                  </div>
+                  <motion.li
+                    key={idx}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: 0.2 + idx * 0.04 }}
+                    className="rules-unified-item"
+                  >
+                    <span className="rules-item-index">{idx + 1}.</span>
+                    <span className="rules-item-text">{rule}</span>
+                  </motion.li>
                 ))}
-              </div>
-            </div>
-
-            {/* Rounds & Progression Section - Simple Cards */}
-            {event.rounds && event.rounds.length > 0 && (
-              <div className="rules-section-block">
-                <div className="rules-block-header">
-                  <span className="rules-section-tag">// TIMELINE & FORMAT</span>
-                  <h2 className="rules-block-title">Rounds & Evaluation</h2>
-                </div>
-                <div className="rounds-simple-cards-grid">
-                  {event.rounds.map((rnd, idx) => (
-                    <div key={idx} className="round-simple-card">
-                      <div className="round-card-header">
-                        <span className="round-card-badge">{rnd.round}</span>
-                        <h3 className="round-card-title">{rnd.title}</h3>
-                        <span className="round-card-duration">
-                          <FaClock style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} />
-                          {rnd.duration}
-                        </span>
-                      </div>
-                      <p className="round-card-desc">{rnd.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              </ol>
+            ) : (
+              <p className="rules-empty-text">Standard event guidelines apply. Contact event coordinators for details.</p>
             )}
-
-            {/* Student Coordinators Contact Section - Simple Cards */}
-            {event.coordinators && event.coordinators.length > 0 && (
-              <div className="rules-section-block">
-                <div className="rules-block-header">
-                  <span className="rules-section-tag">// EVENT DESK CONTACTS</span>
-                  <h2 className="rules-block-title">Student Coordinators</h2>
-                </div>
-                <div className="coordinators-simple-cards-grid">
-                  {event.coordinators.map((c, idx) => (
-                    <div key={idx} className="coord-simple-card">
-                      <div className="coord-card-top">
-                        <span className="coord-slot-badge">{c.slot || String(idx + 1)}</span>
-                        <span className="coord-role-label">{c.role || 'Coordinator'}</span>
-                      </div>
-                      <h4 className="coord-card-name">{c.name}</h4>
-                      <a href={`tel:${c.phone}`} className="btn-coord-call">
-                        <FaPhoneAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                        {c.displayPhone || c.phone}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Bottom Actions Banner */}
-            <div className="rules-bottom-actions-card">
-              <div className="bac-info">
-                <h3 className="bac-title">Ready to Compete in {event.name}?</h3>
-                <p className="bac-desc">Lock in your slot and generate your symposium entry pass.</p>
-              </div>
-              <div className="bac-buttons">
-                <button
-                  className="btn btn-primary btn-large"
-                  onClick={handleRegister}
-                >
-                  PROCEED TO REGISTER <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
-                </button>
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleBackToEvents}
-                >
-                  <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
-                  ALL EVENTS
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Static In-Flow Action Card */}
-          <aside className="event-rules-sidebar">
-            <div className="static-sidebar-card">
-              <button
-                className="btn btn-primary btn-register-cta"
-                onClick={handleRegister}
-              >
-                REGISTER FOR {event.name} <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
-              </button>
-
-              <button
-                className="btn btn-secondary btn-back-events"
-                onClick={handleBackToEvents}
-              >
-                <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
-                Back to Events
-              </button>
-
-              <div className="sidebar-quick-card">
-                <div className="quick-card-badge">
-                  {event.category === 'technical' ? 'TECHNICAL SHOWDOWN' : 'NON-TECHNICAL ARENA'}
-                </div>
-                <div className="quick-card-row">
-                  <span className="qc-label">Entry Fee</span>
-                  <span className="qc-val fee-highlight">{event.fee}</span>
-                </div>
-                <div className="quick-card-row">
-                  <span className="qc-label">Format</span>
-                  <span className="qc-val">{event.teamSize}</span>
-                </div>
-                <div className="quick-card-row">
-                  <span className="qc-label">Date</span>
-                  <span className="qc-val">Sept 29, 2026</span>
-                </div>
-                <div className="quick-card-row">
-                  <span className="qc-label">Institution</span>
-                  <span className="qc-val">CAHCET</span>
-                </div>
-                <div className="quick-card-row">
-                  <span className="qc-label">Total Rounds</span>
-                  <span className="qc-val">{event.rounds ? event.rounds.length : 1} Rounds</span>
-                </div>
-              </div>
-            </div>
-          </aside>
+          </motion.div>
         </div>
+
+        {/* Down / Bottom Section: Compact Coordinator Cards */}
+        {event.coordinators && event.coordinators.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 25 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            className="rules-card-glass rules-bottom-contact-card"
+          >
+            <div className="rules-card-header">
+              <h2 className="rules-card-title">
+                <FaHeadset className="rules-card-icon" /> Student Coordinators & Contact
+              </h2>
+            </div>
+
+            <div className="rules-contact-grid">
+              {event.coordinators.map((coord, idx) => (
+                <div key={idx} className="rules-coord-card">
+                  <div className="coord-card-badge">{coord.role || `Coordinator ${idx + 1}`}</div>
+                  <h3 className="coord-card-name">{coord.name}</h3>
+                  <a href={`tel:${coord.phone}`} className="coord-call-btn">
+                    <FaPhoneAlt style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+                    {coord.displayPhone || coord.phone}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Bottom CTA Actions */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.55 }}
+          className="rules-clean-bottom-actions"
+        >
+          
+          
+        </motion.div>
       </div>
     </div>
   );

@@ -115,9 +115,10 @@ export default function EventsPage({ onNavigate }) {
     }
   };
 
+  // Register button on event cards navigates to event rules page
   const handleRegister = (eventId) => {
     if (onNavigate) {
-      onNavigate('register', eventId);
+      onNavigate('event-rules', eventId);
     }
   };
 
@@ -322,7 +323,7 @@ export default function EventsPage({ onNavigate }) {
               className="btn btn-primary"
               onClick={() => handleRegister('tech-01')}
             >
-              REGISTER FOR PPT PRESENTATION <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
+              EXPLORE PPT PRESENTATION RULES <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
             </button>
             <button
               className="btn btn-secondary"
