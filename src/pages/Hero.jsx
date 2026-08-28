@@ -49,8 +49,8 @@ export default function Hero({ onExplore, onRegister }) {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
         this.size = Math.random() * 2.2 + 0.8;
-        this.speedX = (Math.random() - 0.5) * 0.6;
-        this.speedY = (Math.random() - 0.5) * 0.6;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.speedY = (Math.random() - 0.5) * 0.5;
         this.baseAlpha = Math.random() * 0.45 + 0.25;
         this.color = Math.random() > 0.35 ? '#39FF88' : Math.random() > 0.5 ? '#00A83B' : '#85FFB8';
         this.pulse = Math.random() * Math.PI;
@@ -106,7 +106,7 @@ export default function Hero({ onExplore, onRegister }) {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < maxDistance) {
-            const alpha = (1 - dist / maxDistance) * 0.28;
+            const alpha = (1 - dist / maxDistance) * 0.25;
             ctx.beginPath();
             ctx.moveTo(particles[a].x, particles[a].y);
             ctx.lineTo(particles[b].x, particles[b].y);
@@ -166,15 +166,22 @@ export default function Hero({ onExplore, onRegister }) {
   return (
     <section id="hero" className="hero">
       <canvas ref={canvasRef} className="hero-canvas" />
+      <div className="hero-smoke-overlay" />
       <div className="hero-cyber-grid" />
       <div className="hero-ambient-glow" />
       <div className="hero-hud-lines" />
+      
       <div className="hero-content">
         <div className="hero-college-intro">
-          <p className="hero-college-name">C. Abdul Hakeem College of Engineering and Technology</p>
-          <p className="hero-department">Department of Computer Science and Engineering</p>
-          <p className="hero-presents"><span>cordially presents</span></p>
+          <h2 className="hero-college-name">C. ABDUL HAKEEM COLLEGE OF ENGINEERING AND TECHNOLOGY</h2>
+          <p className="hero-department">DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING</p>
+          <div className="hero-presents-flourish">
+            <span className="flourish-line" />
+            <span className="hero-presents">cordially presents</span>
+            <span className="flourish-line" />
+          </div>
         </div>
+
         <div className="hero-logo-wrapper">
           <h1 className="hero-logo-title">
             <img
@@ -184,14 +191,29 @@ export default function Hero({ onExplore, onRegister }) {
             />
           </h1>
         </div>
-        <p className="hero-tagline">National Level Technical Symposium</p>
+
+        <p className="hero-tagline">NATIONAL LEVEL TECHNICAL SYMPOSIUM</p>
+
         <div className="countdown countdown-days" aria-label={`Countdown: ${timeRemaining.days} days, ${timeRemaining.hours} hours, ${timeRemaining.minutes} minutes, ${timeRemaining.seconds} seconds`}>
           <div className="countdown-value">
-            <span>{timeRemaining.days}</span><b>:</b><span>{timeRemaining.hours}</span><b>:</b><span>{timeRemaining.minutes}</span><b>:</b><span>{timeRemaining.seconds}</span>
+            <span>{timeRemaining.days}</span>
+            <b className="colon">:</b>
+            <span>{timeRemaining.hours}</span>
+            <b className="colon">:</b>
+            <span>{timeRemaining.minutes}</span>
+            <b className="colon">:</b>
+            <span>{timeRemaining.seconds}</span>
           </div>
-          <div className="countdown-labels"><span>Days</span><span>Hours</span><span>Minutes</span><span>Seconds</span></div>
+          <div className="countdown-labels">
+            <span>DAYS</span>
+            <span>HOURS</span>
+            <span>MINUTES</span>
+            <span>SECONDS</span>
+          </div>
         </div>
-        <p className="hero-date">September 29, 2026</p>
+
+        <p className="hero-date">SEPTEMBER 29, 2026</p>
+
         <div className="hero-buttons">
           <button className="btn btn-primary" onClick={onRegister}>
             REGISTER NOW <span aria-hidden="true">→</span>

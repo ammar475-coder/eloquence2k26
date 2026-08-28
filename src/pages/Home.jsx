@@ -1,12 +1,13 @@
-import { useState } from 'react';
 import OpeningVideo from './OpeningVideo.jsx';
 import Hero from './Hero.jsx';
 import Intro from './Intro.jsx';
 import WhyEloquence from './WhyEloquence.jsx';
+import PatronsSection from './PatronsSection.jsx';
+import Sponsors from './Sponsors.jsx';
+import LocationMap from './LocationMap.jsx';
 import FinalCTA from './FinalCTA.jsx';
 
 export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComplete }) {
-
   const handleIntroComplete = () => {
     if (onIntroComplete) {
       onIntroComplete();
@@ -30,6 +31,9 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
       />
       <Intro />
       <WhyEloquence />
+      <PatronsSection />
+      <Sponsors />
+      <LocationMap />
       <FinalCTA onRegister={handleExploreEvents} />
     </main>
   );
