@@ -13,17 +13,18 @@ const coordinatorsData = {
     coordinators: [
       {
         slot: 'A',
+        name: 'Mohammed Nabeel',
+        phone: '9994023366',
+        displayPhone: '+91 99940 23366',
+        role: 'Lead Coordinator'
+        
+      },
+      {
+        slot: 'B',
         name: 'Syed Zaid Ahmed',
         phone: '8056463976',
         displayPhone: '+91 80564 63976',
         role: 'Lead Coordinator'
-      },
-      {
-        slot: 'B',
-        name: 'Mohammed Nabeel',
-        phone: '9994023366',
-        displayPhone: '+91 99940 23366',
-        role: 'Co-Coordinator'
       }
     ]
   },
@@ -46,7 +47,7 @@ const coordinatorsData = {
         name: 'Mohammed Saad V.',
         phone: '8643033733',
         displayPhone: '+91 86430 33733',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -69,7 +70,7 @@ const coordinatorsData = {
         name: 'Tejashwini P.R.',
         phone: '8608190410',
         displayPhone: '+91 86081 90410',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -92,7 +93,7 @@ const coordinatorsData = {
         name: 'Roshni',
         phone: '9489339990',
         displayPhone: '+91 94893 39990',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -115,7 +116,7 @@ const coordinatorsData = {
         name: 'Preethi R.',
         phone: '9344114553',
         displayPhone: '+91 93441 14553',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -138,7 +139,7 @@ const coordinatorsData = {
         name: 'Sufiya Firdause A.',
         phone: '9487915961',
         displayPhone: '+91 94879 15961',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -155,7 +156,7 @@ const coordinatorsData = {
         name: 'Ismail',
         phone: '8098067668',
         displayPhone: '+91 80980 67668',
-        role: 'Event Head'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -178,7 +179,7 @@ const coordinatorsData = {
         name: 'Syed Nounman A.',
         phone: '9844266605',
         displayPhone: '+91 98442 66605',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -194,7 +195,7 @@ const coordinatorsData = {
         name: 'Sugesh B.',
         phone: '9080344472',
         displayPhone: '+91 90803 44472',
-        role: 'Event Head'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -217,7 +218,7 @@ const coordinatorsData = {
         name: 'Pooja Sri',
         phone: '9345728863',
         displayPhone: '+91 93457 28863',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -240,7 +241,7 @@ const coordinatorsData = {
         name: 'Vijaya Kumar M.',
         phone: '6382960769',
         displayPhone: '+91 63829 60769',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   },
@@ -263,7 +264,7 @@ const coordinatorsData = {
         name: 'Mohammed Sharuk I.',
         phone: '9994580064',
         displayPhone: '+91 99945 80064',
-        role: 'Co-Coordinator'
+        role: 'Lead Coordinator'
       }
     ]
   }

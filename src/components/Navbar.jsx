@@ -55,12 +55,6 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
           <a onClick={() => handleNav('home', 'location')}>
             LOCATION
           </a>
-          <a
-            className={currentPage === 'register' ? 'nav-link-active' : ''}
-            onClick={() => handleNav('events')}
-          >
-            REGISTER
-          </a>
         </div>
         <button
           className={`nav-burger ${menuOpen ? 'nav-burger-open' : ''}`}
