@@ -1,4 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
+import {
+  FaBolt,
+  FaGamepad,
+  FaBookOpen,
+  FaArrowRight,
+  FaArrowLeft,
+  FaCreditCard,
+  FaCheck,
+  FaClipboard,
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaClock,
+  FaPrint,
+  FaUserPlus
+} from 'react-icons/fa';
 import events from '../data/events.js';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate'];
@@ -209,7 +224,8 @@ export default function RegistrationPage({ eventId, onNavigate }) {
             className="rules-back-link"
             onClick={() => onNavigate && onNavigate('event-rules', currentEvent.id)}
           >
-            ← Back to {currentEvent.name} Rules
+            <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+            Back to {currentEvent.name} Rules
           </button>
           <span className="breadcrumb-sep">/</span>
           <button
@@ -226,7 +242,17 @@ export default function RegistrationPage({ eventId, onNavigate }) {
         <div className="direct-event-banner">
           <div className="direct-banner-left">
             <span className="direct-banner-badge">
-              {currentEvent.category === 'technical' ? '⚡ TECHNICAL EVENT' : '🎮 NON-TECHNICAL EVENT'}
+              {currentEvent.category === 'technical' ? (
+                <>
+                  <FaBolt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                  TECHNICAL EVENT
+                </>
+              ) : (
+                <>
+                  <FaGamepad style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                  NON-TECHNICAL EVENT
+                </>
+              )}
             </span>
             <h1 className="direct-banner-title">{currentEvent.name}</h1>
             <p className="direct-banner-desc">{currentEvent.description}</p>
@@ -245,7 +271,9 @@ export default function RegistrationPage({ eventId, onNavigate }) {
               className="btn-view-rules-link"
               onClick={() => onNavigate && onNavigate('event-rules', currentEvent.id)}
             >
-              📖 View Full Rules & Guidelines →
+              <FaBookOpen style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+              View Full Rules & Guidelines
+              <FaArrowRight style={{ marginLeft: '0.35rem', verticalAlign: '-1px' }} />
             </button>
           </div>
         </div>
@@ -453,7 +481,8 @@ export default function RegistrationPage({ eventId, onNavigate }) {
                   <span className="summary-total-fee">₹{feeInfo.total}</span>
                 </div>
                 <p className="summary-payment-note">
-                  💳 Payment can be completed at the on-site registration helpdesk via UPI / Cash upon arrival.
+                  <FaCreditCard style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+                  Payment can be completed at the on-site registration helpdesk via UPI / Cash upon arrival.
                 </p>
               </div>
 
@@ -472,7 +501,9 @@ export default function RegistrationPage({ eventId, onNavigate }) {
         ) : (
           /* Success Screen */
           <div className="registration-success-card">
-            <div className="success-badge-icon">✓</div>
+            <div className="success-badge-icon">
+              <FaCheck />
+            </div>
             <h3 className="success-card-title">REGISTRATION CONFIRMED!</h3>
             <p className="success-card-sub">
               You are officially enrolled for <strong>{ticketData.eventName}</strong> at ELOQUENCE 26.
@@ -492,7 +523,17 @@ export default function RegistrationPage({ eventId, onNavigate }) {
                     className="btn-copy-code"
                     onClick={handleCopyCode}
                   >
-                    {copied ? '✓ COPIED' : '📋 COPY ID'}
+                    {copied ? (
+                      <>
+                        <FaCheck style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} />
+                        COPIED
+                      </>
+                    ) : (
+                      <>
+                        <FaClipboard style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} />
+                        COPY ID
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -527,9 +568,18 @@ export default function RegistrationPage({ eventId, onNavigate }) {
               </div>
 
               <div className="ticket-pass-footer">
-                <span>📅 Date: September 29, 2026</span>
-                <span>📍 Venue: CAHCET Campus, Melvisharam</span>
-                <span>⏰ Registered: {ticketData.timestamp}</span>
+                <span>
+                  <FaCalendarAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                  Date: September 29, 2026
+                </span>
+                <span>
+                  <FaMapMarkerAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                  Venue: CAHCET Campus, Melvisharam
+                </span>
+                <span>
+                  <FaClock style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                  Registered: {ticketData.timestamp}
+                </span>
               </div>
             </div>
 
@@ -539,14 +589,16 @@ export default function RegistrationPage({ eventId, onNavigate }) {
                 className="btn btn-primary"
                 onClick={() => window.print()}
               >
-                🖨️ PRINT / SAVE PASS
+                <FaPrint style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+                PRINT / SAVE PASS
               </button>
               <button
                 type="button"
                 className="btn btn-secondary"
                 onClick={resetForm}
               >
-                + REGISTER ANOTHER PARTICIPANT
+                <FaUserPlus style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+                REGISTER ANOTHER PARTICIPANT
               </button>
               <button
                 type="button"

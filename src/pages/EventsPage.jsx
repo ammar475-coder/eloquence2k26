@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes } from 'react-icons/fa';
 import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
-import RegistrationModal from './RegistrationModal.jsx';
 
 function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, duration = 1800 }) {
   const [displayVal, setDisplayVal] = useState(0);
@@ -13,7 +13,6 @@ function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, durati
     const step = (timestamp) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      // easeOutCubic
       const easeProgress = 1 - Math.pow(1 - progress, 3);
       const current = Math.floor(easeProgress * target);
 
@@ -45,8 +44,6 @@ function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, durati
 export default function EventsPage({ onNavigate }) {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
   const canvasRef = useRef(null);
 
   // Scroll to top when page opens
@@ -112,14 +109,16 @@ export default function EventsPage({ onNavigate }) {
     };
   }, []);
 
-  const openModal = (event) => {
-    setSelectedEvent(event);
-    setModalOpen(true);
+  const handleViewRules = (eventId) => {
+    if (onNavigate) {
+      onNavigate('event-rules', eventId);
+    }
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setSelectedEvent(null);
+  const handleRegister = (eventId) => {
+    if (onNavigate) {
+      onNavigate('register', eventId);
+    }
   };
 
   // Filter & search events
@@ -129,6 +128,7 @@ export default function EventsPage({ onNavigate }) {
       searchQuery.trim() === '' ||
       e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (e.subtitle && e.subtitle.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (e.alias && e.alias.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (e.tag && e.tag.toLowerCase().includes(searchQuery.toLowerCase())) ||
       e.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -149,19 +149,23 @@ export default function EventsPage({ onNavigate }) {
               className="breadcrumb-back-btn"
               onClick={() => onNavigate && onNavigate('home')}
             >
-              ← BACK TO HOME
+              <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+              BACK TO HOME
             </button>
             <span className="breadcrumb-separator">/</span>
             <span className="breadcrumb-current">EVENTS CATALOGUE</span>
           </div>
 
-          <div className="events-hero-tag"> CHAMPIONSHIP ARENA 2026</div>
+          <div className="events-hero-tag">
+            <FaBolt style={{ marginRight: '0.35rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+            CHAMPIONSHIP ARENA 2026
+          </div>
           <h1 className="events-page-title">
             THE BATTLEFIELD <span className="text-glow">ROSTER</span>
           </h1>
           <p className="events-page-subtitle">
             12 high-octane competitions across Technical innovation and Non-Technical strategy.
-            Assemble your team, unleash your potential, and claim the championship prize.
+            View official rules or register directly for any competition.
           </p>
 
           {/* Quick Stats Grid */}
@@ -178,7 +182,6 @@ export default function EventsPage({ onNavigate }) {
               <AnimatedNumber value={6} padDigits={2} duration={1600} />
               <span className="stat-label">NON-TECHNICAL</span>
             </div>
-            
           </div>
         </div>
       </section>
@@ -213,7 +216,7 @@ export default function EventsPage({ onNavigate }) {
                 onClick={() => setSearchQuery('')}
                 aria-label="Clear search"
               >
-                ✕
+                <FaTimes />
               </button>
             )}
           </div>
@@ -273,7 +276,12 @@ export default function EventsPage({ onNavigate }) {
                 </div>
                 <div className="events-grid">
                   {techEvents.map((event) => (
-                    <EventCard key={event.id} event={event} onRegister={openModal} />
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onViewRules={handleViewRules}
+                      onRegister={handleRegister}
+                    />
                   ))}
                 </div>
               </div>
@@ -288,7 +296,12 @@ export default function EventsPage({ onNavigate }) {
                 </div>
                 <div className="events-grid">
                   {nonTechEvents.map((event) => (
-                    <EventCard key={event.id} event={event} onRegister={openModal} />
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onViewRules={handleViewRules}
+                      onRegister={handleRegister}
+                    />
                   ))}
                 </div>
               </div>
@@ -300,27 +313,26 @@ export default function EventsPage({ onNavigate }) {
       {/* Bottom CTA on Events Page */}
       <section className="events-bottom-cta">
         <div className="events-bottom-cta-inner">
-          <h3 className="bottom-cta-heading">HAVE QUESTIONS OR NEED ASSISTANCE?</h3>
+          <h3 className="bottom-cta-heading">READY TO ENTER THE ARENA?</h3>
           <p className="bottom-cta-sub">
-            Our student coordinators and technical support team are ready to guide you on-site.
+            Join hundreds of ambitious students across the country and compete for trophies, cash prizes, and certificates.
           </p>
           <div className="bottom-cta-actions">
             <button
               className="btn btn-primary"
+              onClick={() => handleRegister('tech-01')}
+            >
+              REGISTER FOR PPT PRESENTATION <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
+            </button>
+            <button
+              className="btn btn-secondary"
               onClick={() => onNavigate && onNavigate('home')}
             >
-              RETURN TO MAIN STAGE
+              RETURN TO HOME STAGE
             </button>
           </div>
         </div>
       </section>
-
-      {/* Registration Modal */}
-      <RegistrationModal
-        event={selectedEvent}
-        isOpen={modalOpen}
-        onClose={closeModal}
-      />
     </div>
   );
 }
