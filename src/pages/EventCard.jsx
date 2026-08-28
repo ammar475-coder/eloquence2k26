@@ -1,3 +1,4 @@
+import { FaBolt, FaGamepad, FaArrowRight } from 'react-icons/fa';
 import ShaderCard from '../components/ShaderCard.jsx';
 
 export default function EventCard({ event, onRegister, onViewRules }) {
@@ -33,7 +34,17 @@ export default function EventCard({ event, onRegister, onViewRules }) {
           <div className="event-badges-row">
             {event.tag && <span className="event-tag-badge">{event.tag}</span>}
             <div className={`event-category-badge ${isTech ? 'badge-tech' : 'badge-nontech'}`}>
-              {isTech ? 'TECH' : 'NON-TECH'}
+              {isTech ? (
+                <>
+                  <FaBolt style={{ marginRight: '0.25rem', verticalAlign: '-1px' }} />
+                  TECH
+                </>
+              ) : (
+                <>
+                  <FaGamepad style={{ marginRight: '0.25rem', verticalAlign: '-1px' }} />
+                  NON-TECH
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -78,7 +89,7 @@ export default function EventCard({ event, onRegister, onViewRules }) {
             className="btn btn-primary btn-card-register"
             onClick={handleRegister}
           >
-            REGISTER →
+            REGISTER <FaArrowRight style={{ marginLeft: '0.35rem', verticalAlign: '-1px' }} />
           </button>
         </div>
       </div>

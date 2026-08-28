@@ -1276,9 +1276,19 @@ img {
 }
 
 .why-icon {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  filter: grayscale(30%);
+  font-size: 2.2rem;
+  margin-bottom: 1.25rem;
+  color: var(--bright-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 10px rgba(57, 255, 136, 0.45));
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.35s ease;
+}
+
+.why-card:hover .why-icon {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 20px rgba(57, 255, 136, 0.8));
 }
 
 .why-title {

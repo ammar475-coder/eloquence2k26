@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaMapMarkerAlt } from 'react-icons/fa';
 import sponsors from '../data/sponsors.js';
 
 function SponsorCard({ sponsor, tier }) {
@@ -34,7 +35,8 @@ function SponsorCard({ sponsor, tier }) {
           <h4 className="patron-back-name">{sponsor.name}</h4>
           <p className="patron-desc">{sponsor.description}</p>
           <button className="patron-location-btn" onClick={handleVisit}>
-            📍 LOCATION
+            <FaMapMarkerAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+            LOCATION
           </button>
         </div>
       </div>

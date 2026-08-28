@@ -1,3 +1,4 @@
+import { FaBolt, FaGamepad, FaCompass } from 'react-icons/fa';
 import logoImg from '../assets/logo.png';
 import events from '../data/events.js';
 
@@ -39,7 +40,10 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 2: Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading">⚡ TECHNICAL</h4>
+          <h4 className="footer-heading">
+            <FaBolt style={{ marginRight: '0.4rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+            TECHNICAL
+          </h4>
           <ul className="footer-event-list">
             {techEvents.map((event) => (
               <li key={event.id}>
@@ -59,7 +63,10 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 3: Non-Technical Events */}
         <div className="footer-col">
-          <h4 className="footer-heading">🎮 NON-TECHNICAL</h4>
+          <h4 className="footer-heading">
+            <FaGamepad style={{ marginRight: '0.4rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+            NON-TECHNICAL
+          </h4>
           <ul className="footer-event-list">
             {nonTechEvents.map((event) => (
               <li key={event.id}>
@@ -79,7 +86,10 @@ export default function Footer({ onNavigate }) {
 
         {/* Col 4: Quick Navigation */}
         <div className="footer-col">
-          <h4 className="footer-heading">🧭 NAVIGATION</h4>
+          <h4 className="footer-heading">
+            <FaCompass style={{ marginRight: '0.4rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+            NAVIGATION
+          </h4>
           <ul className="footer-nav-list">
             <li>
               <a

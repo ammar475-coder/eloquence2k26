@@ -1,23 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaCrosshairs, FaLightbulb, FaNetworkWired, FaTrophy } from 'react-icons/fa';
 
 const features = [
   {
-    icon: '⚔️',
+    icon: <FaCrosshairs />,
     title: 'COMPETE',
     description: 'Face off against the best minds in technical and creative arenas.',
   },
   {
-    icon: '🔧',
+    icon: <FaLightbulb />,
     title: 'CREATE',
     description: 'Build, design, and innovate — bring your boldest ideas to life.',
   },
   {
-    icon: '🔗',
+    icon: <FaNetworkWired />,
     title: 'CONNECT',
     description: 'Network with peers, mentors, and industry minds under one roof.',
   },
   {
-    icon: '🏆',
+    icon: <FaTrophy />,
     title: 'CONQUER',
     description: 'Rise through the ranks and etch your name among the legends.',
   },

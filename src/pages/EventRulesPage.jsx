@@ -1,4 +1,15 @@
 import { useEffect } from 'react';
+import {
+  FaMapMarkerAlt,
+  FaClock,
+  FaMoneyBillWave,
+  FaUsers,
+  FaBolt,
+  FaGamepad,
+  FaPhoneAlt,
+  FaArrowLeft,
+  FaArrowRight
+} from 'react-icons/fa';
 import events from '../data/events.js';
 
 export default function EventRulesPage({ eventId, onNavigate }) {
@@ -26,7 +37,8 @@ export default function EventRulesPage({ eventId, onNavigate }) {
         {/* Breadcrumb Navigation */}
         <div className="event-rules-breadcrumb">
           <button className="rules-back-link" onClick={handleBackToEvents}>
-            ← Back to Events
+            <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+            Back to Events
           </button>
           <span className="breadcrumb-sep">/</span>
           <span className="breadcrumb-cat">{event.category.toUpperCase()}</span>
@@ -34,7 +46,7 @@ export default function EventRulesPage({ eventId, onNavigate }) {
           <span className="breadcrumb-active">{event.name}</span>
         </div>
 
-        {/* 2-Column Rules Layout with In-Flow Cards (No Hovering / Floating Overlays) */}
+        {/* 2-Column Rules Layout with In-Flow Cards */}
         <div className="event-rules-layout">
           {/* Left Column: Simple Cards for Overview, Rules, Rounds, and Coordinators */}
           <div className="event-rules-content">
@@ -43,7 +55,17 @@ export default function EventRulesPage({ eventId, onNavigate }) {
               <div className="rules-header-top">
                 <span className="rules-event-number">#{event.number}</span>
                 <span className={`event-category-badge ${event.category === 'technical' ? 'badge-tech' : 'badge-nontech'}`}>
-                  {event.category === 'technical' ? '⚡ TECHNICAL EVENT' : '🎮 NON-TECHNICAL EVENT'}
+                  {event.category === 'technical' ? (
+                    <>
+                      <FaBolt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                      TECHNICAL EVENT
+                    </>
+                  ) : (
+                    <>
+                      <FaGamepad style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                      NON-TECHNICAL EVENT
+                    </>
+                  )}
                 </span>
               </div>
               <h1 className="event-rules-heading">{event.name}</h1>
@@ -54,7 +76,9 @@ export default function EventRulesPage({ eventId, onNavigate }) {
               <div className="overview-mini-cards-grid">
                 {event.venue && (
                   <div className="overview-mini-card">
-                    <span className="omc-icon">📍</span>
+                    <span className="omc-icon">
+                      <FaMapMarkerAlt style={{ color: 'var(--bright-green)' }} />
+                    </span>
                     <div className="omc-body">
                       <span className="omc-label">VENUE</span>
                       <span className="omc-val">{event.venue}</span>
@@ -63,7 +87,9 @@ export default function EventRulesPage({ eventId, onNavigate }) {
                 )}
                 {event.timing && (
                   <div className="overview-mini-card">
-                    <span className="omc-icon">⏰</span>
+                    <span className="omc-icon">
+                      <FaClock style={{ color: 'var(--bright-green)' }} />
+                    </span>
                     <div className="omc-body">
                       <span className="omc-label">TIMING</span>
                       <span className="omc-val">{event.timing}</span>
@@ -71,14 +97,18 @@ export default function EventRulesPage({ eventId, onNavigate }) {
                   </div>
                 )}
                 <div className="overview-mini-card">
-                  <span className="omc-icon">💰</span>
+                  <span className="omc-icon">
+                    <FaMoneyBillWave style={{ color: 'var(--bright-green)' }} />
+                  </span>
                   <div className="omc-body">
                     <span className="omc-label">REGISTRATION FEE</span>
                     <span className="omc-val fee-highlight">{event.fee}</span>
                   </div>
                 </div>
                 <div className="overview-mini-card">
-                  <span className="omc-icon">👥</span>
+                  <span className="omc-icon">
+                    <FaUsers style={{ color: 'var(--bright-green)' }} />
+                  </span>
                   <div className="omc-body">
                     <span className="omc-label">TEAM STRUCTURE</span>
                     <span className="omc-val">{event.teamSize}</span>
@@ -118,7 +148,10 @@ export default function EventRulesPage({ eventId, onNavigate }) {
                       <div className="round-card-header">
                         <span className="round-card-badge">{rnd.round}</span>
                         <h3 className="round-card-title">{rnd.title}</h3>
-                        <span className="round-card-duration">⏰ {rnd.duration}</span>
+                        <span className="round-card-duration">
+                          <FaClock style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} />
+                          {rnd.duration}
+                        </span>
                       </div>
                       <p className="round-card-desc">{rnd.desc}</p>
                     </div>
@@ -143,7 +176,8 @@ export default function EventRulesPage({ eventId, onNavigate }) {
                       </div>
                       <h4 className="coord-card-name">{c.name}</h4>
                       <a href={`tel:${c.phone}`} className="btn-coord-call">
-                        📞 {c.displayPhone || c.phone}
+                        <FaPhoneAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                        {c.displayPhone || c.phone}
                       </a>
                     </div>
                   ))}
@@ -151,7 +185,7 @@ export default function EventRulesPage({ eventId, onNavigate }) {
               </div>
             )}
 
-            {/* Bottom Actions Banner - In-Flow Part of Page */}
+            {/* Bottom Actions Banner */}
             <div className="rules-bottom-actions-card">
               <div className="bac-info">
                 <h3 className="bac-title">Ready to Compete in {event.name}?</h3>
@@ -162,13 +196,14 @@ export default function EventRulesPage({ eventId, onNavigate }) {
                   className="btn btn-primary btn-large"
                   onClick={handleRegister}
                 >
-                  PROCEED TO REGISTER →
+                  PROCEED TO REGISTER <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
                 </button>
                 <button
                   className="btn btn-secondary"
                   onClick={handleBackToEvents}
                 >
-                  ← ALL EVENTS
+                  <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+                  ALL EVENTS
                 </button>
               </div>
             </div>
@@ -181,14 +216,15 @@ export default function EventRulesPage({ eventId, onNavigate }) {
                 className="btn btn-primary btn-register-cta"
                 onClick={handleRegister}
               >
-                REGISTER FOR {event.name} →
+                REGISTER FOR {event.name} <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
               </button>
 
               <button
                 className="btn btn-secondary btn-back-events"
                 onClick={handleBackToEvents}
               >
-                ← Back to Events
+                <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+                Back to Events
               </button>
 
               <div className="sidebar-quick-card">

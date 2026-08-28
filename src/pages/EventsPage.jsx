@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes } from 'react-icons/fa';
 import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
 
@@ -148,13 +149,17 @@ export default function EventsPage({ onNavigate }) {
               className="breadcrumb-back-btn"
               onClick={() => onNavigate && onNavigate('home')}
             >
-              ← BACK TO HOME
+              <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+              BACK TO HOME
             </button>
             <span className="breadcrumb-separator">/</span>
             <span className="breadcrumb-current">EVENTS CATALOGUE</span>
           </div>
 
-          <div className="events-hero-tag">⚡ CHAMPIONSHIP ARENA 2026</div>
+          <div className="events-hero-tag">
+            <FaBolt style={{ marginRight: '0.35rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+            CHAMPIONSHIP ARENA 2026
+          </div>
           <h1 className="events-page-title">
             THE BATTLEFIELD <span className="text-glow">ROSTER</span>
           </h1>
@@ -211,7 +216,7 @@ export default function EventsPage({ onNavigate }) {
                 onClick={() => setSearchQuery('')}
                 aria-label="Clear search"
               >
-                ✕
+                <FaTimes />
               </button>
             )}
           </div>
@@ -317,7 +322,7 @@ export default function EventsPage({ onNavigate }) {
               className="btn btn-primary"
               onClick={() => handleRegister('tech-01')}
             >
-              REGISTER FOR PPT PRESENTATION →
+              REGISTER FOR PPT PRESENTATION <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
             </button>
             <button
               className="btn btn-secondary"
