@@ -28,6 +28,7 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
       <Hero
         onExplore={handleExploreEvents}
         onRegister={handleExploreEvents}
+        hasPlayedIntro={hasPlayedIntro}
       />
       <Intro />
       <WhyEloquence />

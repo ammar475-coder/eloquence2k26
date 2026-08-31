@@ -1,24 +1,33 @@
 import { useState, useRef, useEffect } from 'react';
-import desktopVideoSrc from '../assets/landing page new.mp4';
-import portraitVideoSrc from '../assets/landing video new.mp4';
+import desktopVideoSrc from '../assets/lv_0_20260830212552.mp4';
+import portraitVideoSrc from '../assets/lv_0_20260830212104.mp4';
 import logoImg from '../assets/logo.png';
+
+function checkIsMobileOrPortrait() {
+  if (typeof window === 'undefined') return false;
+  const isNarrowScreen = window.innerWidth <= 820;
+  const isPortraitAspect = window.innerHeight > window.innerWidth;
+  const mediaMatches = window.matchMedia('(max-width: 820px), (orientation: portrait)').matches;
+  return isNarrowScreen || (isPortraitAspect && window.innerWidth < 1024) || mediaMatches;
+}
 
 export default function OpeningVideo({ onComplete }) {
   const [fading, setFading] = useState(false);
   const [removed, setRemoved] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth <= 768 || window.matchMedia('(max-width: 768px)').matches;
-  });
+  const [isMobile, setIsMobile] = useState(checkIsMobileOrPortrait);
   const videoRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768 || window.matchMedia('(max-width: 768px)').matches);
+      setIsMobile(checkIsMobileOrPortrait());
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, { passive: true });
+    window.addEventListener('orientationchange', handleResize, { passive: true });
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   const handleFinish = () => {
@@ -26,8 +35,15 @@ export default function OpeningVideo({ onComplete }) {
     setFading(true);
     setTimeout(() => {
       setRemoved(true);
+      if (videoRef.current) {
+        try {
+          videoRef.current.pause();
+          videoRef.current.removeAttribute('src');
+          videoRef.current.load();
+        } catch (_) {}
+      }
       if (onComplete) onComplete();
-    }, 500);
+    }, 400);
   };
 
   const currentVideoSrc = isMobile ? portraitVideoSrc : desktopVideoSrc;
@@ -42,6 +58,7 @@ export default function OpeningVideo({ onComplete }) {
     const playPromise = video.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
+        // Autoplay with audio was blocked by browser policy; fallback to muted autoplay
         video.muted = true;
         setIsMuted(true);
         video.play().catch(() => { });
@@ -99,6 +116,8 @@ export default function OpeningVideo({ onComplete }) {
         src={currentVideoSrc}
         autoPlay
         playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
         preload="auto"
         onEnded={handleFinish}
         className="opening-video-element"
@@ -106,7 +125,6 @@ export default function OpeningVideo({ onComplete }) {
       <div className="opening-video-vignette" />
       <div className="opening-hud-top">
         <img src={logoImg} alt="ELOQUENCE 26" className="opening-hud-logo" />
-        <span className="opening-hud-status">// INITIALIZING ELOQUENCE26</span>
       </div>
 
       <div className="opening-hud-bottom">
