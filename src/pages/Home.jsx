@@ -1,7 +1,6 @@
 import OpeningVideo from './OpeningVideo.jsx';
 import Hero from './Hero.jsx';
 import Intro from './Intro.jsx';
-import WhyEloquence from './WhyEloquence.jsx';
 import PatronsSection from './PatronsSection.jsx';
 import Sponsors from './Sponsors.jsx';
 import LocationMap from './LocationMap.jsx';
@@ -31,7 +30,6 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
         hasPlayedIntro={hasPlayedIntro}
       />
       <Intro />
-      <WhyEloquence />
       <PatronsSection />
       <Sponsors />
       <LocationMap />
