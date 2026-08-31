@@ -8,13 +8,13 @@ function renderPatronIcon(iconName, isGold) {
   switch (iconName) {
     case 'Crown':
       return (
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
           <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
         </svg>
       );
     case 'Landmark':
       return (
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
           <line x1="3" x2="21" y1="22" y2="22" />
           <line x1="6" x2="6" y1="18" y2="11" />
           <line x1="10" x2="10" y1="18" y2="11" />
@@ -25,21 +25,21 @@ function renderPatronIcon(iconName, isGold) {
       );
     case 'GraduationCap':
       return (
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
           <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
           <path d="M6 12v5c3 3 9 3 12 0v-5" />
         </svg>
       );
     case 'Award':
       return (
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
           <circle cx="12" cy="8" r="6" />
           <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
         </svg>
       );
     case 'Cpu':
       return (
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
           <rect x="4" y="4" width="16" height="16" rx="2" />
           <rect x="9" y="9" width="6" height="6" />
           <path d="M15 2v2M15 20v2M2 15h2M2 9h2M20 15h2M20 9h2M9 2v2M9 20v2" />
@@ -48,7 +48,7 @@ function renderPatronIcon(iconName, isGold) {
     case 'ShieldCheck':
     default:
       return (
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="patron-icon-svg">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           <path d="m9 12 2 2 4-4" />
         </svg>
@@ -56,38 +56,15 @@ function renderPatronIcon(iconName, isGold) {
   }
 }
 
-function PatronCard({ patron, index }) {
-  const cardRef = useRef(null);
-  const [rotate, setRotate] = useState({ x: 0, y: 0 });
-
+function PatronSlideCard({ patron, index }) {
   const isGold = patron.tier === 'gold';
   const color1 = isGold ? '#b99358' : '#00a83b';
   const color2 = isGold ? '#f5e4b8' : '#39ff88';
   const color3 = isGold ? '#0a0804' : '#040a06';
 
-  const handleMouseMove = (e) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    setRotate({ x: -(y / rect.height) * 10, y: (x / rect.width) * 10 });
-  };
-
-  const handleMouseLeave = () => {
-    setRotate({ x: 0, y: 0 });
-  };
-
   return (
     <div
-      ref={cardRef}
-      className={`patron-card-outer ${isGold ? 'patron-gold-tier' : 'patron-emerald-tier'}`}
-      style={{
-        transform: `perspective(1000px) rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)`,
-        transition: rotate.x === 0 ? 'transform 0.5s ease-out' : 'none',
-        transitionDelay: `${index * 0.1}s`,
-      }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
+      className={`patron-slide-item ${isGold ? 'patron-gold-tier' : 'patron-emerald-tier'}`}
     >
       <ShaderCard
         color1={color1}
@@ -143,6 +120,9 @@ export default function PatronsSection() {
     return () => observer.disconnect();
   }, []);
 
+  // Triple the items for smooth infinite loop in single line
+  const loopPatrons = [...patrons, ...patrons, ...patrons];
+
   return (
     <section
       id="patrons"
@@ -158,10 +138,18 @@ export default function PatronsSection() {
             Steered by distinguished leaders and academic pioneers shaping national innovation.
           </p>
         </div>
+      </div>
 
-        <div className="patrons-grid">
-          {patrons.map((patron, i) => (
-            <PatronCard patron={patron} index={i} key={patron.id} />
+      <div className="patrons-marquee">
+        <div className="patrons-marquee-fade patrons-marquee-fade-left" />
+        <div className="patrons-marquee-fade patrons-marquee-fade-right" />
+        <div className="patrons-track">
+          {loopPatrons.map((patron, i) => (
+            <PatronSlideCard
+              key={`${patron.id}-${i}`}
+              patron={patron}
+              index={i}
+            />
           ))}
         </div>
       </div>
