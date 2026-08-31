@@ -310,30 +310,6 @@ export default function EventsPage({ onNavigate }) {
           </>
         )}
       </section>
-
-      {/* Bottom CTA on Events Page */}
-      <section className="events-bottom-cta">
-        <div className="events-bottom-cta-inner">
-          <h3 className="bottom-cta-heading">READY TO ENTER THE ARENA?</h3>
-          <p className="bottom-cta-sub">
-            Join hundreds of ambitious students across the country and compete for trophies, cash prizes, and certificates.
-          </p>
-          <div className="bottom-cta-actions">
-            <button
-              className="btn btn-primary"
-              onClick={() => handleRegister('tech-01')}
-            >
-              EXPLORE PPT PRESENTATION RULES <FaArrowRight style={{ marginLeft: '0.4rem', verticalAlign: '-1px' }} />
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => onNavigate && onNavigate('home')}
-            >
-              RETURN TO HOME STAGE
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
