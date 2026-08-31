@@ -50,7 +50,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
           </a>
           <a
             className="nav-pill-link"
-            onClick={() => handleNav('home', 'why')}
+            onClick={() => handleNav('home', 'intro')}
           >
             About
           </a>
@@ -94,7 +94,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
           Events
         </a>
         <a
-          onClick={() => handleNav('home', 'why')}
+          onClick={() => handleNav('home', 'intro')}
         >
           About
         </a>

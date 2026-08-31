@@ -152,7 +152,7 @@ export default function PatronsSection() {
       <div className="patrons-ambient-light" />
       <div className="patrons-container">
         <div className="patrons-header">
-          <span className="patrons-badge">// LEADERSHIP & GUIDANCE</span>
+          <span className="patrons-badge">LEADERSHIP & GUIDANCE</span>
           <h2 className="section-heading">OUR PATRONS</h2>
           <p className="section-sub">
             Steered by distinguished leaders and academic pioneers shaping national innovation.

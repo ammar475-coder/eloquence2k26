@@ -57,7 +57,7 @@ export default function FinalCTA({ onRegister }) {
       animationId = requestAnimationFrame(animate);
     };
     animate();
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', resize, { passive: true });
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
