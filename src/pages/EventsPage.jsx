@@ -140,55 +140,24 @@ export default function EventsPage({ onNavigate }) {
 
   return (
     <div className="events-page">
-      {/* Header Banner */}
-      <section className="events-page-hero">
-        <canvas ref={canvasRef} className="events-page-canvas" />
-        <div className="events-hero-glow" />
-        <div className="events-hero-inner">
-          <div className="events-breadcrumb">
-            <button
-              className="breadcrumb-back-btn"
-              onClick={() => onNavigate && onNavigate('home')}
-            >
-              <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
-              BACK TO HOME
-            </button>
-            <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">EVENTS CATALOGUE</span>
-          </div>
-
-          <div className="events-hero-tag">
-            <FaBolt style={{ marginRight: '0.35rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
-            CHAMPIONSHIP ARENA 2026
-          </div>
-          <h1 className="events-page-title">
-            THE BATTLEFIELD <span className="text-glow">ROSTER</span>
-          </h1>
-          <p className="events-page-subtitle">
-            12 high-octane competitions across Technical innovation and Non-Technical strategy.
-            View official rules or register directly for any competition.
-          </p>
-
-          {/* Quick Stats Grid */}
-          <div className="events-stats-grid">
-            <div className="stat-card">
-              <AnimatedNumber value={12} padDigits={2} duration={1800} />
-              <span className="stat-label">TOTAL SHOWDOWNS</span>
-            </div>
-            <div className="stat-card">
-              <AnimatedNumber value={6} padDigits={2} duration={1600} />
-              <span className="stat-label">TECHNICAL EVENTS</span>
-            </div>
-            <div className="stat-card">
-              <AnimatedNumber value={6} padDigits={2} duration={1600} />
-              <span className="stat-label">NON-TECHNICAL</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <canvas ref={canvasRef} className="events-page-canvas" />
+      <div className="events-hero-glow" />
 
       {/* Main Events Content */}
       <section className="events-catalog-section">
+        {/* Breadcrumb Navigation */}
+        <div className="events-breadcrumb">
+          <button
+            className="breadcrumb-back-btn"
+            onClick={() => onNavigate && onNavigate('home')}
+          >
+            <FaArrowLeft style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
+            BACK TO HOME
+          </button>
+          <span className="breadcrumb-separator">/</span>
+          <span className="breadcrumb-current">EVENTS CATALOGUE</span>
+        </div>
+
         <div className="events-controls-wrapper">
           {/* Search Bar */}
           <div className="events-search-box">
@@ -242,6 +211,22 @@ export default function EventsPage({ onNavigate }) {
             >
               NON-TECHNICAL (6)
             </button>
+          </div>
+        </div>
+
+        {/* Quick Stats Grid below Search Bar & Filters */}
+        <div className="events-stats-grid">
+          <div className="stat-card">
+            <AnimatedNumber value={12} padDigits={2} duration={1800} />
+            <span className="stat-label">TOTAL SHOWDOWNS</span>
+          </div>
+          <div className="stat-card">
+            <AnimatedNumber value={6} padDigits={2} duration={1600} />
+            <span className="stat-label">TECHNICAL EVENTS</span>
+          </div>
+          <div className="stat-card">
+            <AnimatedNumber value={6} padDigits={2} duration={1600} />
+            <span className="stat-label">NON-TECHNICAL</span>
           </div>
         </div>
 
