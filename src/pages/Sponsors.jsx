@@ -12,7 +12,7 @@ function SponsorCard({ sponsor, tier }) {
 
   return (
     <div
-      className={`patron-card patron-card-${tier}`}
+      className={`sponsor-card sponsor-card-${tier}`}
       onClick={() => setFlipped((f) => !f)}
       role="button"
       tabIndex={0}
@@ -24,17 +24,17 @@ function SponsorCard({ sponsor, tier }) {
         }
       }}
     >
-      <div className={`patron-card-inner ${flipped ? 'patron-flipped' : ''}`}>
-        <div className="patron-face patron-front">
-          <span className="patron-tag">{sponsor.tag}</span>
-          <div className="patron-mark">{sponsor.initials}</div>
-          <h4 className="patron-name">{sponsor.name}</h4>
-          <span className="patron-flip-hint">HOVER FOR DETAILS</span>
+      <div className={`sponsor-card-inner ${flipped ? 'sponsor-flipped' : ''}`}>
+        <div className="sponsor-face sponsor-front">
+          <span className="sponsor-tag">{sponsor.tag}</span>
+          <div className="sponsor-mark">{sponsor.initials}</div>
+          <h4 className="sponsor-name">{sponsor.name}</h4>
+          <span className="sponsor-flip-hint">HOVER FOR DETAILS</span>
         </div>
-        <div className="patron-face patron-back">
-          <h4 className="patron-back-name">{sponsor.name}</h4>
-          <p className="patron-desc">{sponsor.description}</p>
-          <button className="patron-location-btn" onClick={handleVisit}>
+        <div className="sponsor-face sponsor-back">
+          <h4 className="sponsor-back-name">{sponsor.name}</h4>
+          <p className="sponsor-desc">{sponsor.description}</p>
+          <button className="sponsor-location-btn" onClick={handleVisit}>
             <FaMapMarkerAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
             LOCATION
           </button>
@@ -48,15 +48,15 @@ function SponsorRow({ tier, label, items, direction }) {
   const loopItems = [...items, ...items];
 
   return (
-    <div className="patron-tier">
-      <div className="patron-tier-label">
-        <span className={`patron-tier-badge patron-tier-${tier}`}>{label}</span>
+    <div className="sponsor-tier">
+      <div className="sponsor-tier-label">
+        <span className={`sponsor-tier-badge sponsor-tier-${tier}`}>{label}</span>
       </div>
-      <div className="patron-marquee">
-        <div className="patron-marquee-fade patron-marquee-fade-left" />
-        <div className="patron-marquee-fade patron-marquee-fade-right" />
+      <div className="sponsor-marquee">
+        <div className="sponsor-marquee-fade sponsor-marquee-fade-left" />
+        <div className="sponsor-marquee-fade sponsor-marquee-fade-right" />
         <div
-          className={`patron-track ${direction === 'right' ? 'patron-track-reverse' : ''}`}
+          className={`sponsor-track ${direction === 'right' ? 'sponsor-track-reverse' : ''}`}
         >
           {loopItems.map((sponsor, i) => (
             <SponsorCard key={`${sponsor.id}-${i}`} sponsor={sponsor} tier={tier} />
@@ -84,7 +84,7 @@ export default function Sponsors() {
     <section
       id="sponsors"
       ref={sectionRef}
-      className={`patrons-section ${visible ? 'patrons-visible' : ''}`}
+      className={`sponsors-section ${visible ? 'sponsors-visible' : ''}`}
     >
       <h2 className="section-heading">SPONSORS</h2>
       <p className="section-sub">
