@@ -193,17 +193,16 @@ export default function EventRulesPage({ eventId, onNavigate }) {
             </div>
           </motion.div>
         )}
+      </div>
 
-        {/* Bottom CTA Actions */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.55 }}
-          className="rules-clean-bottom-actions"
-        >
-          
-          
-        </motion.div>
+      {/* Mobile Sticky Action Bar */}
+      <div className="rules-mobile-sticky-bar">
+        <button className="rules-mobile-back-btn" onClick={handleBackToEvents}>
+          <FaArrowLeft style={{ marginRight: '0.45rem', verticalAlign: '-1px' }} /> Back
+        </button>
+        <button className="rules-mobile-register-btn" onClick={handleRegister}>
+          Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+        </button>
       </div>
     </div>
   );
