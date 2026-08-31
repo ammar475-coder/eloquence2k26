@@ -736,7 +736,44 @@ img {
   background: linear-gradient(180deg, var(--black) 0%, var(--deep-black) 50%, var(--black) 100%);
 }
 
+@keyframes floatGlowIntro {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-30px, 30px) scale(0.9); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+.intro::before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: -5%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(57, 255, 136, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatGlowIntro 10s ease-in-out infinite;
+  z-index: 0;
+}
+
+.intro::after {
+  content: '';
+  position: absolute;
+  bottom: -20%;
+  right: -5%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 168, 59, 0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatGlowIntro 12s ease-in-out infinite reverse;
+  z-index: 0;
+}
+
 .intro-container {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
@@ -5479,20 +5516,14 @@ img {
 }
 
 @media (max-width: 768px) {
-<<<<<<< HEAD
   .event-rules-page {
     padding-top: 5.5rem;
     padding-bottom: 6rem;
   }
 
-  .event-rules-full-container,
-=======
-  .event-rules-page,
   .registration-page {
     padding-top: 5.5rem;
   }
-
->>>>>>> f80f407981b69e5c88f7e56b381831ddfd8467c3
   .event-rules-container,
   .event-rules-full-container,
   .registration-page-container {

@@ -1,50 +1,51 @@
 import { useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa';
-import cardPptImg from '../assets/card_ppt_presentation.png';
-import cardCodingImg from '../assets/card_coding_debugging.png';
-import cardQuizImg from '../assets/card_tech_quiz.png';
-import cardWebImg from '../assets/card_web_prompt.png';
+
+
 
 function getEventIllustration(id, alias, name) {
   switch (id) {
     case 'tech-01':
       return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardPptImg}
-            alt="PPT Presentation"
-            className="event-card-banner-img"
-          />
+        <div className="event-illustration-wrap">
+          <div className="banner-top-title">PAPER PRESENTATION</div>
+          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
+            <rect x="100" y="30" width="200" height="120" rx="8" fill="#E3F2FD" stroke="#1565C0" strokeWidth="4" />
+            <path d="M120 60h160M120 90h160M120 120h100" stroke="#1976D2" strokeWidth="6" strokeLinecap="round" />
+          </svg>
         </div>
       );
     case 'tech-02':
       return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardCodingImg}
-            alt="Coding & Debugging"
-            className="event-card-banner-img"
-          />
+        <div className="event-illustration-wrap">
+          <div className="banner-top-title">CODING & DEBUGGING</div>
+          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
+            <rect x="80" y="40" width="240" height="110" rx="6" fill="#212121" stroke="#424242" strokeWidth="4" />
+            <text x="100" y="80" fill="#00E676" fontFamily="monospace" fontSize="24" fontWeight="bold">&gt; _</text>
+            <path d="M100 110h120" stroke="#00E676" strokeWidth="4" />
+          </svg>
         </div>
       );
     case 'tech-03':
       return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardQuizImg}
-            alt="Tech Quiz"
-            className="event-card-banner-img"
-          />
+        <div className="event-illustration-wrap">
+          <div className="banner-top-title">TECH QUIZ</div>
+          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
+            <circle cx="200" cy="90" r="50" fill="#FFF8E1" stroke="#FBC02D" strokeWidth="5" />
+            <text x="200" y="105" fill="#F57F17" fontSize="48" fontWeight="bold" textAnchor="middle">?</text>
+          </svg>
         </div>
       );
     case 'tech-04':
       return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardWebImg}
-            alt="Web / Prompt"
-            className="event-card-banner-img"
-          />
+        <div className="event-illustration-wrap">
+          <div className="banner-top-title">WEB / PROMPT DESIGN</div>
+          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
+            <rect x="80" y="30" width="240" height="130" rx="10" fill="#F3E5F5" stroke="#7B1FA2" strokeWidth="4" />
+            <rect x="100" y="50" width="200" height="20" rx="4" fill="#CE93D8" />
+            <rect x="100" y="90" width="80" height="50" rx="4" fill="#BA68C8" />
+            <rect x="200" y="90" width="100" height="50" rx="4" fill="#AB47BC" />
+          </svg>
         </div>
       );
     case 'tech-05':

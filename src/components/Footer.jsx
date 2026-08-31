@@ -115,7 +115,7 @@ export default function Footer({ onNavigate }) {
               <a
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNav('home', 'why');
+                  handleNav('home', 'intro');
                 }}
               >
                 About Fest
