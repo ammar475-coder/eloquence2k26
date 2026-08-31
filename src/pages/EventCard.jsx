@@ -1,148 +1,139 @@
 import { useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa';
-
-
+import cardPptImg from '../assets/card_ppt_presentation.png';
+import cardCodingImg from '../assets/card_coding_debugging.png';
+import cardQuizImg from '../assets/card_tech_quiz.png';
+import cardWebImg from '../assets/card_web_prompt.png';
+import cardPosterImg from '../assets/card_poster_design.png';
+import cardUiUxImg from '../assets/card_ui_ux.png';
+import cardSnapImg from '../assets/card_snap_reel.png';
+import cardLinkUpImg from '../assets/card_link_up.png';
+import cardHuntZoneImg from '../assets/card_hunt_zone.png';
+import cardHennaImg from '../assets/card_henna_heist.png';
+import cardBattleImg from '../assets/card_battle_of_champions.png';
+import cardChessImg from '../assets/card_chess.png';
 
 function getEventIllustration(id, alias, name) {
   switch (id) {
     case 'tech-01':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">PAPER PRESENTATION</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="100" y="30" width="200" height="120" rx="8" fill="#E3F2FD" stroke="#1565C0" strokeWidth="4" />
-            <path d="M120 60h160M120 90h160M120 120h100" stroke="#1976D2" strokeWidth="6" strokeLinecap="round" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardPptImg}
+            alt="PPT Presentation"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'tech-02':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">CODING & DEBUGGING</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="80" y="40" width="240" height="110" rx="6" fill="#212121" stroke="#424242" strokeWidth="4" />
-            <text x="100" y="80" fill="#00E676" fontFamily="monospace" fontSize="24" fontWeight="bold">&gt; _</text>
-            <path d="M100 110h120" stroke="#00E676" strokeWidth="4" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardCodingImg}
+            alt="Coding & Debugging"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'tech-03':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">TECH QUIZ</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <circle cx="200" cy="90" r="50" fill="#FFF8E1" stroke="#FBC02D" strokeWidth="5" />
-            <text x="200" y="105" fill="#F57F17" fontSize="48" fontWeight="bold" textAnchor="middle">?</text>
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardQuizImg}
+            alt="Tech Quiz"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'tech-04':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">WEB / PROMPT DESIGN</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="80" y="30" width="240" height="130" rx="10" fill="#F3E5F5" stroke="#7B1FA2" strokeWidth="4" />
-            <rect x="100" y="50" width="200" height="20" rx="4" fill="#CE93D8" />
-            <rect x="100" y="90" width="80" height="50" rx="4" fill="#BA68C8" />
-            <rect x="200" y="90" width="100" height="50" rx="4" fill="#AB47BC" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardWebImg}
+            alt="Web / Prompt"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'tech-05':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">CHART CANVAS POSTER DESIGN</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="110" y="20" width="180" height="135" rx="6" fill="#E8F5E9" stroke="#2E7D32" strokeWidth="3" />
-            <circle cx="160" cy="65" r="20" fill="#81C784" />
-            <polygon points="200,90 240,140 160,140" fill="#4CAF50" />
-            <polygon points="240,100 270,140 210,140" fill="#2E7D32" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardPosterImg}
+            alt="Poster Design"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'tech-06':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">UI / UX PROTOTYPE SHOWCASE</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="80" y="25" width="240" height="130" rx="10" fill="#E8F5E9" stroke="#2E7D32" strokeWidth="3" />
-            <rect x="100" y="45" width="85" height="90" rx="6" fill="#C8E6C9" />
-            <rect x="200" y="45" width="100" height="40" rx="4" fill="#CE93D8" />
-            <rect x="200" y="95" width="100" height="40" rx="4" fill="#BA68C8" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardUiUxImg}
+            alt="UI / UX Prototype Showcase"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'nontech-01':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">SNAP & REEL CINEMATIC SHOTS</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="120" y="40" width="160" height="95" rx="12" fill="#2E7D32" />
-            <circle cx="200" cy="87" r="30" fill="#1B5E20" stroke="#E8F5E9" strokeWidth="4" />
-            <circle cx="200" cy="87" r="14" fill="#00E676" />
-            <rect x="235" y="52" width="20" height="12" rx="3" fill="#81C784" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardSnapImg}
+            alt="Snap & Reel"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'nontech-02':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">LINK UP PUZZLE SHOWDOWN</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <circle cx="140" cy="90" r="32" stroke="#2E7D32" strokeWidth="5" fill="#FFE0B2" />
-            <circle cx="260" cy="90" r="32" stroke="#2E7D32" strokeWidth="5" fill="#FFE0B2" />
-            <path d="M172 90h56" stroke="#F57C00" strokeWidth="6" strokeDasharray="4 4" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardLinkUpImg}
+            alt="Link Up (Connection)"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'nontech-03':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">HUNT ZONE TREASURE QUEST</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="90" y="35" width="220" height="120" rx="8" fill="#FFF3E0" stroke="#8D6E63" strokeWidth="3" />
-            <path d="M120 65 Q 200 120 280 75" stroke="#D84315" strokeWidth="4" strokeDasharray="6 6" fill="none" />
-            <text x="280" y="80" fill="#D32F2F" fontSize="26" fontWeight="bold">✕</text>
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardHuntZoneImg}
+            alt="Hunt Zone (Treasure Hunt)"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'nontech-04':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">HENNA HEIST MEHANDI ART</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <circle cx="200" cy="90" r="45" fill="#FBE9E7" stroke="#D84315" strokeWidth="3" />
-            <circle cx="200" cy="90" r="26" fill="#FFCCBC" />
-            <path d="M200 52v76M162 90h76M173 63l54 54M173 117l54-54" stroke="#BF360C" strokeWidth="2" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardHennaImg}
+            alt="Henna Heist (Mehandi)"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'nontech-05':
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">BATTLE OF CHAMPIONS ESPORTS</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="90" y="45" width="220" height="95" rx="18" fill="#1A237E" stroke="#3D5AFE" strokeWidth="4" />
-            <circle cx="150" cy="92" r="14" fill="#FF1744" />
-            <circle cx="250" cy="84" r="8" fill="#00E676" />
-            <circle cx="270" cy="102" r="8" fill="#FFEA00" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardBattleImg}
+            alt="Battle of Champions"
+            className="event-card-banner-img"
+          />
         </div>
       );
     case 'nontech-06':
     default:
       return (
-        <div className="event-illustration-wrap">
-          <div className="banner-top-title">64 SQUARES GRANDMASTER CHESS</div>
-          <svg viewBox="0 0 400 200" width="100%" height="150" fill="none">
-            <rect x="110" y="25" width="180" height="130" fill="#3E2723" stroke="#D7CCC8" strokeWidth="4" />
-            <rect x="110" y="25" width="45" height="32" fill="#D7CCC8" />
-            <rect x="200" y="25" width="45" height="32" fill="#D7CCC8" />
-            <rect x="155" y="57" width="45" height="32" fill="#D7CCC8" />
-            <rect x="245" y="57" width="45" height="32" fill="#D7CCC8" />
-            <rect x="110" y="89" width="45" height="32" fill="#D7CCC8" />
-            <rect x="200" y="89" width="45" height="32" fill="#D7CCC8" />
-          </svg>
+        <div className="event-banner-img-container">
+          <img
+            src={cardChessImg}
+            alt="64 Squares Grandmaster Chess"
+            className="event-card-banner-img"
+          />
         </div>
       );
   }
