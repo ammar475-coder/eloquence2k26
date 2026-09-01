@@ -283,6 +283,7 @@ exports.updateUser = (req, res) => {
   saveUsersData(users);
   res.json({ success: true, message: 'User updated successfully', data: { id: users[userIndex].id, username: users[userIndex].username, role: users[userIndex].role } });
 };
+};
 
 exports.deleteUser = (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
