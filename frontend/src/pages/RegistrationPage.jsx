@@ -394,6 +394,39 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
     setIsSubmitting(true);
     setServerError(null);
 
+<<<<<<< HEAD
+    fetch('/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentEvent,
+        fields,
+        totalFee: total
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          toast.success('Registration successful!');
+          setTicketData(data.ticketData);
+          setIsSuccess(true);
+          if (formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          toast.error('Registration failed: ' + (data.errorDetails || data.message));
+        }
+      })
+      .catch(err => {
+        console.error('API Error:', err);
+        toast.error('Something went wrong connecting to the server. Please try again.');
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
+=======
     const payload = {
       fullName: fields.fullName,
       email: fields.email,
@@ -429,6 +462,7 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
     } finally {
       setIsSubmitting(false);
     }
+>>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
   };
 
   const handleCopyId = () => {

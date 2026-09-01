@@ -31,14 +31,15 @@ import {
   FaMapMarkerAlt,
   FaBolt,
   FaGamepad,
-  FaSun,
-  FaMoon
+  FaCircle,
+  FaListUl
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 
 export default function AdminDashboard({ token, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
