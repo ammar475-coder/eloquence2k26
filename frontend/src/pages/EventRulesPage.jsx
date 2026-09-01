@@ -13,7 +13,7 @@ import {
 import { motion } from 'framer-motion';
 import events from '../data/events.js';
 
-export default function EventRulesPage({ eventId, onNavigate }) {
+export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
   const event = events.find((e) => e.id === eventId) || events[0];
 
   useEffect(() => {
@@ -47,7 +47,11 @@ export default function EventRulesPage({ eventId, onNavigate }) {
 
   const handleBackToEvents = () => {
     if (onNavigate) {
-      onNavigate('events');
+      if (from === 'register') {
+        onNavigate('register', null, { categoryFilter });
+      } else {
+        onNavigate('events');
+      }
     }
   };
 
