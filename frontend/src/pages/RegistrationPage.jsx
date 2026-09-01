@@ -32,7 +32,7 @@ import { submitRegistration } from '../services/api.js';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'];
 
-export default function RegistrationPage({ eventId, initialCategoryFilter = 'all', onNavigate }) {
+export default function RegistrationPage({ eventId, initialGame, initialCategoryFilter = 'all', onNavigate }) {
   // Determine initially selected event
   const initialEvent = eventId ? events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) : null;
   const [selectedEvent, setSelectedEvent] = useState(initialEvent);
@@ -69,6 +69,25 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
   }, [eventId]);
 
   const formRef = useRef(null);
+  const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
+
+  const getValidGame = (g) => {
+    if (!g) return 'FREE FIRE';
+    const upper = String(g).toUpperCase();
+    if (upper.includes('BGMI')) return 'BGMI';
+    return 'FREE FIRE';
+  };
+
+  const [selectedGame, setSelectedGame] = useState(() => {
+    if (initialGame) return getValidGame(initialGame);
+    const hash = window.location.hash || '';
+    const qIndex = hash.indexOf('?');
+    if (qIndex !== -1) {
+      const q = new URLSearchParams(hash.substring(qIndex));
+      if (q.get('game')) return getValidGame(q.get('game'));
+    }
+    return 'FREE FIRE';
+  });
 
   const initialFields = {
     fullName: '',
@@ -104,7 +123,10 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
       setSelectedEvent(null);
       setStep('select');
     }
-  }, [eventId]);
+    if (initialGame) {
+      setSelectedGame(getValidGame(initialGame));
+    }
+  }, [eventId, initialGame]);
 
   // Helper to pre-populate team members based on event requirements
   const initTeamMembersForEvent = (event) => {
@@ -351,8 +373,9 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
       department: fields.department,
       year: fields.year,
       eventId: selectedEvent.id,
-      eventName: selectedEvent.name,
+      eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
       eventCategory: selectedEvent.category,
+      game: isEsports ? selectedGame : null,
       isTeam: selectedEvent.isTeam,
       teamName: fields.teamName || null,
       teamMembers: fields.teamMembers || [],
@@ -638,7 +661,10 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
                     <FaExchangeAlt style={{ marginRight: '0.35rem' }} /> Change Event
                   </button>
                 </div>
-                <h2 className="hud-event-name">{selectedEvent.name}</h2>
+                <h2 className="hud-event-name">
+                  {selectedEvent.name}
+                  {isEsports && <span className="banner-game-badge"> — {selectedGame}</span>}
+                </h2>
                 <div className="hud-meta-grid">
                   <span><strong>Format:</strong> {selectedEvent.teamSize}</span>
                   <span><strong>Venue:</strong> {selectedEvent.venue || 'CSE Department Labs'}</span>
@@ -656,6 +682,44 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
                     </div>
                     <span className="panel-req-hint">* Required Fields</span>
                   </div>
+
+                  {isEsports && (
+                    <div className="esports-game-select-section" id="reg-field-gameArena">
+                      <label className="form-label">
+                        SELECT GAME ARENA <span className="required-star">*</span>
+                      </label>
+                      <div className="esports-game-toggle-grid">
+                        <button
+                          type="button"
+                          className={`esports-toggle-card ${selectedGame === 'FREE FIRE' ? 'active' : ''}`}
+                          onClick={() => setSelectedGame('FREE FIRE')}
+                        >
+                          <div className="game-toggle-radio-circle">
+                            {selectedGame === 'FREE FIRE' && <span className="game-toggle-radio-dot" />}
+                          </div>
+                          <div className="game-toggle-info">
+                            <span className="game-toggle-title">FREE FIRE</span>
+                            <span className="game-toggle-meta">4-Player Squad • Battle Royale</span>
+                          </div>
+                          <span className="game-toggle-badge">₹200 / Squad</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`esports-toggle-card ${selectedGame === 'BGMI' ? 'active' : ''}`}
+                          onClick={() => setSelectedGame('BGMI')}
+                        >
+                          <div className="game-toggle-radio-circle">
+                            {selectedGame === 'BGMI' && <span className="game-toggle-radio-dot" />}
+                          </div>
+                          <div className="game-toggle-info">
+                            <span className="game-toggle-title">BGMI</span>
+                            <span className="game-toggle-meta">4-Player Squad • Battle Royale</span>
+                          </div>
+                          <span className="game-toggle-badge">₹200 / Squad</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="form-grid-2col">
                     {/* Full Name */}
@@ -1057,8 +1121,17 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
                   <div className="review-data-list">
                     <div className="review-row">
                       <span className="r-label">Competition:</span>
-                      <span className="r-val font-accent">{selectedEvent.name}</span>
+                      <span className="r-val font-accent">
+                        {selectedEvent.name}
+                        {isEsports && ` (${selectedGame})`}
+                      </span>
                     </div>
+                    {isEsports && (
+                      <div className="review-row">
+                        <span className="r-label">Game Arena:</span>
+                        <span className="r-val font-accent">🔥 {selectedGame}</span>
+                      </div>
+                    )}
                     <div className="review-row">
                       <span className="r-label">Category:</span>
                       <span className="r-val">{selectedEvent.category.toUpperCase()}</span>
@@ -1268,7 +1341,12 @@ export default function RegistrationPage({ eventId, initialCategoryFilter = 'all
                     <span className="ticket-val">{ticketData.teamName} ({ticketData.participantCount} Total)</span>
                   </div>
                 )}
-
+                {(ticketData.game || isEsports) && (
+                  <div className="ticket-info-item">
+                    <span className="ticket-label">GAME ARENA</span>
+                    <span className="ticket-val game-highlight">🔥 {ticketData.game || selectedGame} SQUAD</span>
+                  </div>
+                )}
                 <div className="ticket-info-item">
                   <span className="ticket-label">REGISTRATION STATUS</span>
                   <span className="ticket-val status-confirmed">

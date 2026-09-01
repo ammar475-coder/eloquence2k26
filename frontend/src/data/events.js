@@ -6,7 +6,7 @@ const events = [
   {
     id: 'tech-01',
     number: '01',
-    name: 'PPT PRESENTATION',
+    name: 'SLIDE CRAFT',
     alias: 'Slide Craft',
     subtitle: 'PowerPoint & Idea Pitch Deck',
     category: 'technical',
@@ -30,7 +30,7 @@ const events = [
   {
     id: 'tech-02',
     number: '02',
-    name: 'CODING & DEBUGGING',
+    name: 'CRACK THE CODE',
     alias: 'Crack the Code',
     subtitle: 'Code Craft & Bug Hunter',
     category: 'technical',
@@ -54,7 +54,7 @@ const events = [
   {
     id: 'tech-03',
     number: '03',
-    name: 'TECH QUIZ (ONLINE)',
+    name: 'TECH BATTLE',
     alias: 'Tech Battle',
     subtitle: 'Brain Bytes & Rapid Trivia',
     category: 'technical',
@@ -102,7 +102,7 @@ const events = [
   {
     id: 'tech-05',
     number: '05',
-    name: 'POSTER DESIGN (CHART)',
+    name: 'CHART CANVAS',
     alias: 'Chart Canvas',
     subtitle: 'Manual Chart & Visual Design',
     category: 'technical',
@@ -126,7 +126,7 @@ const events = [
   {
     id: 'tech-06',
     number: '06',
-    name: 'POSTER DESIGN – UI/UX',
+    name: 'UI/UX',
     alias: 'UI/UX',
     subtitle: 'Digital Prototype & Experience Design',
     category: 'technical',

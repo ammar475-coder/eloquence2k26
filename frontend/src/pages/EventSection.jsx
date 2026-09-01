@@ -45,7 +45,7 @@ export default function EventSection({ onRegister, onViewRules }) {
 
       {showTech && (
         <>
-          <div className="category-label"> TECHNICAL EVENTS</div>
+          <div className="category-label">TECHNICAL EVENTS</div>
           <div className="events-grid">
             {techEvents.map((event) => (
               <EventCard
@@ -61,7 +61,7 @@ export default function EventSection({ onRegister, onViewRules }) {
 
       {showNonTech && (
         <>
-          <div className="category-label"> NON-TECHNICAL EVENTS</div>
+          <div className="category-label">NON-TECHNICAL EVENTS</div>
           <div className="events-grid">
             {nonTechEvents.map((event) => (
               <EventCard
