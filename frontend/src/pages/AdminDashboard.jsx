@@ -38,7 +38,7 @@ import defaultEvents from '../data/events.js';
 
 export default function AdminDashboard({ token, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -787,13 +787,13 @@ export default function AdminDashboard({ token, onLogout }) {
 
   // Dynamic Theme-Aware Styles
   const S = {
-    container: { display: 'flex', minHeight: '100vh', background: isDark ? '#0b0f19' : '#f8fafc', color: isDark ? '#e2e8f0' : '#0f172a', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', transition: 'background 0.2s ease, color 0.2s ease' },
+    container: { display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: isDark ? '#0b0f19' : '#f8fafc', color: isDark ? '#e2e8f0' : '#0f172a', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', transition: 'background 0.2s ease, color 0.2s ease' },
     loadingContainer: { display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: isDark ? '#0b0f19' : '#f8fafc' },
     spinner: { width: '40px', height: '40px', border: isDark ? '3px solid #1e293b' : '3px solid #e2e8f0', borderTop: '3px solid #2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
     
-    // Sidebar
-    sidebar: { width: '280px', background: isDark ? '#111827' : '#ffffff', borderRight: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', flexShrink: 0, transition: 'background 0.2s ease' },
-    sidebarHeader: { padding: '1.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' },
+    // Sidebar - Fixed & Sticky
+    sidebar: { width: '280px', height: '100vh', position: 'sticky', top: 0, background: isDark ? '#111827' : '#ffffff', borderRight: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 20, transition: 'background 0.2s ease' },
+    sidebarHeader: { padding: '1.75rem 1.5rem', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, borderBottom: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' },
     logoCircle: { width: '42px', height: '42px', borderRadius: '12px', background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     sidebarTitle: { margin: 0, fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a', letterSpacing: '-0.02em' },
     sidebarSubtitle: { fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '600', letterSpacing: '0.04em' },
@@ -816,12 +816,12 @@ export default function AdminDashboard({ token, onLogout }) {
     subnavIcon: { marginRight: '10px', fontSize: '0.95rem' },
     badgeCount: { background: isDark ? '#374151' : '#e2e8f0', color: isDark ? '#e5e7eb' : '#475569', padding: '0.15rem 0.45rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '700' },
 
-    sidebarFooter: { padding: '1.25rem 1rem', borderTop: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' },
+    sidebarFooter: { padding: '1.25rem 1rem', flexShrink: 0, borderTop: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' },
     logoutBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', padding: '0.8rem', background: isDark ? '#451a1a' : '#fef2f2', color: '#ef4444', border: isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s ease' },
     
-    // Main Layout
-    mainContent: { flex: 1, display: 'flex', flexDirection: 'column', overflowX: 'hidden' },
-    topHeader: { background: isDark ? '#111827' : '#ffffff', minHeight: '85px', padding: '1rem 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(8px)' },
+    // Main Layout - Constrained with Independent Content Scroll
+    mainContent: { flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflowX: 'hidden', overflowY: 'hidden' },
+    topHeader: { background: isDark ? '#111827' : '#ffffff', minHeight: '85px', padding: '1rem 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10, flexShrink: 0, backdropFilter: 'blur(8px)' },
     pageTitle: { margin: 0, fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a', letterSpacing: '-0.02em' },
     pageSubtitle: { margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '400' },
     headerRight: { display: 'flex', alignItems: 'center', gap: '1rem' },
