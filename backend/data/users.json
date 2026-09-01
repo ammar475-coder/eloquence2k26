@@ -1,1 +1,8 @@
-[{"id": 1, "username": "admin", "password": "eloquenceadmin", "role": "superadmin"}]
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "eloquenceadmin",
+    "role": "superadmin"
+  }
+]
