@@ -89,6 +89,9 @@ exports.registerEvent = async (req, res) => {
       fee_per_head: currentEvent.feePerHead || 50
     }], { onConflict: 'id' });
 
+    const validTeamMembers = (fields.teamMembers || [])
+      .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
+
     // 1. Insert into registrations table
     const { data: regData, error: regError } = await supabase
       .from('registrations')
@@ -102,6 +105,7 @@ exports.registerEvent = async (req, res) => {
         college: fields.college,
         department: fields.department,
         year: fields.year,
+        members_count: 1 + validTeamMembers.length,
         total_fee: totalFee,
         payment_status: 'pending'
       }])
@@ -110,20 +114,22 @@ exports.registerEvent = async (req, res) => {
     if (regError) throw regError;
     const registrationId = regData[0].id;
 
-    // 2. Insert team members if any
-    if (fields.teamMembers && fields.teamMembers.length > 0) {
-      const membersToInsert = fields.teamMembers.map(member => ({
+    // 2. Insert team members into registration_members table if any
+    if (validTeamMembers.length > 0) {
+      const membersToInsert = validTeamMembers.map((member, idx) => ({
         registration_id: registrationId,
-        member_name: member.name,
-        member_email: member.email || null,
-        member_phone: member.phone || null
+        member_number: idx + 2,
+        member_name: (typeof member === 'string' ? member : (member.name || '')).trim()
       }));
 
       const { error: membersError } = await supabase
         .from('registration_members')
         .insert(membersToInsert);
 
-      if (membersError) throw membersError;
+      if (membersError) {
+        console.error('Registration members insert error:', membersError);
+        throw membersError;
+      }
     }
 
     // Prepare response data for the ticket PDF
@@ -132,14 +138,14 @@ exports.registerEvent = async (req, res) => {
       eventName: currentEvent.name,
       category: currentEvent.category,
       leadName: fields.fullName,
-      college: fields.college,       // Not stored in DB yet based on current schema, but needed for PDF
-      department: fields.department, // Not stored in DB yet based on current schema
+      college: fields.college,
+      department: fields.department,
       email: fields.email,
       phone: fields.phone,
-      year: fields.year,             // Not stored in DB yet based on current schema
+      year: fields.year,
       teamName: fields.teamName || null,
-      membersCount: 1 + (fields.teamMembers ? fields.teamMembers.length : 0),
-      teamMembersList: fields.teamMembers || [],
+      membersCount: 1 + validTeamMembers.length,
+      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : m.name),
       totalFee,
       venue: currentEvent.venue,
       timing: currentEvent.timing,
@@ -207,20 +213,44 @@ exports.getPublicEvents = (req, res) => {
   }
 };
 
-exports.getRegistrations = (req, res) => {
+exports.getRegistrations = async (req, res) => {
   try {
-    const registrations = readRegistrations();
     const { eventId, category, status } = req.query;
 
+    // First try querying Supabase with joined registration_members
+    try {
+      let query = supabase
+        .from('registrations')
+        .select('*, registration_members(*)')
+        .order('created_at', { ascending: false });
+
+      if (eventId) {
+        query = query.eq('event_id', eventId);
+      }
+
+      const { data: dbData, error: dbError } = await query;
+      if (!dbError && Array.isArray(dbData) && dbData.length > 0) {
+        return res.json({
+          success: true,
+          count: dbData.length,
+          registrations: dbData
+        });
+      }
+    } catch (dbErr) {
+      console.warn('Supabase getRegistrations fallback:', dbErr.message);
+    }
+
+    // Fallback to local registrations.json
+    const registrations = readRegistrations();
     let filtered = registrations;
     if (eventId) {
       filtered = filtered.filter((r) => r.eventId === eventId);
     }
     if (category) {
-      filtered = filtered.filter((r) => r.eventCategory.toLowerCase() === category.toLowerCase());
+      filtered = filtered.filter((r) => r.eventCategory && r.eventCategory.toLowerCase() === category.toLowerCase());
     }
     if (status) {
-      filtered = filtered.filter((r) => r.registrationStatus.toLowerCase() === status.toLowerCase());
+      filtered = filtered.filter((r) => r.registrationStatus && r.registrationStatus.toLowerCase() === status.toLowerCase());
     }
 
     res.json({
@@ -234,11 +264,29 @@ exports.getRegistrations = (req, res) => {
   }
 };
 
-exports.getRegistrationById = (req, res) => {
+exports.getRegistrationById = async (req, res) => {
   try {
+    const id = req.params.id;
+
+    // Try Supabase first
+    try {
+      const { data, error } = await supabase
+        .from('registrations')
+        .select('*, registration_members(*)')
+        .or(`ticket_code.eq.${id},id.eq.${id}`);
+
+      if (!error && data && data.length > 0) {
+        return res.json(data[0]);
+      }
+    } catch (e) {
+      console.warn('Supabase getRegistrationById fallback:', e.message);
+    }
+
+    // Fallback to local
     const registrations = readRegistrations();
     const record = registrations.find(
-      (r) => r.registrationId.toUpperCase() === req.params.id.toUpperCase()
+      (r) => (r.registrationId && r.registrationId.toUpperCase() === id.toUpperCase()) ||
+             (r.ticketCode && r.ticketCode.toUpperCase() === id.toUpperCase())
     );
     if (!record) {
       return res.status(404).json({ success: false, error: 'Registration record not found' });
