@@ -2,10 +2,13 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env'), quiet: true });
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 let morgan;
 try {
   morgan = require('morgan');
 } catch (e) {}
+const morgan = require('morgan');
+const supabase = require('./config/supabase');
 
 const app = express();
 const PORT = process.env.PORT || 5000;

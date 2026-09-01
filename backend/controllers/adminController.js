@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const supabase = require('../config/supabase');
+const fs = require('fs');
+const path = require('path');
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
@@ -116,6 +117,11 @@ const getRegistrationsData = () => {
 };
 
 // ==================== AUTH & TOKEN ====================
+exports.login = (req, res) => {
+  const { username, password } = req.body;
+
+  const users = getUsersData();
+  const user = users.find(u => u.username === username && u.password === password);
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
@@ -137,6 +143,9 @@ exports.login = async (req, res) => {
       return res.json({ success: true, token, user: { username: user.username, role: user.role } });
     }
 
+  if (user) {
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.json({ success: true, token, user: { username: user.username, role: user.role } });
     // Fallback to Supabase if configured
     if (supabase) {
       const { data: supaUsers, error } = await supabase
@@ -161,6 +170,8 @@ exports.login = async (req, res) => {
     console.error('Login error:', err);
     return res.status(500).json({ success: false, message: 'Server error during login' });
   }
+
+  return res.status(401).json({ success: false, message: 'Invalid credentials' });
 };
 
 exports.verifyToken = (req, res, next) => {
@@ -169,6 +180,8 @@ exports.verifyToken = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Attach user info to request
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence');
     req.user = decoded; 
     next();
@@ -178,6 +191,7 @@ exports.verifyToken = (req, res, next) => {
 };
 
 // ==================== DASHBOARD STATS ====================
+exports.getDashboardData = (req, res) => {
 exports.getDashboardData = async (req, res) => {
   try {
     const sponsors = getSponsorsData();
@@ -283,6 +297,8 @@ exports.createUser = (req, res) => {
   }
 
   const users = getUsersData();
+  if (users.find(u => u.username === username)) {
+    return res.status(400).json({ success: false, message: 'Username already exists' });
   if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
     return res.status(400).json({ success: false, message: 'Username already taken' });
   }
@@ -307,6 +323,7 @@ exports.updateUser = (req, res) => {
   }
 
   const users = getUsersData();
+  const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
   const userIndex = users.findIndex(u => u.id === parseInt(id, 10) || u.id === id);
 
   if (userIndex === -1) {
@@ -338,6 +355,7 @@ exports.deleteUser = (req, res) => {
 
   const { id } = req.params;
   const users = getUsersData();
+  const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
   const userIndex = users.findIndex(u => u.id === parseInt(id, 10) || u.id === id);
 
   if (userIndex === -1) {
@@ -347,11 +365,17 @@ exports.deleteUser = (req, res) => {
   if (users[userIndex].username === 'admin') {
     return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
   }
+  
+
+  if (users[userIndex].username === 'admin') {
+    return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
+  }
 
   if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
     return res.status(403).json({ success: false, message: 'Cannot delete a superadmin' });
   }
 
+  if (users[userIndex].id === req.user.id) {
   if (users[userIndex].id.toString() === req.user.id.toString()) {
     return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
   }
