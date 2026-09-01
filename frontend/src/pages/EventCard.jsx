@@ -20,7 +20,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardPptImg}
-            alt="PPT Presentation"
+            alt="Slide Craft"
             className="event-card-banner-img"
           />
         </div>
@@ -30,7 +30,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardCodingImg}
-            alt="Coding & Debugging"
+            alt="Crack the Code"
             className="event-card-banner-img"
           />
         </div>
@@ -40,7 +40,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardQuizImg}
-            alt="Tech Quiz"
+            alt="Tech Battle"
             className="event-card-banner-img"
           />
         </div>
@@ -60,7 +60,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardPosterImg}
-            alt="Poster Design"
+            alt="Chart Canvas"
             className="event-card-banner-img"
           />
         </div>
@@ -70,7 +70,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardUiUxImg}
-            alt="UI / UX Prototype Showcase"
+            alt="UI/UX"
             className="event-card-banner-img"
           />
         </div>
