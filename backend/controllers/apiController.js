@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 const supabase = require('../config/supabase');
-=======
 const fs = require('fs');
 const path = require('path');
 
@@ -61,7 +59,6 @@ function generateRegistrationId(existingCount) {
   const nextNum = existingCount + 101;
   return `ELQ26-${year}-${String(nextNum).padStart(4, '0')}`;
 }
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
 
 exports.getStatus = (req, res) => {
   res.json({ success: true, message: 'API is working properly' });
