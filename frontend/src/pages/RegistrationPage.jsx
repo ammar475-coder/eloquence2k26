@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import {
   FaBolt,
   FaGamepad,
@@ -165,33 +166,39 @@ export default function RegistrationPage({ eventId, onNavigate }) {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const { total } = calculateTotalFee();
-      const code = `ELQ26-${currentEvent.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(10000 + Math.random() * 90000)}`;
-      setTicketData({
-        ticketCode: code,
-        eventName: currentEvent.name,
-        category: currentEvent.category,
-        leadName: fields.fullName,
-        college: fields.college,
-        department: fields.department,
-        email: fields.email,
-        phone: fields.phone,
-        year: fields.year,
-        teamName: fields.teamName || null,
-        membersCount: 1 + fields.teamMembers.length,
-        teamMembersList: fields.teamMembers,
-        totalFee: total,
-        venue: currentEvent.venue,
-        timing: currentEvent.timing,
-        timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    const { total } = calculateTotalFee();
+
+    fetch('/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentEvent,
+        fields,
+        totalFee: total
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          toast.success('Registration successful!');
+          setTicketData(data.ticketData);
+          setIsSuccess(true);
+          if (formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          toast.error('Registration failed: ' + data.message);
+        }
+      })
+      .catch(err => {
+        console.error('API Error:', err);
+        toast.error('Something went wrong connecting to the server. Please try again.');
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
-      setIsSubmitting(false);
-      setIsSuccess(true);
-      if (formRef.current) {
-        formRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 500);
   };
 
   const handleCopyCode = () => {
