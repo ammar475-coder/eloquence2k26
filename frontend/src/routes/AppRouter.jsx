@@ -9,28 +9,45 @@ import events from '../data/events.js';
 
 function parseHash(hash) {
   if (!hash || hash === '#' || hash === '#/') {
-    return { page: 'home', eventId: null, sectionId: null };
+    return { page: 'home', eventId: null, game: null, sectionId: null };
   }
   if (hash.startsWith('#/register/') || hash === '#/register' || hash.startsWith('#register')) {
-    const parts = hash.split('/');
-    const id = parts[2];
+    const raw = hash.replace(/^#\/?/, '');
+    const [pathPart, queryPart] = raw.split('?');
+    const parts = pathPart.split('/');
+    const id = parts[1];
+    let game = null;
+    if (queryPart) {
+      const q = new URLSearchParams(queryPart);
+      game = q.get('game');
+    }
+    if (!game && parts[2]) {
+      const g = parts[2].toLowerCase();
+      if (g.includes('bgmi')) game = 'BGMI';
+      else if (g.includes('free') || g.includes('fire')) game = 'FREE FIRE';
+    }
     const found = events.find((e) => e.id === id || e.id.toLowerCase() === id?.toLowerCase());
-    return { page: 'register', eventId: found ? found.id : events[0].id, sectionId: null };
+    return {
+      page: 'register',
+      eventId: found ? found.id : events[0].id,
+      game: game || null,
+      sectionId: null
+    };
   }
   if (hash.startsWith('#/events/') || hash.startsWith('#/event/')) {
     const parts = hash.split('/');
     const id = parts[2];
     const found = events.find((e) => e.id === id || e.id.toLowerCase() === id?.toLowerCase());
-    return { page: 'event-rules', eventId: found ? found.id : events[0].id, sectionId: null };
+    return { page: 'event-rules', eventId: found ? found.id : events[0].id, game: null, sectionId: null };
   }
   if (hash === '#/events' || hash === '#events') {
-    return { page: 'events', eventId: null, sectionId: null };
+    return { page: 'events', eventId: null, game: null, sectionId: null };
   }
   if (hash.startsWith('#')) {
     const section = hash.replace(/^#\/?/, '');
-    return { page: 'home', eventId: null, sectionId: section };
+    return { page: 'home', eventId: null, game: null, sectionId: section };
   }
-  return { page: 'home', eventId: null, sectionId: null };
+  return { page: 'home', eventId: null, game: null, sectionId: null };
 }
 
 export default function AppRouter() {
@@ -49,21 +66,30 @@ export default function AppRouter() {
   const navigateTo = (page, extra = null) => {
     if (page === 'event-rules') {
       const eventId = extra || 'tech-01';
-      setRoute({ page: 'event-rules', eventId, sectionId: null });
+      setRoute({ page: 'event-rules', eventId, game: null, sectionId: null });
       window.location.hash = `/events/${eventId}`;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (page === 'register') {
-      const eventId = extra || 'tech-01';
-      setRoute({ page: 'register', eventId, sectionId: null });
-      window.location.hash = `/register/${eventId}`;
+      let eventId = 'tech-01';
+      let game = null;
+      if (typeof extra === 'object' && extra !== null) {
+        eventId = extra.eventId || 'tech-01';
+        game = extra.game || null;
+      } else if (typeof extra === 'string') {
+        eventId = extra;
+      }
+      setRoute({ page: 'register', eventId, game, sectionId: null });
+      window.location.hash = game
+        ? `/register/${eventId}?game=${encodeURIComponent(game)}`
+        : `/register/${eventId}`;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (page === 'events') {
-      setRoute({ page: 'events', eventId: null, sectionId: null });
+      setRoute({ page: 'events', eventId: null, game: null, sectionId: null });
       window.location.hash = '/events';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       const sectionId = typeof extra === 'string' ? extra : null;
-      setRoute({ page: 'home', eventId: null, sectionId });
+      setRoute({ page: 'home', eventId: null, game: null, sectionId });
       window.location.hash = sectionId ? `#${sectionId}` : '/';
       if (sectionId) {
         setTimeout(() => {
@@ -82,7 +108,7 @@ export default function AppRouter() {
         {route.page === 'event-rules' ? (
           <EventRulesPage eventId={route.eventId} onNavigate={navigateTo} />
         ) : route.page === 'register' ? (
-          <RegistrationPage eventId={route.eventId} onNavigate={navigateTo} />
+          <RegistrationPage eventId={route.eventId} initialGame={route.game} onNavigate={navigateTo} />
         ) : route.page === 'events' ? (
           <EventsPage onNavigate={navigateTo} />
         ) : (

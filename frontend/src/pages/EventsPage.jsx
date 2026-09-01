@@ -257,7 +257,7 @@ export default function EventsPage({ onNavigate }) {
             {(filter === 'all' || filter === 'technical') && techEvents.length > 0 && (
               <div className="event-group-block">
                 <div className="category-header-row">
-                  <div className="category-label">// TECHNICAL EVENTS ({techEvents.length})</div>
+                  <div className="category-label">TECHNICAL EVENTS ({techEvents.length})</div>
                   <div className="category-line" />
                 </div>
                 <div className="events-grid">
@@ -277,7 +277,7 @@ export default function EventsPage({ onNavigate }) {
             {(filter === 'all' || filter === 'non-technical') && nonTechEvents.length > 0 && (
               <div className="event-group-block">
                 <div className="category-header-row">
-                  <div className="category-label">// NON-TECHNICAL EVENTS ({nonTechEvents.length})</div>
+                  <div className="category-label">NON-TECHNICAL EVENTS ({nonTechEvents.length})</div>
                   <div className="category-line" />
                 </div>
                 <div className="events-grid">

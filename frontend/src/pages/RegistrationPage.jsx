@@ -18,9 +18,28 @@ import events from '../data/events.js';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Postgraduate'];
 
-export default function RegistrationPage({ eventId, onNavigate }) {
+export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const currentEvent = events.find((e) => e.id === eventId) || events[0];
   const formRef = useRef(null);
+  const isEsports = currentEvent.id === 'nontech-05';
+
+  const getValidGame = (g) => {
+    if (!g) return 'FREE FIRE';
+    const upper = String(g).toUpperCase();
+    if (upper.includes('BGMI')) return 'BGMI';
+    return 'FREE FIRE';
+  };
+
+  const [selectedGame, setSelectedGame] = useState(() => {
+    if (initialGame) return getValidGame(initialGame);
+    const hash = window.location.hash || '';
+    const qIndex = hash.indexOf('?');
+    if (qIndex !== -1) {
+      const q = new URLSearchParams(hash.substring(qIndex));
+      if (q.get('game')) return getValidGame(q.get('game'));
+    }
+    return 'FREE FIRE';
+  });
 
   const initialFields = {
     fullName: '',
@@ -50,7 +69,10 @@ export default function RegistrationPage({ eventId, onNavigate }) {
     setErrors({});
     setIsSuccess(false);
     setTicketData(null);
-  }, [eventId, currentEvent.id]);
+    if (initialGame) {
+      setSelectedGame(getValidGame(initialGame));
+    }
+  }, [eventId, currentEvent.id, initialGame]);
 
   const calculateTotalFee = () => {
     if (currentEvent.feeType === 'per_squad') {
@@ -170,8 +192,9 @@ export default function RegistrationPage({ eventId, onNavigate }) {
       const code = `ELQ26-${currentEvent.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(10000 + Math.random() * 90000)}`;
       setTicketData({
         ticketCode: code,
-        eventName: currentEvent.name,
+        eventName: isEsports ? `${currentEvent.name} — ${selectedGame}` : currentEvent.name,
         category: currentEvent.category,
+        game: isEsports ? selectedGame : null,
         leadName: fields.fullName,
         college: fields.college,
         department: fields.department,
@@ -254,7 +277,12 @@ export default function RegistrationPage({ eventId, onNavigate }) {
                 </>
               )}
             </span>
-            <h1 className="direct-banner-title">{currentEvent.name}</h1>
+            <h1 className="direct-banner-title">
+              {currentEvent.name}
+              {isEsports && (
+                <span className="banner-game-badge"> — {selectedGame}</span>
+              )}
+            </h1>
             <p className="direct-banner-desc">{currentEvent.description}</p>
           </div>
           <div className="direct-banner-right">
@@ -285,6 +313,44 @@ export default function RegistrationPage({ eventId, onNavigate }) {
                 <span>ENTER PARTICIPANT DETAILS</span>
                 <span className="required-notice">* Required fields</span>
               </div>
+
+              {isEsports && (
+                <div className="esports-game-select-section" id="reg-field-gameArena">
+                  <label className="form-label">
+                    SELECT GAME ARENA <span className="required-star">*</span>
+                  </label>
+                  <div className="esports-game-toggle-grid">
+                    <button
+                      type="button"
+                      className={`esports-toggle-card ${selectedGame === 'FREE FIRE' ? 'active' : ''}`}
+                      onClick={() => setSelectedGame('FREE FIRE')}
+                    >
+                      <div className="game-toggle-radio-circle">
+                        {selectedGame === 'FREE FIRE' && <span className="game-toggle-radio-dot" />}
+                      </div>
+                      <div className="game-toggle-info">
+                        <span className="game-toggle-title">FREE FIRE</span>
+                        <span className="game-toggle-meta">4-Player Squad • Battle Royale</span>
+                      </div>
+                      <span className="game-toggle-badge">₹200 / Squad</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`esports-toggle-card ${selectedGame === 'BGMI' ? 'active' : ''}`}
+                      onClick={() => setSelectedGame('BGMI')}
+                    >
+                      <div className="game-toggle-radio-circle">
+                        {selectedGame === 'BGMI' && <span className="game-toggle-radio-dot" />}
+                      </div>
+                      <div className="game-toggle-info">
+                        <span className="game-toggle-title">BGMI</span>
+                        <span className="game-toggle-meta">4-Player Squad • Battle Royale</span>
+                      </div>
+                      <span className="game-toggle-badge">₹200 / Squad</span>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="form-grid-2col">
                 {/* Full Name */}
@@ -559,6 +625,12 @@ export default function RegistrationPage({ eventId, onNavigate }) {
                   <div className="ticket-info-item">
                     <span className="ticket-label">TEAM / SQUAD</span>
                     <span className="ticket-val">{ticketData.teamName} ({ticketData.membersCount} Members)</span>
+                  </div>
+                )}
+                {ticketData.game && (
+                  <div className="ticket-info-item">
+                    <span className="ticket-label">GAME ARENA</span>
+                    <span className="ticket-val game-highlight">🔥 {ticketData.game} SQUAD</span>
                   </div>
                 )}
                 <div className="ticket-info-item">

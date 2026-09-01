@@ -7,7 +7,7 @@ const coordinatorsData = {
   /* ───── TECHNICAL EVENT COORDINATORS ───── */
   'tech-01': {
     eventId: 'tech-01',
-    eventName: 'PPT PRESENTATION',
+    eventName: 'SLIDE CRAFT',
     alias: 'Slide Craft',
     category: 'technical',
     coordinators: [
@@ -31,7 +31,7 @@ const coordinatorsData = {
 
   'tech-02': {
     eventId: 'tech-02',
-    eventName: 'CODING & DEBUGGING',
+    eventName: 'CRACK THE CODE',
     alias: 'Crack the Code',
     category: 'technical',
     coordinators: [
@@ -54,7 +54,7 @@ const coordinatorsData = {
 
   'tech-03': {
     eventId: 'tech-03',
-    eventName: 'TECH QUIZ (ONLINE)',
+    eventName: 'TECH BATTLE',
     alias: 'Tech Battle',
     category: 'technical',
     coordinators: [
@@ -100,7 +100,7 @@ const coordinatorsData = {
 
   'tech-05': {
     eventId: 'tech-05',
-    eventName: 'POSTER DESIGN (CHART)',
+    eventName: 'CHART CANVAS',
     alias: 'Chart Canvas',
     category: 'technical',
     coordinators: [
@@ -123,7 +123,7 @@ const coordinatorsData = {
 
   'tech-06': {
     eventId: 'tech-06',
-    eventName: 'POSTER DESIGN – UI/UX',
+    eventName: 'UI/UX',
     alias: 'UI/UX',
     category: 'technical',
     coordinators: [

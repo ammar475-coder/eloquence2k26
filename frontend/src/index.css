@@ -4231,6 +4231,236 @@ img {
   justify-content: center;
 }
 
+/* E-Sports Battle of Champions CTA & Action Buttons */
+.esports-cta-wrap {
+  margin-top: 2rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid rgba(57, 255, 136, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.esports-cta-heading {
+  font-family: var(--font-display);
+  font-size: clamp(0.78rem, 0.95vw, 0.88rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: #39FF88;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-shadow: 0 0 12px rgba(57, 255, 136, 0.35);
+}
+
+.esports-cta-heading::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(57, 255, 136, 0.4), transparent);
+}
+
+.esports-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.esports-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-size: clamp(0.82rem, 1vw, 0.92rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.9rem 1.1rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, rgba(0, 168, 59, 0.28) 0%, rgba(6, 28, 14, 0.95) 100%);
+  border: 1.5px solid #39FF88;
+  color: #FFFFFF;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-decoration: none;
+}
+
+.esports-action-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(57, 255, 136, 0.2), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.esports-action-btn:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(0, 168, 59, 0.5) 0%, rgba(8, 38, 18, 0.98) 100%);
+  border-color: #39FF88;
+  box-shadow: 0 0 24px rgba(57, 255, 136, 0.45), 0 6px 20px rgba(0, 0, 0, 0.6);
+  color: #FFFFFF;
+}
+
+.esports-action-btn:hover::before {
+  transform: translateX(100%);
+}
+
+.esports-action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 0 12px rgba(57, 255, 136, 0.3);
+}
+
+.esports-btn-arrow {
+  font-size: 0.85rem;
+  color: #39FF88;
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.esports-action-btn:hover .esports-btn-arrow {
+  transform: translateX(3px);
+  color: #FFFFFF;
+}
+
+@media (max-width: 480px) {
+  .esports-buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .esports-action-btn {
+    padding: 0.85rem 1rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* E-Sports Game Selector on Registration Page */
+.banner-game-badge {
+  color: #39FF88;
+  font-weight: 800;
+  text-shadow: 0 0 12px rgba(57, 255, 136, 0.4);
+}
+
+.esports-game-select-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(57, 255, 136, 0.04);
+  border: 1px solid rgba(57, 255, 136, 0.2);
+  border-radius: 12px;
+}
+
+.esports-game-toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.esports-toggle-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(8, 22, 14, 0.7);
+  border: 1.5px solid rgba(57, 255, 136, 0.22);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.esports-toggle-card:hover {
+  border-color: rgba(57, 255, 136, 0.5);
+  background: rgba(12, 34, 20, 0.8);
+  transform: translateY(-1px);
+}
+
+.esports-toggle-card.active {
+  border-color: #39FF88;
+  background: linear-gradient(135deg, rgba(0, 168, 59, 0.28) 0%, rgba(6, 26, 13, 0.9) 100%);
+  box-shadow: 0 0 20px rgba(57, 255, 136, 0.25), inset 0 0 12px rgba(57, 255, 136, 0.1);
+}
+
+.game-toggle-radio-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(57, 255, 136, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease;
+}
+
+.esports-toggle-card.active .game-toggle-radio-circle {
+  border-color: #39FF88;
+  box-shadow: 0 0 8px rgba(57, 255, 136, 0.5);
+}
+
+.game-toggle-radio-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #39FF88;
+  box-shadow: 0 0 6px rgba(57, 255, 136, 0.8);
+}
+
+.game-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.game-toggle-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: 0.08em;
+}
+
+.esports-toggle-card.active .game-toggle-title {
+  color: #39FF88;
+  text-shadow: 0 0 8px rgba(57, 255, 136, 0.35);
+}
+
+.game-toggle-meta {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.game-toggle-badge {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  background: rgba(57, 255, 136, 0.12);
+  border: 1px solid rgba(57, 255, 136, 0.3);
+  border-radius: 6px;
+  color: #39FF88;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.game-highlight {
+  color: #39FF88;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(57, 255, 136, 0.4);
+}
+
+@media (max-width: 640px) {
+  .esports-game-toggle-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Right Rules Card & Unified Rules List (Single Container) */
 .rules-unified-list {
   margin: 0;
