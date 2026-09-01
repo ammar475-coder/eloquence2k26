@@ -4,8 +4,11 @@ const apiController = require('../controllers/apiController');
 const adminController = require('../controllers/adminController');
 
 // Public Routes
+router.get('/health', apiController.getHealth);
 router.get('/status', apiController.getStatus);
 router.post('/register', apiController.registerEvent);
+router.get('/registrations', apiController.getRegistrations);
+router.get('/registrations/:id', apiController.getRegistrationById);
 
 // Admin Routes
 router.post('/admin/login', adminController.login);

@@ -60,7 +60,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
         <div className="nav-pill-actions">
           <button
             className={`nav-pill-register-btn ${isRegisterActive ? 'active' : ''}`}
-            onClick={() => handleNav('events')}
+            onClick={() => handleNav('register')}
           >
             Register Now
           </button>
@@ -100,7 +100,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
         </a>
         <button
           className="nav-pill-register-btn mobile-reg-btn"
-          onClick={() => handleNav('events')}
+          onClick={() => handleNav('register')}
         >
           Register Now
         </button>

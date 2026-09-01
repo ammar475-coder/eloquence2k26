@@ -1,13 +1,18 @@
 require('dotenv').config({ quiet: true });
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
+let morgan;
+try {
+  morgan = require('morgan');
+} catch (e) {}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(morgan('dev')); // Log requests to the console
+if (morgan) {
+  app.use(morgan('dev'));
+}
 app.use(cors());
 app.use(express.json());
 
@@ -22,5 +27,7 @@ app.get('/', (req, res) => {
 
 // Start Server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`[ELOQUENCE'26 Backend] Server running on http://localhost:${PORT}`);
 });
+
+module.exports = app;

@@ -111,14 +111,14 @@ export default function EventsPage({ onNavigate }) {
 
   const handleViewRules = (eventId) => {
     if (onNavigate) {
-      onNavigate('event-rules', eventId);
+      onNavigate('event-rules', eventId, { from: 'events' });
     }
   };
 
-  // Register button on event cards navigates to event rules page
+  // Register button on event cards navigates to registration page with selected event
   const handleRegister = (eventId) => {
     if (onNavigate) {
-      onNavigate('event-rules', eventId);
+      onNavigate('register', eventId);
     }
   };
 
