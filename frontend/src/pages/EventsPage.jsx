@@ -42,9 +42,22 @@ function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, durati
 }
 
 export default function EventsPage({ onNavigate }) {
+  const [eventsList, setEventsList] = useState(events);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const canvasRef = useRef(null);
+
+  // Fetch live event data from backend API with static fallback
+  useEffect(() => {
+    fetch('/api/events')
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setEventsList(result.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Scroll to top when page opens
   useEffect(() => {
@@ -123,7 +136,7 @@ export default function EventsPage({ onNavigate }) {
   };
 
   // Filter & search events
-  const filteredEvents = events.filter((e) => {
+  const filteredEvents = eventsList.filter((e) => {
     const matchesCategory = filter === 'all' || e.category === filter;
     const matchesSearch =
       searchQuery.trim() === '' ||
@@ -135,6 +148,8 @@ export default function EventsPage({ onNavigate }) {
     return matchesCategory && matchesSearch;
   });
 
+  const totalTechCount = eventsList.filter((e) => e.category === 'technical').length;
+  const totalNonTechCount = eventsList.filter((e) => e.category === 'non-technical').length;
   const techEvents = filteredEvents.filter((e) => e.category === 'technical');
   const nonTechEvents = filteredEvents.filter((e) => e.category === 'non-technical');
 
@@ -197,19 +212,19 @@ export default function EventsPage({ onNavigate }) {
               className={`filter-btn ${filter === 'all' ? 'filter-btn-active' : ''}`}
               onClick={() => setFilter('all')}
             >
-              ALL EVENTS ({events.length})
+              ALL EVENTS ({eventsList.length})
             </button>
             <button
               className={`filter-btn ${filter === 'technical' ? 'filter-btn-active' : ''}`}
               onClick={() => setFilter('technical')}
             >
-              TECHNICAL (6)
+              TECHNICAL ({totalTechCount})
             </button>
             <button
               className={`filter-btn ${filter === 'non-technical' ? 'filter-btn-active' : ''}`}
               onClick={() => setFilter('non-technical')}
             >
-              NON-TECHNICAL (6)
+              NON-TECHNICAL ({totalNonTechCount})
             </button>
           </div>
         </div>
@@ -217,15 +232,15 @@ export default function EventsPage({ onNavigate }) {
         {/* Quick Stats Grid below Search Bar & Filters */}
         <div className="events-stats-grid">
           <div className="stat-card">
-            <AnimatedNumber value={12} padDigits={2} duration={1800} />
+            <AnimatedNumber value={eventsList.length} padDigits={2} duration={1800} />
             <span className="stat-label">TOTAL SHOWDOWNS</span>
           </div>
           <div className="stat-card">
-            <AnimatedNumber value={6} padDigits={2} duration={1600} />
+            <AnimatedNumber value={totalTechCount} padDigits={2} duration={1600} />
             <span className="stat-label">TECHNICAL EVENTS</span>
           </div>
           <div className="stat-card">
-            <AnimatedNumber value={6} padDigits={2} duration={1600} />
+            <AnimatedNumber value={totalNonTechCount} padDigits={2} duration={1600} />
             <span className="stat-label">NON-TECHNICAL</span>
           </div>
         </div>

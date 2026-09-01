@@ -9,6 +9,7 @@ router.get('/status', apiController.getStatus);
 router.post('/register', apiController.registerEvent);
 router.get('/registrations', apiController.getRegistrations);
 router.get('/registrations/:id', apiController.getRegistrationById);
+router.get('/events', apiController.getPublicEvents);
 
 // Admin Routes
 router.post('/admin/login', adminController.login);
@@ -21,5 +22,7 @@ router.get('/admin/roles', adminController.verifyToken, adminController.getRoles
 router.post('/admin/roles', adminController.verifyToken, adminController.createRole);
 router.put('/admin/roles/:id', adminController.verifyToken, adminController.updateRole);
 router.delete('/admin/roles/:id', adminController.verifyToken, adminController.deleteRole);
+router.get('/admin/events', adminController.verifyToken, adminController.getEvents);
+router.put('/admin/events/:id', adminController.verifyToken, adminController.updateEvent);
 
 module.exports = router;

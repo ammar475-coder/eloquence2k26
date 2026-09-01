@@ -15,12 +15,34 @@ import {
   FaShieldAlt,
   FaKey,
   FaLock,
+<<<<<<< HEAD
   FaSun,
   FaMoon
+=======
+  FaCalendarAlt,
+  FaLaptopCode,
+  FaGamepad,
+  FaTrophy,
+  FaBolt,
+  FaMapMarkerAlt,
+  FaClock,
+  FaMoneyBillWave,
+  FaPhoneAlt,
+  FaSearch,
+  FaCheckCircle,
+  FaTimes,
+  FaCircle,
+  FaListUl
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 } from 'react-icons/fa';
+import defaultEvents from '../data/events.js';
 
 export default function AdminDashboard({ token, onLogout }) {
+<<<<<<< HEAD
   const [activeTab, setActiveTab] = useState('dashboard');
+=======
+  const [activeTab, setActiveTab] = useState('events');
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,10 +76,25 @@ export default function AdminDashboard({ token, onLogout }) {
   const [editingRoleId, setEditingRoleId] = useState(null);
   const [roleNameInput, setRoleNameInput] = useState('');
 
+  // Events State
+  const [eventsList, setEventsList] = useState(defaultEvents);
+  const [eventFilter, setEventFilter] = useState('all');
+  const [eventSearch, setEventSearch] = useState('');
+  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+
+  // Event Edit Form Fields
+  const [eventName, setEventName] = useState('');
+  const [eventVenue, setEventVenue] = useState('');
+  const [eventTiming, setEventTiming] = useState('');
+  const [eventFee, setEventFee] = useState('');
+  const [eventTeamSize, setEventTeamSize] = useState('');
+
   useEffect(() => {
     fetchDashboardData();
     fetchUsers();
     fetchRoles();
+    fetchEvents();
   }, [token]);
 
   // Handle ESC key to close modal overlays
@@ -66,11 +103,12 @@ export default function AdminDashboard({ token, onLogout }) {
       if (e.key === 'Escape') {
         if (isUserFormVisible) resetUserForm();
         if (isRoleFormVisible) resetRoleForm();
+        if (isEventEditModalOpen) resetEventEditModal();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isUserFormVisible, isRoleFormVisible]);
+  }, [isUserFormVisible, isRoleFormVisible, isEventEditModalOpen]);
 
   const fetchDashboardData = () => {
     fetch('/api/admin/dashboard', { headers: { 'Authorization': `Bearer ${token}` } })
@@ -104,6 +142,19 @@ export default function AdminDashboard({ token, onLogout }) {
         }
       })
       .catch(console.error);
+  };
+
+  const fetchEvents = () => {
+    fetch('/api/admin/events', { headers: { 'Authorization': `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setEventsList(result.data);
+        }
+      })
+      .catch(() => {
+        // Fallback to defaultEvents if API is unreachable
+      });
   };
 
   const handleAuthError = () => {
@@ -255,6 +306,60 @@ export default function AdminDashboard({ token, onLogout }) {
       .catch(() => toast.error('Server error', { id: loadingToast }));
   };
 
+  // ==================== EVENT MANAGEMENT HANDLERS ====================
+  const resetEventEditModal = () => {
+    setEditingEvent(null);
+    setEventName('');
+    setEventVenue('');
+    setEventTiming('');
+    setEventFee('');
+    setEventTeamSize('');
+    setIsEventEditModalOpen(false);
+  };
+
+  const handleOpenEditEventModal = (eventItem) => {
+    setEditingEvent(eventItem);
+    setEventName(eventItem.name || '');
+    setEventVenue(eventItem.venue || '');
+    setEventTiming(eventItem.timing || '');
+    setEventFee(eventItem.fee || '');
+    setEventTeamSize(eventItem.teamSize || '');
+    setIsEventEditModalOpen(true);
+  };
+
+  const handleSubmitEventEdit = (e) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+    if (!eventName.trim() || !eventVenue.trim() || !eventTiming.trim() || !eventFee.trim()) {
+      return toast.error('Please fill in all required event details');
+    }
+
+    const loadingToast = toast.loading('Saving event changes...');
+
+    fetch(`/api/admin/events/${editingEvent.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        name: eventName.trim(),
+        venue: eventVenue.trim(),
+        timing: eventTiming.trim(),
+        fee: eventFee.trim(),
+        teamSize: eventTeamSize.trim()
+      })
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          toast.success('Event updated! Changes live on main events page.', { id: loadingToast });
+          setEventsList(eventsList.map(item => item.id === editingEvent.id ? result.data : item));
+          resetEventEditModal();
+        } else {
+          toast.error(result.message || 'Failed to update event', { id: loadingToast });
+        }
+      })
+      .catch(() => toast.error('Server connection error', { id: loadingToast }));
+  };
+
   // Helper for counting users in a role
   const getUserCountForRole = (rName) => {
     return users.filter(u => u.role?.toLowerCase() === rName.toLowerCase()).length;
@@ -265,6 +370,17 @@ export default function AdminDashboard({ token, onLogout }) {
     u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
     u.role.toLowerCase().includes(userSearch.toLowerCase())
   );
+
+  // Filtered events
+  const filteredEventsList = eventsList.filter(e => {
+    const matchesCategory = eventFilter === 'all' || e.category === eventFilter;
+    const matchesSearch = eventSearch.trim() === '' || 
+      e.name.toLowerCase().includes(eventSearch.toLowerCase()) ||
+      (e.venue && e.venue.toLowerCase().includes(eventSearch.toLowerCase())) ||
+      (e.timing && e.timing.toLowerCase().includes(eventSearch.toLowerCase())) ||
+      (e.fee && e.fee.toLowerCase().includes(eventSearch.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
 
   if (loading) {
     return (
@@ -319,28 +435,40 @@ export default function AdminDashboard({ token, onLogout }) {
               <div style={styles.submenu}>
                 <button 
                   style={activeTab === 'manage-users' ? { ...styles.subnavItem, ...styles.subnavItemActive } : styles.subnavItem}
-                  onClick={() => {
-                    setActiveTab('manage-users');
-                  }}
+                  onClick={() => setActiveTab('manage-users')}
                 >
-                  <FaUserCheck style={styles.subnavIcon} />
-                  <span>Manage Users</span>
+                  <div style={styles.subnavLabelRow}>
+                    <FaUserCheck style={styles.subnavIcon} />
+                    <span>Manage Users</span>
+                  </div>
                   <span style={styles.badgeCount}>{users.length}</span>
                 </button>
 
                 <button 
                   style={activeTab === 'manage-roles' ? { ...styles.subnavItem, ...styles.subnavItemActive } : styles.subnavItem}
-                  onClick={() => {
-                    setActiveTab('manage-roles');
-                  }}
+                  onClick={() => setActiveTab('manage-roles')}
                 >
-                  <FaShieldAlt style={styles.subnavIcon} />
-                  <span>Manage Roles</span>
+                  <div style={styles.subnavLabelRow}>
+                    <FaShieldAlt style={styles.subnavIcon} />
+                    <span>Manage Roles</span>
+                  </div>
                   <span style={styles.badgeCount}>{roles.length}</span>
                 </button>
               </div>
             )}
           </div>
+
+          {/* Events Navigation Item (Single item without dropdown) */}
+          <button 
+            style={activeTab === 'events' ? { ...styles.navItem, ...styles.navItemActive } : styles.navItem} 
+            onClick={() => setActiveTab('events')}
+          >
+            <div style={styles.dropdownToggleLeft}>
+              <FaCalendarAlt style={styles.navIcon} />
+              <span>Events</span>
+            </div>
+            <span style={styles.badgeCount}>{eventsList.length}</span>
+          </button>
         </nav>
 
         <div style={styles.sidebarFooter}>
@@ -358,11 +486,13 @@ export default function AdminDashboard({ token, onLogout }) {
               {activeTab === 'dashboard' && 'Overview Dashboard'}
               {activeTab === 'manage-users' && 'User Management'}
               {activeTab === 'manage-roles' && 'Role Management'}
+              {activeTab === 'events' && 'Events Management'}
             </h1>
             <p style={styles.pageSubtitle}>
               {activeTab === 'dashboard' && 'Live event analytics and incoming registration overview.'}
               {activeTab === 'manage-users' && 'Create, edit, assign roles, and remove system user accounts.'}
               {activeTab === 'manage-roles' && 'Configure custom access roles, permissions, and security hierarchy.'}
+              {activeTab === 'events' && 'Edit event details, venues, schedules, and entry fees in real-time.'}
             </p>
           </div>
           <div style={styles.headerRight}>
@@ -403,7 +533,7 @@ export default function AdminDashboard({ token, onLogout }) {
                 </div>
                 <div style={styles.statCard}>
                   <div style={styles.statLabel}>Active Events</div>
-                  <div style={styles.statValue}>{data?.stats?.eventsActive || 0}</div>
+                  <div style={styles.statValue}>{eventsList.length}</div>
                 </div>
               </div>
 
@@ -492,7 +622,9 @@ export default function AdminDashboard({ token, onLogout }) {
                             </span>
                           </td>
                           <td style={styles.td}>
-                            <span style={styles.statusActive}>● Active</span>
+                            <span style={styles.statusActive}>
+                              <FaCircle size={7} style={{ marginRight: '6px' }} /> Active
+                            </span>
                           </td>
                           <td style={{ ...styles.td, textAlign: 'right' }}>
                             <button 
@@ -617,8 +749,235 @@ export default function AdminDashboard({ token, onLogout }) {
               </div>
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* 4. EVENTS MANAGEMENT PAGE                                */}
+          {/* ======================================================== */}
+          {activeTab === 'events' && (
+            <div style={styles.viewContainer}>
+              {/* Filter & Search Bar */}
+              <div style={styles.viewHeader}>
+                <div style={styles.searchBox}>
+                  <input 
+                    type="text" 
+                    placeholder="Search events by name, venue, timing, or fee..." 
+                    value={eventSearch}
+                    onChange={(e) => setEventSearch(e.target.value)}
+                    style={styles.searchInput}
+                  />
+                </div>
+
+                <div style={styles.filterPillGroup}>
+                  {['all', 'technical', 'non-technical'].map(cat => (
+                    <button
+                      key={cat}
+                      style={eventFilter === cat ? styles.filterPillActive : styles.filterPill}
+                      onClick={() => setEventFilter(cat)}
+                    >
+                      {cat === 'all' ? (
+                        <span>All Events ({eventsList.length})</span>
+                      ) : cat === 'technical' ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <FaBolt size={11} /> Technical ({eventsList.filter(e => e.category === 'technical').length})
+                        </span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <FaGamepad size={12} /> Non-Tech ({eventsList.filter(e => e.category === 'non-technical').length})
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Events Table */}
+              <div style={styles.card}>
+                <div style={styles.cardHeaderFlex}>
+                  <h3 style={styles.cardTitle}>
+                    <FaCalendarAlt style={{ marginRight: '8px', color: '#2563eb' }} />
+                    All Events ({filteredEventsList.length})
+                  </h3>
+                  <span style={styles.cardSubText}>Live database synchronized with main events page</span>
+                </div>
+                <div style={styles.tableResponsive}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Event Name</th>
+                        <th style={styles.th}>Category</th>
+                        <th style={styles.th}>Venue</th>
+                        <th style={styles.th}>Time / Schedule</th>
+                        <th style={styles.th}>Registration Fee</th>
+                        <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEventsList.map(evt => (
+                        <tr key={evt.id} style={styles.tr}>
+                          <td style={styles.td}>
+                            <div>
+                              <span style={styles.strongText}>{evt.name}</span>
+                              <div style={styles.tableSubText}>
+                                <span style={styles.idBadgeMini}>{evt.id.toUpperCase()}</span> {evt.subtitle || evt.alias}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={evt.category === 'technical' ? styles.badgeTech : styles.badgeNonTech}>
+                              {evt.category === 'technical' ? (
+                                <><FaBolt style={{ marginRight: '4px' }} /> Technical</>
+                              ) : (
+                                <><FaGamepad style={{ marginRight: '4px' }} /> Non-Tech</>
+                              )}
+                            </span>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={styles.venueText}>
+                              <FaMapMarkerAlt style={{ color: '#64748b', marginRight: '6px', fontSize: '0.85rem' }} />
+                              {evt.venue}
+                            </span>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={styles.timeText}>
+                              <FaClock style={{ color: '#64748b', marginRight: '6px', fontSize: '0.85rem' }} />
+                              {evt.timing}
+                            </span>
+                          </td>
+                          <td style={styles.td}>
+                            <div>
+                              <span style={styles.feeHighlight}>{evt.fee}</span>
+                              {evt.teamSize && <div style={styles.tableSubText}>{evt.teamSize}</div>}
+                            </div>
+                          </td>
+                          <td style={{ ...styles.td, textAlign: 'right' }}>
+                            <button
+                              onClick={() => handleOpenEditEventModal(evt)}
+                              style={styles.actionBtnEdit}
+                              title="Edit Event Details"
+                            >
+                              <FaEdit style={{ marginRight: '4px' }} /> Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {!filteredEventsList.length && (
+                        <tr>
+                          <td colSpan="6" style={styles.emptyState}>
+                            No events match the search criteria.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* ======================================================== */}
+      {/* OVERLAY MODAL: EDIT EVENT                                */}
+      {/* ======================================================== */}
+      {isEventEditModalOpen && editingEvent && (
+        <div style={styles.modalBackdrop} onClick={resetEventEditModal}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div style={styles.modalHeaderLeft}>
+                <div style={styles.modalIconBoxEvent}>
+                  <FaCalendarAlt size={18} />
+                </div>
+                <div>
+                  <h3 style={styles.modalTitle}>
+                    Edit Event: {editingEvent.id.toUpperCase()}
+                  </h3>
+                  <p style={styles.modalSubtitle}>
+                    Updates made here immediately reflect on the live events page.
+                  </p>
+                </div>
+              </div>
+              <button onClick={resetEventEditModal} style={styles.modalCloseBtn} title="Close (Esc)">
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitEventEdit} style={styles.modalForm}>
+              <div style={styles.modalFormBody}>
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.label}>Event Name *</label>
+                  <input 
+                    type="text" 
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
+                    style={styles.input}
+                    placeholder="e.g. PPT PRESENTATION"
+                    required 
+                    autoFocus
+                  />
+                </div>
+
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.label}>Venue *</label>
+                  <input 
+                    type="text" 
+                    value={eventVenue}
+                    onChange={(e) => setEventVenue(e.target.value)}
+                    style={styles.input}
+                    placeholder="e.g. CSE Seminar Hall / Drawing Hall"
+                    required 
+                  />
+                </div>
+
+                <div style={styles.modalInputGroup}>
+                  <label style={styles.label}>Time / Schedule *</label>
+                  <input 
+                    type="text" 
+                    value={eventTiming}
+                    onChange={(e) => setEventTiming(e.target.value)}
+                    style={styles.input}
+                    placeholder="e.g. 10:00 AM – 01:00 PM"
+                    required 
+                  />
+                </div>
+
+                <div style={styles.formRowTwo}>
+                  <div style={styles.modalInputGroup}>
+                    <label style={styles.label}>Registration Fee *</label>
+                    <input 
+                      type="text" 
+                      value={eventFee}
+                      onChange={(e) => setEventFee(e.target.value)}
+                      style={styles.input}
+                      placeholder="e.g. ₹100 per head / ₹200 per squad"
+                      required 
+                    />
+                  </div>
+
+                  <div style={styles.modalInputGroup}>
+                    <label style={styles.label}>Team Size / Format</label>
+                    <input 
+                      type="text" 
+                      value={eventTeamSize}
+                      onChange={(e) => setEventTeamSize(e.target.value)}
+                      style={styles.input}
+                      placeholder="e.g. Max of 3 members / Individual"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.modalFooter}>
+                <button type="button" onClick={resetEventEditModal} style={styles.cancelBtn}>
+                  Cancel
+                </button>
+                <button type="submit" style={styles.primaryBtn}>
+                  Save Event Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* OVERLAY MODAL: CREATE / EDIT USER                        */}
@@ -641,7 +1000,7 @@ export default function AdminDashboard({ token, onLogout }) {
                 </div>
               </div>
               <button onClick={resetUserForm} style={styles.modalCloseBtn} title="Close (Esc)">
-                ✕
+                <FaTimes />
               </button>
             </div>
 
@@ -728,7 +1087,7 @@ export default function AdminDashboard({ token, onLogout }) {
                 </div>
               </div>
               <button onClick={resetRoleForm} style={styles.modalCloseBtn} title="Close (Esc)">
-                ✕
+                <FaTimes />
               </button>
             </div>
 
@@ -767,6 +1126,7 @@ export default function AdminDashboard({ token, onLogout }) {
   );
 }
 
+<<<<<<< HEAD
 const getDashboardStyles = (isDark) => ({
   container: { 
     display: 'flex', 
@@ -790,6 +1150,12 @@ const getDashboardStyles = (isDark) => ({
     borderRadius: '50%', 
     animation: 'spin 1s linear infinite' 
   },
+=======
+const styles = {
+  container: { display: 'flex', minHeight: '100vh', background: '#f1f5f9', fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif' },
+  loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' },
+  spinner: { width: '40px', height: '40px', border: '4px solid #cbd5e1', borderTop: '4px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' },
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
   
   // Sidebar
   sidebar: { 
@@ -835,6 +1201,7 @@ const getDashboardStyles = (isDark) => ({
   },
   
   // Nav
+<<<<<<< HEAD
   navMenu: { 
     flex: 1, 
     padding: '1.5rem 1rem', 
@@ -942,6 +1309,27 @@ const getDashboardStyles = (isDark) => ({
     fontSize: '0.72rem', 
     fontWeight: '700' 
   },
+=======
+  navMenu: { flex: 1, padding: '1.25rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto' },
+  navItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', borderRadius: '10px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '0.92rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease', width: '100%' },
+  navItemActive: { background: '#eff6ff', color: '#2563eb' },
+  navIcon: { marginRight: '12px', fontSize: '1.1rem', flexShrink: 0 },
+  
+  // Dropdown
+  dropdownGroup: { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
+  dropdownToggle: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', borderRadius: '10px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '0.92rem', fontWeight: '600', cursor: 'pointer', width: '100%', transition: 'all 0.2s ease' },
+  dropdownToggleActive: { color: '#0f172a', background: '#f8fafc' },
+  dropdownToggleLeft: { display: 'flex', alignItems: 'center' },
+  dropdownChevron: { color: '#94a3b8', display: 'flex', alignItems: 'center' },
+  
+  submenu: { display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '1.2rem', marginTop: '0.2rem', marginBottom: '0.4rem' },
+  subnavLabelRow: { display: 'flex', alignItems: 'center' },
+  subnavItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', borderRadius: '8px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '0.86rem', fontWeight: '500', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease', width: '100%' },
+  subnavItemActive: { background: '#dbeafe', color: '#1d4ed8', fontWeight: '700' },
+  subnavIcon: { marginRight: '10px', fontSize: '0.95rem' },
+
+  badgeCount: { background: '#e2e8f0', color: '#475569', padding: '0.15rem 0.45rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '700' },
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 
   sidebarFooter: { 
     padding: '1.25rem 1rem', 
@@ -964,6 +1352,7 @@ const getDashboardStyles = (isDark) => ({
   },
   
   // Main Layout
+<<<<<<< HEAD
   mainContent: { 
     flex: 1, 
     display: 'flex', 
@@ -1042,6 +1431,15 @@ const getDashboardStyles = (isDark) => ({
     flex: 1, 
     overflowY: 'auto' 
   },
+=======
+  mainContent: { flex: 1, display: 'flex', flexDirection: 'column', overflowX: 'hidden' },
+  topHeader: { background: '#ffffff', minHeight: '85px', padding: '1rem 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(8px)' },
+  pageTitle: { margin: 0, fontSize: '1.45rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' },
+  pageSubtitle: { margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: '400' },
+  userProfile: { display: 'flex', alignItems: 'center' },
+  avatar: { width: '42px', height: '42px', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '1.1rem', border: '2px solid #ffffff', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' },
+  contentWrapper: { padding: '2.5rem', flex: 1, overflowY: 'auto' },
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 
   // Views & Headers
   viewContainer: { 
@@ -1093,7 +1491,12 @@ const getDashboardStyles = (isDark) => ({
     transition: 'background 0.2s' 
   },
 
+  filterPillGroup: { display: 'flex', gap: '0.5rem', background: '#ffffff', padding: '4px', borderRadius: '10px', border: '1px solid #e2e8f0' },
+  filterPill: { border: 'none', background: 'transparent', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' },
+  filterPillActive: { border: 'none', background: '#2563eb', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 5px rgba(37,99,235,0.2)' },
+
   // Cards & Tables
+<<<<<<< HEAD
   card: { 
     background: isDark ? '#111827' : '#ffffff', 
     borderRadius: '16px', 
@@ -1172,6 +1575,24 @@ const getDashboardStyles = (isDark) => ({
     fontSize: '0.8rem', 
     fontWeight: '600' 
   },
+=======
+  card: { background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', overflow: 'hidden' },
+  cardHeaderFlex: { padding: '1.25rem 1.75rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center' },
+  cardSubText: { fontSize: '0.8rem', color: '#64748b' },
+  tableResponsive: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse' },
+  th: { background: '#ffffff', padding: '1rem 1.75rem', textAlign: 'left', color: '#64748b', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
+  tr: { borderBottom: '1px solid #f1f5f9' },
+  td: { padding: '1.1rem 1.75rem', color: '#334155', fontSize: '0.9rem' },
+  
+  userCell: { display: 'flex', alignItems: 'center', gap: '10px' },
+  userAvatarSm: { width: '30px', height: '30px', borderRadius: '8px', background: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
+  strongText: { fontWeight: '600', color: '#0f172a' },
+  tableSubText: { fontSize: '0.78rem', color: '#64748b', marginTop: '2px' },
+  idBadge: { background: '#f1f5f9', color: '#475569', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700' },
+  idBadgeMini: { background: '#eff6ff', color: '#2563eb', padding: '0.1rem 0.35rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700', marginRight: '4px' },
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
   
   roleBadge: { 
     display: 'inline-block', 
@@ -1222,6 +1643,7 @@ const getDashboardStyles = (isDark) => ({
     fontWeight: '600' 
   },
   
+<<<<<<< HEAD
   statusActive: { 
     color: '#10b981', 
     fontWeight: '600', 
@@ -1254,6 +1676,19 @@ const getDashboardStyles = (isDark) => ({
     color: isDark ? '#64748b' : '#94a3b8', 
     fontSize: '0.9rem' 
   },
+=======
+  badgeTech: { display: 'inline-flex', alignItems: 'center', background: '#eff6ff', color: '#1d4ed8', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid #bfdbfe' },
+  badgeNonTech: { display: 'inline-flex', alignItems: 'center', background: '#ecfdf5', color: '#047857', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid #a7f3d0' },
+  
+  venueText: { fontSize: '0.85rem', color: '#1e293b', fontWeight: '500', display: 'flex', alignItems: 'center' },
+  timeText: { fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center' },
+  feeHighlight: { fontWeight: '700', color: '#059669', fontSize: '0.9rem' },
+
+  actionBtnEdit: { display: 'inline-flex', alignItems: 'center', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', padding: '0.45rem 0.75rem', borderRadius: '6px', marginRight: '0.5rem', transition: 'all 0.15s' },
+  actionBtnDelete: { background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', padding: '0.45rem 0.65rem', borderRadius: '6px', transition: 'all 0.15s' },
+  statusActive: { display: 'inline-flex', alignItems: 'center', color: '#10b981', fontWeight: '600', fontSize: '0.85rem' },
+  emptyState: { padding: '3rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' },
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 
   // Stats Grid for Dashboard
   statsGrid: { 
@@ -1306,7 +1741,7 @@ const getDashboardStyles = (isDark) => ({
   modalCard: {
     background: isDark ? '#111827' : '#ffffff',
     width: '100%',
-    maxWidth: '520px',
+    maxWidth: '540px',
     borderRadius: '16px',
     boxShadow: isDark 
       ? '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px #1e293b' 
@@ -1351,6 +1786,17 @@ const getDashboardStyles = (isDark) => ({
     justifyContent: 'center',
     flexShrink: 0
   },
+  modalIconBoxEvent: {
+    width: '42px',
+    height: '42px',
+    borderRadius: '10px',
+    background: '#fef3c7',
+    color: '#d97706',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0
+  },
   modalTitle: {
     margin: 0,
     fontSize: '1.15rem',
@@ -1384,8 +1830,18 @@ const getDashboardStyles = (isDark) => ({
     padding: '1.75rem',
     display: 'flex',
     flexDirection: 'column',
+<<<<<<< HEAD
     gap: '1.25rem',
     background: isDark ? '#111827' : '#ffffff'
+=======
+    gap: '1.15rem',
+    background: '#ffffff'
+>>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
+  },
+  formRowTwo: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '1rem'
   },
   modalInputGroup: {
     display: 'flex',

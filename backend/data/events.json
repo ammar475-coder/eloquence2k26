@@ -1,0 +1,688 @@
+[
+  {
+    "id": "tech-01",
+    "number": "01",
+    "name": "PPT PRESENTATION",
+    "alias": "Slide Craft",
+    "subtitle": "PowerPoint & Idea Pitch Deck",
+    "category": "technical",
+    "teamSize": "Max of 3 members",
+    "minMembers": 1,
+    "maxMembers": 3,
+    "fee": "₹100 per head",
+    "feePerHead": 100,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Technical Presentation",
+    "venue": "CSE Seminar Hall",
+    "timing": "10:00 AM – 01:00 PM",
+    "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
+    "rules": [
+      "Presentation must be strictly prepared in PowerPoint or PDF format.",
+      "Maximum of 7 slides allowed per team.",
+      "5 minutes for presentation and 2 minutes for Q&A session.",
+      "Bring presentations on a virus-free USB drive."
+    ],
+    "rounds": [
+      {
+        "name": "Preliminary Deck Screening",
+        "time": "15 Mins",
+        "desc": "Initial slide deck review by panel judges."
+      },
+      {
+        "name": "Final Stage Pitch",
+        "time": "7 Mins / Team",
+        "desc": "Live presentation followed by jury Q&A."
+      }
+    ],
+    "guidelines": [
+      "Standard projector and clicker will be provided.",
+      "Presenters must report 15 minutes before the allocated slot."
+    ],
+    "coordinators": [
+      {
+        "name": "Dr. S. K. Sharma",
+        "role": "Faculty Coordinator",
+        "phone": "9876543210"
+      },
+      {
+        "name": "A. Mohammed",
+        "role": "Student Coordinator",
+        "phone": "9876543211"
+      }
+    ],
+    "highlights": [
+      "5 mins presentation",
+      "2 mins Q&A",
+      "< 7 slides limit",
+      "₹100/head"
+    ]
+  },
+  {
+    "id": "tech-02",
+    "number": "02",
+    "name": "CRACK THE CODE",
+    "alias": "Crack the Code",
+    "subtitle": "Code Craft & Bug Hunter",
+    "category": "technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Competitive Coding",
+    "venue": "CSE Lab 1 & 2",
+    "timing": "10:30 AM – 12:30 PM",
+    "description": "Test your logic and debugging prowess across intense algorithmic challenges and bug fixes.",
+    "rules": [
+      "Individual participation only.",
+      "No built-in or external third-party libraries permitted.",
+      "Supported languages: C, C++, Java, and Python.",
+      "Plagiarism or tab switching results in instant disqualification."
+    ],
+    "rounds": [
+      {
+        "name": "Round 1: Written Logic Test",
+        "time": "30 Mins",
+        "desc": "MCQs covering syntax, complexity, and output prediction."
+      },
+      {
+        "name": "Round 2: Live Bug Hunting & Coding",
+        "time": "45 Mins",
+        "desc": "Fix broken code snippets and solve competitive problems."
+      }
+    ],
+    "guidelines": [
+      "Desktop PCs will be provided with offline compilers.",
+      "Use of internet or mobile phones is strictly forbidden."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. R. Priya",
+        "role": "Faculty Coordinator",
+        "phone": "9876543212"
+      },
+      {
+        "name": "V. Karthik",
+        "role": "Student Coordinator",
+        "phone": "9876543213"
+      }
+    ],
+    "highlights": [
+      "No built-in libraries",
+      "Round 1: Written test",
+      "Round 2: Coding & Debugging"
+    ]
+  },
+  {
+    "id": "tech-03",
+    "number": "03",
+    "name": "TECH QUIZ (ONLINE)",
+    "alias": "Tech Battle",
+    "subtitle": "Brain Bytes & Rapid Trivia",
+    "category": "technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Knowledge Battle",
+    "venue": "Digital Library / Lab 3",
+    "timing": "11:00 AM – 12:00 PM",
+    "description": "Rapid-fire online technology trivia covering computer fundamentals, latest trends, AI, and IT giants.",
+    "rules": [
+      "Individual participation with browser lockdown enabled.",
+      "Negative marking for wrong answers in final buzzer round.",
+      "Screen recording and lock enforcement active."
+    ],
+    "rounds": [
+      {
+        "name": "Round 1: Rapid Fire MCQs",
+        "time": "15 Mins",
+        "desc": "30 fast-paced technical questions."
+      },
+      {
+        "name": "Round 2: Identify the Tech & Buzz",
+        "time": "15 Mins",
+        "desc": "Audio-visual and logo identification."
+      },
+      {
+        "name": "Round 3: Grand Finale Showdown",
+        "time": "15 Mins",
+        "desc": "Buzzer-based tie-breaker and high-difficulty trivia."
+      }
+    ],
+    "guidelines": [
+      "Ensure stable mobile data or connect to designated campus Wi-Fi."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. T. Anand",
+        "role": "Faculty Coordinator",
+        "phone": "9876543214"
+      },
+      {
+        "name": "S. Naveen",
+        "role": "Student Coordinator",
+        "phone": "9876543215"
+      }
+    ],
+    "highlights": [
+      "Screen lock enforcement",
+      "3 Rounds (15 mins/round)",
+      "Total 45 mins"
+    ]
+  },
+  {
+    "id": "tech-04",
+    "number": "04",
+    "name": "WEB / PROMPT",
+    "alias": "Web / Prompt",
+    "subtitle": "Web Design & Generative AI Prompting",
+    "category": "technical",
+    "teamSize": "Individual / Team of 2",
+    "minMembers": 1,
+    "maxMembers": 2,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Web & Prompt AI",
+    "venue": "IT Lab 2",
+    "timing": "01:30 PM – 03:30 PM",
+    "description": "Craft responsive web pages and generate AI visual assets through precision prompting.",
+    "rules": [
+      "Individual or team of 2 members allowed.",
+      "Standard HTML5, CSS3, JS allowed on local machines.",
+      "Prompts must be logged and submitted with final code."
+    ],
+    "rounds": [
+      {
+        "name": "Round 1: Responsive Landing Page",
+        "time": "45 Mins",
+        "desc": "Design a pixel-perfect hero and feature section on given theme."
+      },
+      {
+        "name": "Round 2: AI Prompt Integration & Full UI",
+        "time": "45 Mins",
+        "desc": "Complete interactive web application with generated UI assets."
+      }
+    ],
+    "guidelines": [
+      "VS Code and standard browsers will be pre-installed."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. G. Deepa",
+        "role": "Faculty Coordinator",
+        "phone": "9876543216"
+      },
+      {
+        "name": "R. Vignesh",
+        "role": "Student Coordinator",
+        "phone": "9876543217"
+      }
+    ],
+    "highlights": [
+      "Systems provided",
+      "Round 1: Landing page",
+      "Round 2: Overall website"
+    ]
+  },
+  {
+    "id": "tech-05",
+    "number": "05",
+    "name": "POSTER DESIGN (CHART)",
+    "alias": "Chart Canvas",
+    "subtitle": "Manual Chart & Visual Design",
+    "category": "technical",
+    "teamSize": "Team (Max 3 members)",
+    "minMembers": 1,
+    "maxMembers": 3,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Creative Graphics",
+    "venue": "Drawing Hall 1",
+    "timing": "11:00 AM – 01:00 PM",
+    "description": "Express technical architectures, environmental concepts, and futuristic tech through handmade chart posters.",
+    "rules": [
+      "Maximum of 3 members per team.",
+      "Topic will be announced on the spot.",
+      "Participants must bring their own drawing materials (Chart sheets provided).",
+      "5 minutes presentation to judges."
+    ],
+    "rounds": [
+      {
+        "name": "Poster Drafting & Design",
+        "time": "60 Mins",
+        "desc": "Craft handmade poster on the announced topic."
+      },
+      {
+        "name": "Jury Evaluation",
+        "time": "5 Mins / Team",
+        "desc": "Explain design concept and technical relevance to judges."
+      }
+    ],
+    "guidelines": [
+      "Standard size chart paper will be supplied by organizers."
+    ],
+    "coordinators": [
+      {
+        "name": "Dr. K. Jayanthi",
+        "role": "Faculty Coordinator",
+        "phone": "9876543218"
+      },
+      {
+        "name": "M. Dinesh",
+        "role": "Student Coordinator",
+        "phone": "9876543219"
+      }
+    ],
+    "highlights": [
+      "Topics on spot",
+      "1 hour designing",
+      "5 mins presentation",
+      "Bring materials"
+    ]
+  },
+  {
+    "id": "tech-06",
+    "number": "06",
+    "name": "POSTER DESIGN – UI/UX",
+    "alias": "UI/UX",
+    "subtitle": "Digital Prototype & Experience Design",
+    "category": "technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Product Design",
+    "venue": "Multimedia Lab",
+    "timing": "02:00 PM – 04:00 PM",
+    "description": "Design modern, user-friendly mobile and web user interfaces using Figma or Canva.",
+    "rules": [
+      "Individual competition.",
+      "Tools: Figma or Canva.",
+      "Direct AI-generated designs are strictly restricted.",
+      "Wireframes and color palettes must be presented."
+    ],
+    "rounds": [
+      {
+        "name": "Round 1: Auth & Onboarding Flow",
+        "time": "30 Mins",
+        "desc": "Design smooth login, registration, and onboarding screens."
+      },
+      {
+        "name": "Round 2: Feature Dashboard & Interactions",
+        "time": "60 Mins",
+        "desc": "Create main dashboard UI with interactive prototypes."
+      }
+    ],
+    "guidelines": [
+      "Participants can bring their own laptops with Figma installed."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. N. Suresh",
+        "role": "Faculty Coordinator",
+        "phone": "9876543220"
+      },
+      {
+        "name": "P. Swetha",
+        "role": "Student Coordinator",
+        "phone": "9876543221"
+      }
+    ],
+    "highlights": [
+      "Tools: Figma & Canva",
+      "AI strictly restricted",
+      "Round 1: Login page",
+      "Round 2: Dashboard"
+    ]
+  },
+  {
+    "id": "nontech-01",
+    "number": "01",
+    "name": "SNAP & REEL",
+    "alias": "Snap & Reel",
+    "subtitle": "Frames & Cinematic Shots",
+    "category": "non-technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Visual Media",
+    "venue": "Campus Grounds & Media Room",
+    "timing": "10:00 AM – 03:00 PM",
+    "description": "Capture cinematic campus moments, dynamic event energy, and craft creative 30-60 second Instagram reels.",
+    "rules": [
+      "Footage must be captured within campus grounds on event day.",
+      "Reel duration: 30 to 60 seconds.",
+      "Background audio/music permitted (no explicit content)."
+    ],
+    "rounds": [
+      {
+        "name": "Campus Capture",
+        "time": "3 Hours",
+        "desc": "Shoot footage across symposium events."
+      },
+      {
+        "name": "Editing & Reel Submission",
+        "time": "1 Hour",
+        "desc": "Final color grading, sound mixing, and upload."
+      }
+    ],
+    "guidelines": [
+      "Submission via Google Drive link or designated upload portal."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. M. Vijay",
+        "role": "Faculty Coordinator",
+        "phone": "9876543222"
+      },
+      {
+        "name": "K. Rahul",
+        "role": "Student Coordinator",
+        "phone": "9876543223"
+      }
+    ],
+    "highlights": [
+      "Original campus footage",
+      "30-60 sec reel length",
+      "Background music allowed"
+    ]
+  },
+  {
+    "id": "nontech-02",
+    "number": "02",
+    "name": "LINK UP (CONNECTION)",
+    "alias": "Link Up",
+    "subtitle": "Find The Hidden Link",
+    "category": "non-technical",
+    "teamSize": "Max of 3 members",
+    "minMembers": 1,
+    "maxMembers": 3,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Brain Teaser",
+    "venue": "Auditorium Annex",
+    "timing": "11:30 AM – 01:00 PM",
+    "description": "Decode visual rebus puzzles, connected clues, movie scenes, and pop-culture links with fast buzzer reflexes.",
+    "rules": [
+      "Max 3 members per squad.",
+      "Fastest buzzer gets priority to answer.",
+      "Negative score for incorrect buzzer attempts."
+    ],
+    "rounds": [
+      {
+        "name": "Round 1: Picture Rebus Clues",
+        "time": "20 Mins",
+        "desc": "Solve interconnected images to find movie or word titles."
+      },
+      {
+        "name": "Round 2: Rapid Buzzer Connection",
+        "time": "30 Mins",
+        "desc": "Complex multi-stage connection puzzles with countdown timer."
+      }
+    ],
+    "guidelines": [
+      "Decisions of the quizmaster are final and binding."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. B. Revathi",
+        "role": "Faculty Coordinator",
+        "phone": "9876543224"
+      },
+      {
+        "name": "J. Surya",
+        "role": "Student Coordinator",
+        "phone": "9876543225"
+      }
+    ],
+    "highlights": [
+      "Visual connection puzzles",
+      "Fast buzzer mechanics",
+      "Max 3 per squad"
+    ]
+  },
+  {
+    "id": "nontech-03",
+    "number": "03",
+    "name": "HUNT ZONE (TREASURE HUNT)",
+    "alias": "Hunt Zone",
+    "subtitle": "Quest of The Ancients",
+    "category": "non-technical",
+    "teamSize": "Max of 4 members",
+    "minMembers": 2,
+    "maxMembers": 4,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Adventure & Mystery",
+    "venue": "Campus Wide / Starting at Main Lawn",
+    "timing": "01:00 PM – 03:00 PM",
+    "description": "An exciting treasure hunt across the campus uncovering riddles, cryptographic clues, and physical tokens.",
+    "rules": [
+      "Teams of 2 to 4 members.",
+      "Do not tamper with non-clue campus assets or restricted areas.",
+      "First team to report with all verified tokens wins."
+    ],
+    "rounds": [
+      {
+        "name": "Clue Phase 1: Cryptic Riddles",
+        "time": "45 Mins",
+        "desc": "Solve campus location riddles to find checkpoint clues."
+      },
+      {
+        "name": "Clue Phase 2: Final Relic Recovery",
+        "time": "45 Mins",
+        "desc": "Assemble the master cipher and find the hidden treasure."
+      }
+    ],
+    "guidelines": [
+      "Wear comfortable shoes for campus exploration."
+    ],
+    "coordinators": [
+      {
+        "name": "Dr. P. Manoharan",
+        "role": "Faculty Coordinator",
+        "phone": "9876543226"
+      },
+      {
+        "name": "A. Harish",
+        "role": "Student Coordinator",
+        "phone": "9876543227"
+      }
+    ],
+    "highlights": [
+      "Campus-wide trail",
+      "Cryptic clue checkpoints",
+      "Timed squad adventure"
+    ]
+  },
+  {
+    "id": "nontech-04",
+    "number": "04",
+    "name": "HENNA HEIST (MEHANDI)",
+    "alias": "Henna Heist",
+    "subtitle": "Henna Art & Elegance",
+    "category": "non-technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Traditional Art",
+    "venue": "Classroom Block B – 204",
+    "timing": "10:30 AM – 12:00 PM",
+    "description": "Display traditional Indian and Arabic henna patterns with intricacy, neatness, and artistic flair.",
+    "rules": [
+      "Individual participant (can bring one volunteer model).",
+      "Time duration: 1 Hour.",
+      "Participants must bring their own henna cones."
+    ],
+    "rounds": [
+      {
+        "name": "Henna Application",
+        "time": "60 Mins",
+        "desc": "Apply elaborate pattern covering palm and forearm."
+      },
+      {
+        "name": "Jury Review",
+        "time": "15 Mins",
+        "desc": "Judged on symmetry, clarity, and creativity."
+      }
+    ],
+    "guidelines": [
+      "No pre-drawn stencils or printed reference guides allowed during competition."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. S. Divya",
+        "role": "Faculty Coordinator",
+        "phone": "9876543228"
+      },
+      {
+        "name": "F. Ayesha",
+        "role": "Student Coordinator",
+        "phone": "9876543229"
+      }
+    ],
+    "highlights": [
+      "1 hour duration",
+      "Intricate traditional & modern patterns",
+      "Bring cones"
+    ]
+  },
+  {
+    "id": "nontech-05",
+    "number": "05",
+    "name": "BATTLE OF CHAMPIONS (E-SPORTS)",
+    "alias": "Battle of Champions",
+    "subtitle": "Mobile Battle Royale Showdown",
+    "category": "non-technical",
+    "teamSize": "Only Squad Match (4 Players)",
+    "minMembers": 4,
+    "maxMembers": 4,
+    "fee": "₹200 per squad",
+    "feePerHead": 50,
+    "feeType": "per_squad",
+    "isTeam": true,
+    "tag": "Mobile Gaming",
+    "venue": "Seminar Hall 2",
+    "timing": "01:30 PM – 04:00 PM",
+    "description": "Squad battle royale esports tournament. High strategy, fast gunplay, and survival tactics.",
+    "rules": [
+      "4-Player squad match only (Flat ₹200 entry fee per squad).",
+      "Emotes and unsportsmanlike behavior strictly restricted.",
+      "Third-party triggers and hacks will lead to immediate disqualification."
+    ],
+    "rounds": [
+      {
+        "name": "Match 1: Erangel / Bermuda Qualifiers",
+        "time": "30 Mins",
+        "desc": "Points awarded for kills and placement rank."
+      },
+      {
+        "name": "Match 2: Miramar Championship Finals",
+        "time": "30 Mins",
+        "desc": "Top squads battle for the title."
+      }
+    ],
+    "guidelines": [
+      "Bring charged smartphones and headphones."
+    ],
+    "coordinators": [
+      {
+        "name": "Prof. E. Rajesh",
+        "role": "Faculty Coordinator",
+        "phone": "9876543230"
+      },
+      {
+        "name": "S. Imran",
+        "role": "Student Coordinator",
+        "phone": "9876543231"
+      }
+    ],
+    "highlights": [
+      "Emotes strictly restricted",
+      "4-Player squad match only",
+      "Flat ₹200 per squad"
+    ]
+  },
+  {
+    "id": "nontech-06",
+    "number": "06",
+    "name": "64 SQUARES (CHESS)",
+    "alias": "64 Squares",
+    "subtitle": "Grandmaster Board Tactics",
+    "category": "non-technical",
+    "teamSize": "Individual only",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Board Strategy",
+    "venue": "Indoor Sports Complex",
+    "timing": "10:30 AM – 02:00 PM",
+    "description": "Classical & Blitz chess championship testing tactical foresight, openings, and endgame mastery.",
+    "rules": [
+      "Individual participation.",
+      "FIDE standard rapid time control (10 mins + 5 sec increment).",
+      "Touch-move rule strictly enforced."
+    ],
+    "rounds": [
+      {
+        "name": "Swiss System Rounds",
+        "time": "5 Rounds",
+        "desc": "Players matched by score in standard Swiss pairing."
+      },
+      {
+        "name": "Knockout Semis & Finals",
+        "time": "2 Matches",
+        "desc": "Top 4 battle for championship trophy."
+      }
+    ],
+    "guidelines": [
+      "Standard tournament chess sets and digital clocks provided."
+    ],
+    "coordinators": [
+      {
+        "name": "Dr. V. Chandran",
+        "role": "Faculty Coordinator",
+        "phone": "9876543232"
+      },
+      {
+        "name": "T. Pranav",
+        "role": "Student Coordinator",
+        "phone": "9876543233"
+      }
+    ],
+    "highlights": [
+      "Rapid / Blitz time control",
+      "FIDE standard rules",
+      "Digital clocks provided"
+    ]
+  }
+]
