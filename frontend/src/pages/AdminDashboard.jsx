@@ -31,8 +31,8 @@ import {
   FaMapMarkerAlt,
   FaBolt,
   FaGamepad,
-  FaCircle,
-  FaListUl
+  FaSun,
+  FaMoon
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 
