@@ -4,6 +4,7 @@ const path = require('path');
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
+const eventsFilePath = path.join(__dirname, '../data/events.json');
 const sponsorsFilePath = path.join(__dirname, '../data/sponsors.json');
 const coordinatorsFilePath = path.join(__dirname, '../data/coordinators.json');
 const registrationsFilePath = path.join(__dirname, '../data/registrations.json');
@@ -46,6 +47,23 @@ const saveRolesData = (roles) => {
     fs.writeFileSync(rolesFilePath, JSON.stringify(roles, null, 2), 'utf8');
   } catch (err) {
     console.error('Error writing roles.json:', err);
+  }
+};
+
+const getEventsData = () => {
+  try {
+    const data = fs.readFileSync(eventsFilePath, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    return [];
+  }
+};
+
+const saveEventsData = (events) => {
+  try {
+    fs.writeFileSync(eventsFilePath, JSON.stringify(events, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error writing events.json:', err);
   }
 };
 
@@ -131,6 +149,7 @@ exports.getDashboardData = (req, res) => {
     const registrations = getRegistrationsData();
     const sponsors = getSponsorsData();
     const coordinators = getCoordinatorsData();
+    const events = getEventsData();
 
     const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
@@ -153,7 +172,7 @@ exports.getDashboardData = (req, res) => {
         stats: {
           totalRegistrations: registrations.length,
           revenue: totalRevenue,
-          eventsActive: 12,
+          eventsActive: events.length || 12,
           totalSponsors: sponsors.length,
           activeSponsors: activeSponsors.length,
           totalCoordinators: coordinators.length,
@@ -382,6 +401,47 @@ exports.deleteRole = (req, res) => {
   saveRolesData(roles);
 
   res.json({ success: true, message: 'Role deleted successfully' });
+};
+
+// ==================== EVENT MANAGEMENT ====================
+exports.getEvents = (req, res) => {
+  const events = getEventsData();
+  res.json({ success: true, data: events });
+};
+
+exports.updateEvent = (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const { id } = req.params;
+  const { name, venue, timing, fee, feePerHead, feeType, teamSize, subtitle, tag, description } = req.body;
+
+  const events = getEventsData();
+  const eventIndex = events.findIndex(e => e.id === id);
+
+  if (eventIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Event not found' });
+  }
+
+  if (name) events[eventIndex].name = name;
+  if (venue !== undefined) events[eventIndex].venue = venue;
+  if (timing !== undefined) events[eventIndex].timing = timing;
+  if (fee !== undefined) events[eventIndex].fee = fee;
+  if (feePerHead !== undefined) events[eventIndex].feePerHead = feePerHead;
+  if (feeType !== undefined) events[eventIndex].feeType = feeType;
+  if (teamSize !== undefined) events[eventIndex].teamSize = teamSize;
+  if (subtitle !== undefined) events[eventIndex].subtitle = subtitle;
+  if (tag !== undefined) events[eventIndex].tag = tag;
+  if (description !== undefined) events[eventIndex].description = description;
+
+  saveEventsData(events);
+
+  res.json({ 
+    success: true, 
+    message: 'Event updated successfully', 
+    data: events[eventIndex] 
+  });
 };
 
 // ==================== SPONSOR MANAGEMENT ====================

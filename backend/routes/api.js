@@ -9,6 +9,7 @@ router.get('/status', apiController.getStatus);
 router.post('/register', apiController.registerEvent);
 router.get('/registrations', apiController.getRegistrations);
 router.get('/registrations/:id', apiController.getRegistrationById);
+router.get('/events', apiController.getPublicEvents);
 
 // Public Sponsors & Coordinators
 router.get('/sponsors', apiController.getActiveSponsors);
@@ -31,6 +32,8 @@ router.get('/admin/roles', adminController.verifyToken, adminController.getRoles
 router.post('/admin/roles', adminController.verifyToken, adminController.createRole);
 router.put('/admin/roles/:id', adminController.verifyToken, adminController.updateRole);
 router.delete('/admin/roles/:id', adminController.verifyToken, adminController.deleteRole);
+router.get('/admin/events', adminController.verifyToken, adminController.getEvents);
+router.put('/admin/events/:id', adminController.verifyToken, adminController.updateEvent);
 
 // ── Admin Sponsor Management ─────────────────────────────────────────────────
 router.get('/admin/sponsors', adminController.verifyToken, adminController.getSponsors);

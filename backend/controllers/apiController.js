@@ -74,6 +74,20 @@ exports.getHealth = (req, res) => {
   });
 };
 
+exports.getPublicEvents = (req, res) => {
+  try {
+    const eventsFile = path.join(DATA_DIR, 'events.json');
+    if (fs.existsSync(eventsFile)) {
+      const data = fs.readFileSync(eventsFile, 'utf-8');
+      return res.json({ success: true, data: JSON.parse(data) });
+    }
+    res.json({ success: true, data: [] });
+  } catch (err) {
+    console.error('Error reading events:', err);
+    res.status(500).json({ success: false, message: 'Could not load events' });
+  }
+};
+
 exports.registerEvent = (req, res) => {
   try {
     let {

@@ -9,6 +9,14 @@
   },
   {
     "id": 3,
+    "name": "moderator"
+  },
+  {
+    "id": 4,
+    "name": "coordinator"
+  },
+  {
+    "id": 5,
     "name": "web-coordinator"
   }
 ]
