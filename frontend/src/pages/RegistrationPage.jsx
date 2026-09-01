@@ -394,41 +394,90 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
     setIsSubmitting(true);
     setServerError(null);
 
-    const payload = {
-      fullName: fields.fullName,
-      email: fields.email,
-      phone: fields.phone,
-      whatsapp: fields.whatsapp || null,
-      college: fields.college,
-      department: fields.department,
-      year: fields.year,
-      eventId: selectedEvent.id,
-      eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
-      eventCategory: selectedEvent.category,
-      game: isEsports ? selectedGame : null,
-      isTeam: selectedEvent.isTeam,
-      teamName: fields.teamName || null,
-      teamMembers: fields.teamMembers || [],
-      feePerHead: selectedEvent.feePerHead,
-      totalFee: feeInfo.total,
-      feeFormula: feeInfo.formula,
-    };
-
-    try {
-      const result = await submitRegistration(payload);
-      if (result.success) {
-        setTicketData(result.data);
-        setStep('success');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        setServerError(result.error || 'Registration submission failed. Please try again.');
-      }
-    } catch (err) {
-      console.error('Submission error:', err);
-      setServerError('An unexpected network error occurred. Please verify your connection.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    fetch('/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentEvent: isEsports 
+          ? { ...selectedEvent, name: `${selectedEvent.name} (${selectedGame})`, game: selectedGame }
+          : selectedEvent,
+        fields,
+        totalFee: feeInfo.total,
+        game: isEsports ? selectedGame : null
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          toast.success('Registration successful!');
+          const resTicket = data.ticketData || {};
+          setTicketData({
+            ...resTicket,
+            registrationId: resTicket.ticketCode || data.registrationId || 'ELQ26-REG',
+            fullName: fields.fullName,
+            college: fields.college,
+            department: fields.department,
+            year: fields.year,
+            phone: fields.phone,
+            email: fields.email,
+            eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
+            eventCategory: selectedEvent.category,
+            isTeam: selectedEvent.isTeam,
+            teamName: fields.teamName,
+            participantCount: 1 + (fields.teamMembers ? fields.teamMembers.length : 0),
+            totalFee: feeInfo.total,
+            game: isEsports ? selectedGame : null
+          });
+          setStep('success');
+          if (formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          toast.error('Registration failed: ' + (data.errorDetails || data.message || 'Unknown error'));
+        }
+      })
+      .catch(async (err) => {
+        console.warn('API fetch failed, trying local fallback:', err);
+        const payload = {
+          fullName: fields.fullName,
+          email: fields.email,
+          phone: fields.phone,
+          whatsapp: fields.whatsapp || null,
+          college: fields.college,
+          department: fields.department,
+          year: fields.year,
+          eventId: selectedEvent.id,
+          eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
+          eventCategory: selectedEvent.category,
+          game: isEsports ? selectedGame : null,
+          isTeam: selectedEvent.isTeam,
+          teamName: fields.teamName || null,
+          teamMembers: fields.teamMembers || [],
+          feePerHead: selectedEvent.feePerHead,
+          totalFee: feeInfo.total,
+          feeFormula: feeInfo.formula,
+        };
+        try {
+          const result = await submitRegistration(payload);
+          if (result.success) {
+            toast.success('Registration saved!');
+            setTicketData(result.data);
+            setStep('success');
+            if (formRef.current) {
+              formRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+          } else {
+            toast.error('Registration failed: ' + (result.error || 'Server error'));
+          }
+        } catch (fallbackErr) {
+          toast.error('Something went wrong connecting to the server. Please try again.');
+        }
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handleCopyId = () => {
