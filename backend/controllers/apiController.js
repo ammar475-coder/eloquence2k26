@@ -144,6 +144,30 @@ exports.registerEvent = async (req, res) => {
       timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
     };
 
+    // Save backup to local JSON as well
+    try {
+      const localRegs = readRegistrations();
+      localRegs.push({
+        registrationId: ticketCode,
+        id: registrationId,
+        fullName: fields.fullName,
+        email: fields.email,
+        phone: fields.phone,
+        college: fields.college,
+        department: fields.department,
+        year: fields.year,
+        eventId: currentEvent.id,
+        eventName: currentEvent.name,
+        isTeam: Boolean(currentEvent.isTeam),
+        teamName: fields.teamName || null,
+        totalAmount: Number(totalFee) || 0,
+        createdAt: new Date().toISOString()
+      });
+      writeRegistrations(localRegs);
+    } catch (localErr) {
+      console.warn('Local backup registration write error:', localErr);
+    }
+
     res.json({
       success: true,
       message: 'Registration successful',
@@ -178,127 +202,6 @@ exports.getPublicEvents = (req, res) => {
   } catch (err) {
     console.error('Error reading events:', err);
     res.status(500).json({ success: false, message: 'Could not load events' });
-  }
-};
-
-exports.registerEvent = (req, res) => {
-  try {
-    let {
-      fullName,
-      email,
-      phone,
-      whatsapp,
-      college,
-      department,
-      year,
-      eventId,
-      eventName,
-      eventCategory,
-      isTeam,
-      teamName,
-      teamMembers,
-      feePerHead,
-      totalFee,
-      feeFormula,
-      currentEvent,
-      fields
-    } = req.body;
-
-    // Handle nested format if sent from legacy form
-    if (fields) {
-      fullName = fullName || fields.fullName;
-      email = email || fields.email;
-      phone = phone || fields.phone;
-      whatsapp = whatsapp || fields.whatsapp;
-      college = college || fields.college;
-      department = department || fields.department;
-      year = year || fields.year;
-      teamName = teamName || fields.teamName;
-      teamMembers = teamMembers || fields.teamMembers;
-    }
-    if (currentEvent) {
-      eventId = eventId || currentEvent.id;
-      eventName = eventName || currentEvent.name;
-      eventCategory = eventCategory || currentEvent.category;
-      isTeam = isTeam !== undefined ? isTeam : currentEvent.isTeam;
-      feePerHead = feePerHead || currentEvent.feePerHead;
-      totalFee = totalFee !== undefined ? totalFee : req.body.totalFee;
-    }
-
-    // Validation
-    if (!fullName || !fullName.trim()) {
-      return res.status(400).json({ success: false, error: 'Full name is required', message: 'Full name is required' });
-    }
-    if (!email || !email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return res.status(400).json({ success: false, error: 'Valid email address is required', message: 'Valid email address is required' });
-    }
-    if (!phone || !phone.trim() || !/^[6-9]\d{9}$/.test(phone.trim())) {
-      return res.status(400).json({ success: false, error: 'Valid 10-digit Indian mobile number is required', message: 'Valid 10-digit Indian mobile number is required' });
-    }
-    if (!college || !college.trim()) {
-      return res.status(400).json({ success: false, error: 'College / Institution name is required', message: 'College / Institution name is required' });
-    }
-    if (!department || !department.trim()) {
-      return res.status(400).json({ success: false, error: 'Department is required', message: 'Department is required' });
-    }
-    if (!year || !year.trim()) {
-      return res.status(400).json({ success: false, error: 'Year of study is required', message: 'Year of study is required' });
-    }
-    if (!eventId || !eventName) {
-      return res.status(400).json({ success: false, error: 'Selected event is required', message: 'Selected event is required' });
-    }
-
-    if (isTeam && (!teamName || !teamName.trim())) {
-      return res.status(400).json({ success: false, error: 'Team name is required for team events', message: 'Team name is required for team events' });
-    }
-
-    const registrations = readRegistrations();
-    const registrationId = generateRegistrationId(registrations.length);
-    const now = new Date();
-
-    const newRecord = {
-      registrationId,
-      fullName: fullName.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      whatsapp: whatsapp ? whatsapp.trim() : null,
-      college: college.trim(),
-      department: department.trim(),
-      year: year.trim(),
-      eventId,
-      eventName,
-      eventCategory: eventCategory || 'technical',
-      isTeam: Boolean(isTeam),
-      teamName: isTeam && teamName ? teamName.trim() : null,
-      teamMembers: Array.isArray(teamMembers) ? teamMembers.filter((m) => m && m.trim()) : [],
-      participantCount: 1 + (Array.isArray(teamMembers) ? teamMembers.filter((m) => m && m.trim()).length : 0),
-      feePerHead: Number(feePerHead) || 0,
-      totalAmount: Number(totalFee) || 0,
-      feeFormula: feeFormula || '',
-      registrationStatus: 'CONFIRMED',
-      paymentStatus: 'PENDING',
-      paymentMethod: 'ON_SITE_DESK',
-      createdAt: now.toISOString(),
-      createdAtFormatted: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-    };
-
-    registrations.push(newRecord);
-    writeRegistrations(registrations);
-
-    return res.status(201).json({
-      success: true,
-      message: 'Registration confirmed successfully',
-      registration: newRecord,
-      registrationId,
-      ticketData: newRecord
-    });
-  } catch (err) {
-    console.error('Registration processing error:', err);
-    return res.status(500).json({
-      success: false,
-      error: 'Internal server error processing registration',
-      message: 'Internal server error processing registration'
-    });
   }
 };
 

@@ -32,7 +32,9 @@ import {
   FaBolt,
   FaGamepad,
   FaCircle,
-  FaListUl
+  FaListUl,
+  FaSun,
+  FaMoon
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 
