@@ -146,6 +146,29 @@ exports.login = async (req, res) => {
   if (user) {
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
     return res.json({ success: true, token, user: { username: user.username, role: user.role } });
+    // Fallback to Supabase if configured
+    if (supabase) {
+      const { data: supaUsers, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password);
+
+      if (!error && supaUsers && supaUsers.length > 0) {
+        const suUser = supaUsers[0];
+        const token = jwt.sign(
+          { id: suUser.id, username: suUser.username, role: suUser.role }, 
+          process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence', 
+          { expiresIn: '1d' }
+        );
+        return res.json({ success: true, token, user: { username: suUser.username, role: suUser.role } });
+      }
+    }
+
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ success: false, message: 'Server error during login' });
   }
 
   return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -159,6 +182,8 @@ exports.verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded; // Attach user info to request
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence');
+    req.user = decoded; 
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });
@@ -168,10 +193,6 @@ exports.verifyToken = (req, res, next) => {
 // ==================== DASHBOARD STATS ====================
 exports.getDashboardData = (req, res) => {
 exports.getDashboardData = async (req, res) => {
-  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
-  }
-
   try {
     const sponsors = getSponsorsData();
     const coordinators = getCoordinatorsData();
@@ -182,20 +203,22 @@ exports.getDashboardData = async (req, res) => {
 
     // Try fetching registrations from Supabase
     try {
-      const { data: dbRegs, error: dbError } = await supabase
-        .from('registrations')
-        .select('id, full_name, event_id, total_fee, created_at, ticket_code')
-        .order('created_at', { ascending: false });
+      if (supabase) {
+        const { data: dbRegs, error: dbError } = await supabase
+          .from('registrations')
+          .select('id, full_name, event_id, total_fee, created_at, ticket_code')
+          .order('created_at', { ascending: false });
 
-      if (!dbError && Array.isArray(dbRegs)) {
-        allRegistrations = dbRegs.map(r => ({
-          id: r.ticket_code || r.id,
-          fullName: r.full_name || 'Anonymous',
-          eventName: r.event_id || 'General Registration',
-          totalAmount: Number(r.total_fee) || 0,
-          createdAt: r.created_at,
-          createdAtFormatted: r.created_at ? new Date(r.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recent'
-        }));
+        if (!dbError && Array.isArray(dbRegs)) {
+          allRegistrations = dbRegs.map(r => ({
+            id: r.ticket_code || r.id,
+            fullName: r.full_name || 'Anonymous',
+            eventName: r.event_id || 'General Registration',
+            totalAmount: Number(r.total_fee) || 0,
+            createdAt: r.created_at,
+            createdAtFormatted: r.created_at ? new Date(r.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recent'
+          }));
+        }
       }
     } catch (e) {
       console.warn('Supabase registration query fallback:', e.message);
@@ -248,8 +271,8 @@ exports.getDashboardData = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Error fetching dashboard data:', err);
-    res.status(500).json({ success: false, message: 'Error fetching dashboard data' });
+    console.error('Error in getDashboardData:', err);
+    res.status(500).json({ success: false, message: 'Failed to compute dashboard metrics' });
   }
 };
 
