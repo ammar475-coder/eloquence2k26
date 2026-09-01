@@ -71,6 +71,92 @@ exports.createRole = (req, res) => {
   res.json({ success: true, message: 'Role created successfully', data: newRole });
 };
 
+exports.updateRole = (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const { id } = req.params;
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Role name required' });
+  }
+
+  const roles = getRolesData();
+  const roleIndex = roles.findIndex(r => r.id === parseInt(id, 10) || r.id === id);
+
+  if (roleIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Role not found' });
+  }
+
+  const oldRoleName = roles[roleIndex].name;
+  const normalizedName = name.toLowerCase().trim();
+
+  if (oldRoleName === 'superadmin' && normalizedName !== 'superadmin') {
+    return res.status(400).json({ success: false, message: 'Cannot rename system superadmin role' });
+  }
+
+  if (roles.find(r => r.name === normalizedName && (r.id !== parseInt(id, 10) && r.id !== id))) {
+    return res.status(400).json({ success: false, message: 'Role name already in use' });
+  }
+
+  roles[roleIndex].name = normalizedName;
+  saveRolesData(roles);
+
+  // If role name changed, update all users with the old role name
+  if (oldRoleName !== normalizedName) {
+    const users = getUsersData();
+    let updated = false;
+    users.forEach(u => {
+      if (u.role === oldRoleName) {
+        u.role = normalizedName;
+        updated = true;
+      }
+    });
+    if (updated) {
+      saveUsersData(users);
+    }
+  }
+
+  res.json({ success: true, message: 'Role updated successfully', data: roles[roleIndex] });
+};
+
+exports.deleteRole = (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const { id } = req.params;
+  const roles = getRolesData();
+  const roleIndex = roles.findIndex(r => r.id === parseInt(id, 10) || r.id === id);
+
+  if (roleIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Role not found' });
+  }
+
+  const roleName = roles[roleIndex].name;
+
+  if (roleName === 'superadmin' || roleName === 'admin') {
+    return res.status(400).json({ success: false, message: `Cannot delete primary system role '${roleName}'` });
+  }
+
+  // Check if any user is currently assigned this role
+  const users = getUsersData();
+  const assignedUsers = users.filter(u => u.role === roleName);
+  if (assignedUsers.length > 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Cannot delete role '${roleName}' because ${assignedUsers.length} user(s) are currently assigned to it. Reassign their roles first.` 
+    });
+  }
+
+  roles.splice(roleIndex, 1);
+  saveRolesData(roles);
+
+  res.json({ success: true, message: 'Role deleted successfully' });
+};
+
 exports.login = (req, res) => {
   const { username, password } = req.body;
 

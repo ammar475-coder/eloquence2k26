@@ -16,5 +16,7 @@ router.put('/admin/users/:id', adminController.verifyToken, adminController.upda
 router.delete('/admin/users/:id', adminController.verifyToken, adminController.deleteUser);
 router.get('/admin/roles', adminController.verifyToken, adminController.getRoles);
 router.post('/admin/roles', adminController.verifyToken, adminController.createRole);
+router.put('/admin/roles/:id', adminController.verifyToken, adminController.updateRole);
+router.delete('/admin/roles/:id', adminController.verifyToken, adminController.deleteRole);
 
 module.exports = router;
