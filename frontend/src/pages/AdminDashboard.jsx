@@ -15,10 +15,8 @@ import {
   FaShieldAlt,
   FaKey,
   FaLock,
-<<<<<<< HEAD
   FaSun,
-  FaMoon
-=======
+  FaMoon,
   FaCalendarAlt,
   FaLaptopCode,
   FaGamepad,
@@ -33,16 +31,11 @@ import {
   FaTimes,
   FaCircle,
   FaListUl
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 
 export default function AdminDashboard({ token, onLogout }) {
-<<<<<<< HEAD
   const [activeTab, setActiveTab] = useState('dashboard');
-=======
-  const [activeTab, setActiveTab] = useState('events');
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1126,11 +1119,12 @@ export default function AdminDashboard({ token, onLogout }) {
   );
 }
 
-<<<<<<< HEAD
 const getDashboardStyles = (isDark) => ({
   container: { 
     display: 'flex', 
-    minHeight: '100vh', 
+    height: '100vh', 
+    maxHeight: '100vh',
+    overflow: 'hidden', 
     background: isDark ? '#090d16' : '#f1f5f9', 
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
     transition: 'background 0.25s ease, color 0.25s ease'
@@ -1150,16 +1144,14 @@ const getDashboardStyles = (isDark) => ({
     borderRadius: '50%', 
     animation: 'spin 1s linear infinite' 
   },
-=======
-const styles = {
-  container: { display: 'flex', minHeight: '100vh', background: '#f1f5f9', fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif' },
-  loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f1f5f9' },
-  spinner: { width: '40px', height: '40px', border: '4px solid #cbd5e1', borderTop: '4px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' },
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
   
-  // Sidebar
+  // Sidebar - Sticky & Fixed Height
   sidebar: { 
     width: '270px', 
+    height: '100vh',
+    position: 'sticky',
+    top: 0,
+    flexShrink: 0,
     background: isDark ? '#0d1322' : '#ffffff', 
     borderRight: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', 
     display: 'flex', 
@@ -1173,6 +1165,7 @@ const styles = {
     display: 'flex', 
     alignItems: 'center', 
     gap: '12px', 
+    flexShrink: 0,
     borderBottom: isDark ? '1px solid #1e293b' : '1px solid #f1f5f9' 
   },
   logoCircle: { 
@@ -1201,13 +1194,13 @@ const styles = {
   },
   
   // Nav
-<<<<<<< HEAD
   navMenu: { 
     flex: 1, 
     padding: '1.5rem 1rem', 
     display: 'flex', 
     flexDirection: 'column', 
-    gap: '0.4rem' 
+    gap: '0.4rem',
+    overflowY: 'auto'
   },
   navItem: { 
     display: 'flex', 
@@ -1301,6 +1294,7 @@ const styles = {
     marginRight: '10px', 
     fontSize: '0.95rem' 
   },
+  subnavLabelRow: { display: 'flex', alignItems: 'center' },
   badgeCount: { 
     background: isDark ? '#1e293b' : '#e2e8f0', 
     color: isDark ? '#94a3b8' : '#475569', 
@@ -1309,30 +1303,10 @@ const styles = {
     fontSize: '0.72rem', 
     fontWeight: '700' 
   },
-=======
-  navMenu: { flex: 1, padding: '1.25rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', overflowY: 'auto' },
-  navItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', borderRadius: '10px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '0.92rem', fontWeight: '600', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease', width: '100%' },
-  navItemActive: { background: '#eff6ff', color: '#2563eb' },
-  navIcon: { marginRight: '12px', fontSize: '1.1rem', flexShrink: 0 },
-  
-  // Dropdown
-  dropdownGroup: { display: 'flex', flexDirection: 'column', gap: '0.2rem' },
-  dropdownToggle: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1rem', borderRadius: '10px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '0.92rem', fontWeight: '600', cursor: 'pointer', width: '100%', transition: 'all 0.2s ease' },
-  dropdownToggleActive: { color: '#0f172a', background: '#f8fafc' },
-  dropdownToggleLeft: { display: 'flex', alignItems: 'center' },
-  dropdownChevron: { color: '#94a3b8', display: 'flex', alignItems: 'center' },
-  
-  submenu: { display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingLeft: '1.2rem', marginTop: '0.2rem', marginBottom: '0.4rem' },
-  subnavLabelRow: { display: 'flex', alignItems: 'center' },
-  subnavItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.85rem', borderRadius: '8px', border: 'none', background: 'transparent', color: '#64748b', fontSize: '0.86rem', fontWeight: '500', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s ease', width: '100%' },
-  subnavItemActive: { background: '#dbeafe', color: '#1d4ed8', fontWeight: '700' },
-  subnavIcon: { marginRight: '10px', fontSize: '0.95rem' },
-
-  badgeCount: { background: '#e2e8f0', color: '#475569', padding: '0.15rem 0.45rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '700' },
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 
   sidebarFooter: { 
     padding: '1.25rem 1rem', 
+    flexShrink: 0,
     borderTop: isDark ? '1px solid #1e293b' : '1px solid #f1f5f9' 
   },
   logoutBtn: { 
@@ -1352,12 +1326,13 @@ const styles = {
   },
   
   // Main Layout
-<<<<<<< HEAD
   mainContent: { 
     flex: 1, 
     display: 'flex', 
     flexDirection: 'column', 
+    height: '100vh',
     overflowX: 'hidden',
+    overflowY: 'hidden',
     background: isDark ? '#090d16' : '#f1f5f9',
     transition: 'background 0.25s ease'
   },
@@ -1372,6 +1347,7 @@ const styles = {
     position: 'sticky', 
     top: 0, 
     zIndex: 10, 
+    flexShrink: 0,
     backdropFilter: 'blur(8px)',
     transition: 'background 0.25s ease, border-color 0.25s ease'
   },
@@ -1431,15 +1407,6 @@ const styles = {
     flex: 1, 
     overflowY: 'auto' 
   },
-=======
-  mainContent: { flex: 1, display: 'flex', flexDirection: 'column', overflowX: 'hidden' },
-  topHeader: { background: '#ffffff', minHeight: '85px', padding: '1rem 2.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10, backdropFilter: 'blur(8px)' },
-  pageTitle: { margin: 0, fontSize: '1.45rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' },
-  pageSubtitle: { margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: '400' },
-  userProfile: { display: 'flex', alignItems: 'center' },
-  avatar: { width: '42px', height: '42px', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#ffffff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '1.1rem', border: '2px solid #ffffff', boxShadow: '0 2px 6px rgba(0,0,0,0.1)' },
-  contentWrapper: { padding: '2.5rem', flex: 1, overflowY: 'auto' },
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 
   // Views & Headers
   viewContainer: { 
@@ -1495,8 +1462,6 @@ const styles = {
   filterPill: { border: 'none', background: 'transparent', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', color: '#64748b', cursor: 'pointer' },
   filterPillActive: { border: 'none', background: '#2563eb', color: '#ffffff', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 5px rgba(37,99,235,0.2)' },
 
-  // Cards & Tables
-<<<<<<< HEAD
   card: { 
     background: isDark ? '#111827' : '#ffffff', 
     borderRadius: '16px', 
@@ -1517,8 +1482,11 @@ const styles = {
     margin: 0, 
     fontSize: '1.05rem', 
     fontWeight: '700', 
-    color: isDark ? '#f8fafc' : '#0f172a' 
+    color: isDark ? '#f8fafc' : '#0f172a',
+    display: 'flex',
+    alignItems: 'center'
   },
+  cardSubText: { fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#64748b' },
   tableResponsive: { 
     overflowX: 'auto' 
   },
@@ -1567,6 +1535,7 @@ const styles = {
     fontWeight: '600', 
     color: isDark ? '#f8fafc' : '#0f172a' 
   },
+  tableSubText: { fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b', marginTop: '2px' },
   idBadge: { 
     background: isDark ? '#1e293b' : '#f1f5f9', 
     color: isDark ? '#94a3b8' : '#475569', 
@@ -1575,24 +1544,15 @@ const styles = {
     fontSize: '0.8rem', 
     fontWeight: '600' 
   },
-=======
-  card: { background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', overflow: 'hidden' },
-  cardHeaderFlex: { padding: '1.25rem 1.75rem', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  cardTitle: { margin: 0, fontSize: '1.05rem', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center' },
-  cardSubText: { fontSize: '0.8rem', color: '#64748b' },
-  tableResponsive: { overflowX: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { background: '#ffffff', padding: '1rem 1.75rem', textAlign: 'left', color: '#64748b', fontWeight: '600', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0' },
-  tr: { borderBottom: '1px solid #f1f5f9' },
-  td: { padding: '1.1rem 1.75rem', color: '#334155', fontSize: '0.9rem' },
-  
-  userCell: { display: 'flex', alignItems: 'center', gap: '10px' },
-  userAvatarSm: { width: '30px', height: '30px', borderRadius: '8px', background: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '0.85rem' },
-  strongText: { fontWeight: '600', color: '#0f172a' },
-  tableSubText: { fontSize: '0.78rem', color: '#64748b', marginTop: '2px' },
-  idBadge: { background: '#f1f5f9', color: '#475569', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700' },
-  idBadgeMini: { background: '#eff6ff', color: '#2563eb', padding: '0.1rem 0.35rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '700', marginRight: '4px' },
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
+  idBadgeMini: { 
+    background: isDark ? '#1e3a8a' : '#eff6ff', 
+    color: isDark ? '#93c5fd' : '#2563eb', 
+    padding: '0.1rem 0.35rem', 
+    borderRadius: '4px', 
+    fontSize: '0.7rem', 
+    fontWeight: '700', 
+    marginRight: '4px' 
+  },
   
   roleBadge: { 
     display: 'inline-block', 
@@ -1643,19 +1603,49 @@ const styles = {
     fontWeight: '600' 
   },
   
-<<<<<<< HEAD
+  badgeTech: { 
+    display: 'inline-flex', 
+    alignItems: 'center', 
+    background: isDark ? '#1e3a8a' : '#eff6ff', 
+    color: isDark ? '#93c5fd' : '#1d4ed8', 
+    padding: '0.25rem 0.65rem', 
+    borderRadius: '6px', 
+    fontSize: '0.78rem', 
+    fontWeight: '700', 
+    border: isDark ? '1px solid #2563eb' : '1px solid #bfdbfe' 
+  },
+  badgeNonTech: { 
+    display: 'inline-flex', 
+    alignItems: 'center', 
+    background: isDark ? '#064e3b' : '#ecfdf5', 
+    color: isDark ? '#6ee7b7' : '#047857', 
+    padding: '0.25rem 0.65rem', 
+    borderRadius: '6px', 
+    fontSize: '0.78rem', 
+    fontWeight: '700', 
+    border: isDark ? '1px solid #059669' : '1px solid #a7f3d0' 
+  },
+  venueText: { fontSize: '0.85rem', color: isDark ? '#cbd5e1' : '#1e293b', fontWeight: '500', display: 'flex', alignItems: 'center' },
+  timeText: { fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#64748b', display: 'flex', alignItems: 'center' },
+  feeHighlight: { fontWeight: '700', color: '#10b981', fontSize: '0.9rem' },
+  
   statusActive: { 
+    display: 'inline-flex',
+    alignItems: 'center',
     color: '#10b981', 
     fontWeight: '600', 
     fontSize: '0.85rem' 
   },
   actionBtnEdit: { 
+    display: 'inline-flex',
+    alignItems: 'center',
     background: isDark ? '#1e3a8a' : '#eff6ff', 
     border: isDark ? '1px solid #2563eb' : '1px solid #bfdbfe', 
     color: isDark ? '#93c5fd' : '#2563eb', 
     cursor: 'pointer', 
-    fontSize: '0.9rem', 
-    padding: '0.45rem 0.65rem', 
+    fontSize: '0.85rem',
+    fontWeight: '600',
+    padding: '0.45rem 0.75rem', 
     borderRadius: '6px', 
     marginRight: '0.5rem', 
     transition: 'all 0.15s' 
@@ -1676,19 +1666,6 @@ const styles = {
     color: isDark ? '#64748b' : '#94a3b8', 
     fontSize: '0.9rem' 
   },
-=======
-  badgeTech: { display: 'inline-flex', alignItems: 'center', background: '#eff6ff', color: '#1d4ed8', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid #bfdbfe' },
-  badgeNonTech: { display: 'inline-flex', alignItems: 'center', background: '#ecfdf5', color: '#047857', padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid #a7f3d0' },
-  
-  venueText: { fontSize: '0.85rem', color: '#1e293b', fontWeight: '500', display: 'flex', alignItems: 'center' },
-  timeText: { fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center' },
-  feeHighlight: { fontWeight: '700', color: '#059669', fontSize: '0.9rem' },
-
-  actionBtnEdit: { display: 'inline-flex', alignItems: 'center', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600', padding: '0.45rem 0.75rem', borderRadius: '6px', marginRight: '0.5rem', transition: 'all 0.15s' },
-  actionBtnDelete: { background: '#fef2f2', border: '1px solid #fecaca', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem', padding: '0.45rem 0.65rem', borderRadius: '6px', transition: 'all 0.15s' },
-  statusActive: { display: 'inline-flex', alignItems: 'center', color: '#10b981', fontWeight: '600', fontSize: '0.85rem' },
-  emptyState: { padding: '3rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' },
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
 
   // Stats Grid for Dashboard
   statsGrid: { 
@@ -1830,13 +1807,8 @@ const styles = {
     padding: '1.75rem',
     display: 'flex',
     flexDirection: 'column',
-<<<<<<< HEAD
     gap: '1.25rem',
     background: isDark ? '#111827' : '#ffffff'
-=======
-    gap: '1.15rem',
-    background: '#ffffff'
->>>>>>> 3d136d39c84c327736d92cfbf6a6c894128c0997
   },
   formRowTwo: {
     display: 'grid',
