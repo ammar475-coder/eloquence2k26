@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -122,53 +120,10 @@ exports.login = (req, res) => {
 
   const users = getUsersData();
   const user = users.find(u => u.username === username && u.password === password);
-exports.login = async (req, res) => {
-  const { username, password } = req.body;
-
-  try {
-    const users = getUsersData();
-    let user = users.find(u => u.username === username && u.password === password);
-
-    // Fallback check against environment admin credentials
-    if (!user && username === (process.env.ADMIN_USERNAME || 'admin') && password === (process.env.ADMIN_PASSWORD || 'eloquenceadmin')) {
-      user = { id: 1, username: 'admin', role: 'superadmin' };
-    }
-
-    if (user) {
-      const token = jwt.sign(
-        { id: user.id, username: user.username, role: user.role }, 
-        process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence', 
-        { expiresIn: '1d' }
-      );
-      return res.json({ success: true, token, user: { username: user.username, role: user.role } });
-    }
 
   if (user) {
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
     return res.json({ success: true, token, user: { username: user.username, role: user.role } });
-    // Fallback to Supabase if configured
-    if (supabase) {
-      const { data: supaUsers, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password);
-
-      if (!error && supaUsers && supaUsers.length > 0) {
-        const suUser = supaUsers[0];
-        const token = jwt.sign(
-          { id: suUser.id, username: suUser.username, role: suUser.role }, 
-          process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence', 
-          { expiresIn: '1d' }
-        );
-        return res.json({ success: true, token, user: { username: suUser.username, role: suUser.role } });
-      }
-    }
-
-    return res.status(401).json({ success: false, message: 'Invalid credentials' });
-  } catch (err) {
-    console.error('Login error:', err);
-    return res.status(500).json({ success: false, message: 'Server error during login' });
   }
 
   return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -182,8 +137,6 @@ exports.verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded; // Attach user info to request
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence');
-    req.user = decoded; 
     next();
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });
@@ -192,76 +145,34 @@ exports.verifyToken = (req, res, next) => {
 
 // ==================== DASHBOARD STATS ====================
 exports.getDashboardData = (req, res) => {
-exports.getDashboardData = async (req, res) => {
   try {
+    const registrations = getRegistrationsData();
     const sponsors = getSponsorsData();
     const coordinators = getCoordinatorsData();
-    const localEvents = getEventsData();
-    const localRegs = getRegistrationsData();
+    const events = getEventsData();
 
-    let allRegistrations = [];
-
-    // Try fetching registrations from Supabase
-    try {
-      if (supabase) {
-        const { data: dbRegs, error: dbError } = await supabase
-          .from('registrations')
-          .select('id, full_name, event_id, total_fee, created_at, ticket_code')
-          .order('created_at', { ascending: false });
-
-        if (!dbError && Array.isArray(dbRegs)) {
-          allRegistrations = dbRegs.map(r => ({
-            id: r.ticket_code || r.id,
-            fullName: r.full_name || 'Anonymous',
-            eventName: r.event_id || 'General Registration',
-            totalAmount: Number(r.total_fee) || 0,
-            createdAt: r.created_at,
-            createdAtFormatted: r.created_at ? new Date(r.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recent'
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn('Supabase registration query fallback:', e.message);
-    }
-
-    // Merge with local registrations if any (avoiding duplicate IDs)
-    const existingIds = new Set(allRegistrations.map(r => String(r.id)));
-    for (const lr of localRegs) {
-      const id = String(lr.registrationId || lr.id || '');
-      if (id && !existingIds.has(id)) {
-        allRegistrations.push({
-          id,
-          fullName: lr.fullName || lr.primary_contact_name || 'Anonymous',
-          eventName: lr.eventName || lr.eventId || 'General Registration',
-          totalAmount: Number(lr.totalAmount) || Number(lr.totalFee) || 0,
-          createdAt: lr.createdAt,
-          createdAtFormatted: lr.createdAtFormatted || (lr.createdAt ? new Date(lr.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recent')
-        });
-        existingIds.add(id);
-      }
-    }
-
-    const totalRevenue = allRegistrations.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
+    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
 
-    // Format recent registrations for the dashboard
-    const recentRegistrations = allRegistrations
-      .slice(0, 10)
+    // Format recent registrations
+    const recentRegistrations = [...registrations]
+      .reverse()
+      .slice(0, 5)
       .map(r => ({
-        id: r.id,
-        name: r.fullName,
-        event: r.eventName,
-        date: r.createdAtFormatted || 'Recent'
+        id: r.registrationId || r.id,
+        name: r.fullName || 'Anonymous',
+        event: r.eventName || 'General Registration',
+        date: r.createdAtFormatted || (r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : 'Recent')
       }));
 
     res.json({
       success: true,
       data: {
         stats: {
-          totalRegistrations: allRegistrations.length,
+          totalRegistrations: registrations.length,
           revenue: totalRevenue,
-          eventsActive: localEvents.length || 12,
+          eventsActive: events.length || 12,
           totalSponsors: sponsors.length,
           activeSponsors: activeSponsors.length,
           totalCoordinators: coordinators.length,
@@ -299,11 +210,9 @@ exports.createUser = (req, res) => {
   const users = getUsersData();
   if (users.find(u => u.username === username)) {
     return res.status(400).json({ success: false, message: 'Username already exists' });
-  if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
-    return res.status(400).json({ success: false, message: 'Username already taken' });
   }
 
-  const newUser = { id: Date.now(), username: username.trim(), password: password.trim(), role: role.trim() };
+  const newUser = { id: Date.now(), username, password, role };
   users.push(newUser);
   saveUsersData(users);
 
@@ -317,14 +226,13 @@ exports.updateUser = (req, res) => {
 
   const { id } = req.params;
   const { username, password, role } = req.body;
-
+  
   if (!username || !role) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   const users = getUsersData();
   const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
-  const userIndex = users.findIndex(u => u.id === parseInt(id, 10) || u.id === id);
 
   if (userIndex === -1) {
     return res.status(404).json({ success: false, message: 'User not found' });
@@ -334,14 +242,14 @@ exports.updateUser = (req, res) => {
     return res.status(403).json({ success: false, message: 'Cannot modify a superadmin' });
   }
 
-  if (users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.id !== users[userIndex].id)) {
+  if (users.find(u => u.username === username && u.id !== parseInt(id, 10))) {
     return res.status(400).json({ success: false, message: 'Username already taken' });
   }
 
-  users[userIndex].username = username.trim();
-  users[userIndex].role = role.trim();
-  if (password && password.trim()) {
-    users[userIndex].password = password.trim();
+  users[userIndex].username = username;
+  users[userIndex].role = role;
+  if (password) {
+    users[userIndex].password = password;
   }
 
   saveUsersData(users);
@@ -356,7 +264,6 @@ exports.deleteUser = (req, res) => {
   const { id } = req.params;
   const users = getUsersData();
   const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
-  const userIndex = users.findIndex(u => u.id === parseInt(id, 10) || u.id === id);
 
   if (userIndex === -1) {
     return res.status(404).json({ success: false, message: 'User not found' });
@@ -366,17 +273,11 @@ exports.deleteUser = (req, res) => {
     return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
   }
   
-
-  if (users[userIndex].username === 'admin') {
-    return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
-  }
-
   if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
     return res.status(403).json({ success: false, message: 'Cannot delete a superadmin' });
   }
 
   if (users[userIndex].id === req.user.id) {
-  if (users[userIndex].id.toString() === req.user.id.toString()) {
     return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
   }
 
