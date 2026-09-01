@@ -64,5 +64,37 @@
     "teamName": "sdfg",
     "totalAmount": 100,
     "createdAt": "2026-09-01T10:16:35.749Z"
+  },
+  {
+    "registrationId": "ELQ26-TCH-44540",
+    "id": "764c8fc4-2830-4e33-9662-037948fd74c9",
+    "fullName": "Lead Participant",
+    "email": "lead@test.com",
+    "phone": "9876543210",
+    "college": "CAHCET",
+    "department": "CSE",
+    "year": "3rd Year",
+    "eventId": "tech-01",
+    "eventName": "PPT PRESENTATION",
+    "isTeam": true,
+    "teamName": "Alpha Squad",
+    "totalAmount": 300,
+    "createdAt": "2026-09-01T10:33:37.693Z"
+  },
+  {
+    "registrationId": "ELQ26-TCH-51064",
+    "id": "a5de5254-9571-479b-ab11-acf419b9a023",
+    "fullName": "sh",
+    "email": "admin1@gmail.com",
+    "phone": "9876543212",
+    "college": "rgfdeg",
+    "department": "ddj",
+    "year": "2nd Year",
+    "eventId": "tech-01",
+    "eventName": "SLIDE CRAFT",
+    "isTeam": true,
+    "teamName": "sdd",
+    "totalAmount": 300,
+    "createdAt": "2026-09-01T10:34:55.254Z"
   }
 ]
