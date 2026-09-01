@@ -400,22 +400,38 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        currentEvent,
+        currentEvent: selectedEvent,
         fields,
-        totalFee: total
+        totalFee: feeInfo.total
       }),
     })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           toast.success('Registration successful!');
-          setTicketData(data.ticketData);
-          setIsSuccess(true);
+          const resTicket = data.ticketData || {};
+          setTicketData({
+            ...resTicket,
+            registrationId: resTicket.ticketCode || data.registrationId || 'ELQ26-REG',
+            fullName: fields.fullName,
+            college: fields.college,
+            department: fields.department,
+            year: fields.year,
+            phone: fields.phone,
+            email: fields.email,
+            eventName: selectedEvent.name,
+            eventCategory: selectedEvent.category,
+            isTeam: selectedEvent.isTeam,
+            teamName: fields.teamName,
+            participantCount: 1 + (fields.teamMembers ? fields.teamMembers.length : 0),
+            totalFee: feeInfo.total
+          });
+          setStep('success');
           if (formRef.current) {
             formRef.current.scrollIntoView({ behavior: 'smooth' });
           }
         } else {
-          toast.error('Registration failed: ' + (data.errorDetails || data.message));
+          toast.error('Registration failed: ' + (data.errorDetails || data.message || 'Unknown error'));
         }
       })
       .catch(err => {
