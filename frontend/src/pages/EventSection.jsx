@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
 
-export default function EventSection({ onRegister }) {
+export default function EventSection({ onRegister, onViewRules }) {
   const [filter, setFilter] = useState('all');
   const [visible, setVisible] = useState(false);
   const sectionRef = useRef(null);
@@ -48,7 +48,12 @@ export default function EventSection({ onRegister }) {
           <div className="category-label"> TECHNICAL EVENTS</div>
           <div className="events-grid">
             {techEvents.map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onRegister={onRegister}
+                onViewRules={onViewRules}
+              />
             ))}
           </div>
         </>
@@ -59,7 +64,12 @@ export default function EventSection({ onRegister }) {
           <div className="category-label"> NON-TECHNICAL EVENTS</div>
           <div className="events-grid">
             {nonTechEvents.map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onRegister={onRegister}
+                onViewRules={onViewRules}
+              />
             ))}
           </div>
         </>

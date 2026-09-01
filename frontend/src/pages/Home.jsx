@@ -19,6 +19,12 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
     }
   };
 
+  const handleRegisterNow = () => {
+    if (onNavigate) {
+      onNavigate('register');
+    }
+  };
+
   return (
     <main className="home-page">
       {!hasPlayedIntro && (
@@ -26,14 +32,14 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
       )}
       <Hero
         onExplore={handleExploreEvents}
-        onRegister={handleExploreEvents}
+        onRegister={handleRegisterNow}
         hasPlayedIntro={hasPlayedIntro}
       />
       <Intro />
       <PatronsSection />
       <Sponsors />
       <LocationMap />
-      <FinalCTA onRegister={handleExploreEvents} />
+      <FinalCTA onRegister={handleRegisterNow} />
     </main>
   );
 }
