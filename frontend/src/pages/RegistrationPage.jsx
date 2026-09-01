@@ -429,6 +429,53 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
     } finally {
       setIsSubmitting(false);
     }
+    fetch('/api/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentEvent: selectedEvent,
+        fields,
+        totalFee: feeInfo.total
+      }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          toast.success('Registration successful!');
+          const resTicket = data.ticketData || {};
+          setTicketData({
+            ...resTicket,
+            registrationId: resTicket.ticketCode || data.registrationId || 'ELQ26-REG',
+            fullName: fields.fullName,
+            college: fields.college,
+            department: fields.department,
+            year: fields.year,
+            phone: fields.phone,
+            email: fields.email,
+            eventName: selectedEvent.name,
+            eventCategory: selectedEvent.category,
+            isTeam: selectedEvent.isTeam,
+            teamName: fields.teamName,
+            participantCount: 1 + (fields.teamMembers ? fields.teamMembers.length : 0),
+            totalFee: feeInfo.total
+          });
+          setStep('success');
+          if (formRef.current) {
+            formRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        } else {
+          toast.error('Registration failed: ' + (data.errorDetails || data.message || 'Unknown error'));
+        }
+      })
+      .catch(err => {
+        console.error('API Error:', err);
+        toast.error('Something went wrong connecting to the server. Please try again.');
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const handleCopyId = () => {
