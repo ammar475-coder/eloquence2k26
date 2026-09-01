@@ -2,6 +2,7 @@ require('dotenv').config({ quiet: true });
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const supabase = require('./config/supabase');
 
 const app = express();
 const PORT = process.env.PORT || 5000;

@@ -189,7 +189,7 @@ export default function RegistrationPage({ eventId, onNavigate }) {
             formRef.current.scrollIntoView({ behavior: 'smooth' });
           }
         } else {
-          toast.error('Registration failed: ' + data.message);
+          toast.error('Registration failed: ' + (data.errorDetails || data.message));
         }
       })
       .catch(err => {
