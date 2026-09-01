@@ -12,7 +12,11 @@
     "name": "moderator"
   },
   {
-    "id": 1788250530723,
+    "id": 4,
     "name": "coordinator"
+  },
+  {
+    "id": 5,
+    "name": "web-coordinator"
   }
 ]
