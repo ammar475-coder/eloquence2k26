@@ -37,10 +37,40 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
   const initialEvent = eventId ? events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) : null;
   const [selectedEvent, setSelectedEvent] = useState(initialEvent);
 
-  // Event-specific student coordinators
-  const eventCoordinators = (selectedEvent?.coordinators && selectedEvent.coordinators.length > 0)
-    ? selectedEvent.coordinators
-    : (selectedEvent ? coordinatorsData[selectedEvent.id]?.coordinators || [] : []);
+  // Event-specific student coordinators (live from backend with local fallback)
+  const [liveCoordinators, setLiveCoordinators] = useState(() => {
+    return selectedEvent ? (coordinatorsData[selectedEvent.id]?.coordinators || []) : [];
+  });
+
+  useEffect(() => {
+    if (!selectedEvent?.id) {
+      setLiveCoordinators([]);
+      return;
+    }
+
+    let isMounted = true;
+    const staticFallback = coordinatorsData[selectedEvent.id]?.coordinators || [];
+
+    fetch(`/api/coordinators/event/${encodeURIComponent(selectedEvent.id)}`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (!isMounted) return;
+        if (result.success && Array.isArray(result.data)) {
+          setLiveCoordinators(result.data);
+        } else {
+          setLiveCoordinators(staticFallback);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLiveCoordinators(staticFallback);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedEvent?.id]);
+
+  const eventCoordinators = liveCoordinators;
 
   // Stepper: 'select' | 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState(initialEvent ? 'participant' : 'select');
@@ -1013,16 +1043,16 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
                 </div>
 
                 {/* Event-Specific Student Coordinators & Contact */}
-                {eventCoordinators.length > 0 && (
-                  <div className="reg-coordinators-section">
-                    <div className="summary-card-header coord-header">
-                      <span className="summary-title-tag">STUDENT COORDINATORS</span>
-                      <h4 className="summary-card-heading">
-                        <FaHeadset style={{ marginRight: '0.45rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
-                        CONTACT & ASSISTANCE
-                      </h4>
-                    </div>
+                <div className="reg-coordinators-section">
+                  <div className="summary-card-header coord-header">
+                    <span className="summary-title-tag">STUDENT COORDINATORS</span>
+                    <h4 className="summary-card-heading">
+                      <FaHeadset style={{ marginRight: '0.45rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+                      CONTACT & ASSISTANCE
+                    </h4>
+                  </div>
 
+                  {eventCoordinators.length > 0 ? (
                     <div className="reg-coord-list">
                       {eventCoordinators.map((coord, idx) => (
                         <div key={idx} className="reg-coord-item">
@@ -1038,8 +1068,12 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ padding: '0.85rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px dashed rgba(255, 255, 255, 0.15)', color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.82rem', textAlign: 'center' }}>
+                      Coordinator details will be updated soon.
+                    </div>
+                  )}
+                </div>
               </div>
             </aside>
           </div>
@@ -1217,14 +1251,14 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
                 </div>
 
                 {/* 5. Student Coordinators & Contact in Review */}
-                {eventCoordinators.length > 0 && (
-                  <div className="review-section-box review-full-col">
-                    <div className="review-sec-header">
-                      <h4>
-                        <FaHeadset style={{ marginRight: '0.45rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
-                        STUDENT COORDINATORS & CONTACT ({selectedEvent.name})
-                      </h4>
-                    </div>
+                <div className="review-section-box review-full-col">
+                  <div className="review-sec-header">
+                    <h4>
+                      <FaHeadset style={{ marginRight: '0.45rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
+                      STUDENT COORDINATORS & CONTACT ({selectedEvent.name})
+                    </h4>
+                  </div>
+                  {eventCoordinators.length > 0 ? (
                     <div className="review-coord-grid">
                       {eventCoordinators.map((c, idx) => (
                         <div key={idx} className="review-coord-entry">
@@ -1237,8 +1271,12 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px dashed rgba(255, 255, 255, 0.15)', color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.85rem', textAlign: 'center' }}>
+                      Coordinator details will be updated soon.
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Confirmation Actions */}

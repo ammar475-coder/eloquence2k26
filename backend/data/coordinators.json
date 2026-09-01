@@ -1,0 +1,376 @@
+[
+  {
+    "id": "coord-tech-01-a",
+    "name": "Mohammed Nabeel",
+    "phone": "9994023366",
+    "whatsapp": "9994023366",
+    "email": "nabeel@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-01"
+    ],
+    "isActive": true,
+    "displayOrder": 1,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-01-b",
+    "name": "Syed Zaid Ahmed",
+    "phone": "8056463976",
+    "whatsapp": "8056463976",
+    "email": "zaid@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-01"
+    ],
+    "isActive": true,
+    "displayOrder": 2,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-02-a",
+    "name": "MD Faazil Ammar P.",
+    "phone": "9025184611",
+    "whatsapp": "9025184611",
+    "email": "faazil@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-02"
+    ],
+    "isActive": true,
+    "displayOrder": 3,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-02-b",
+    "name": "Mohammed Saad V.",
+    "phone": "8643033733",
+    "whatsapp": "8643033733",
+    "email": "saad@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-02"
+    ],
+    "isActive": true,
+    "displayOrder": 4,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-03-a",
+    "name": "Kashif Ulhaq K.",
+    "phone": "9150311529",
+    "whatsapp": "9150311529",
+    "email": "kashif@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-03"
+    ],
+    "isActive": true,
+    "displayOrder": 5,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-03-b",
+    "name": "Tejashwini P.R.",
+    "phone": "8608190410",
+    "whatsapp": "8608190410",
+    "email": "tejashwini@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-03"
+    ],
+    "isActive": true,
+    "displayOrder": 6,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-04-a",
+    "name": "Faseeh Mohammed A.",
+    "phone": "7867926568",
+    "whatsapp": "7867926568",
+    "email": "faseeh@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-04"
+    ],
+    "isActive": true,
+    "displayOrder": 7,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-04-b",
+    "name": "Roshni",
+    "phone": "9489339990",
+    "whatsapp": "9489339990",
+    "email": "roshni@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-04"
+    ],
+    "isActive": true,
+    "displayOrder": 8,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-05-a",
+    "name": "Imran B.",
+    "phone": "6369954082",
+    "whatsapp": "6369954082",
+    "email": "imran@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-05"
+    ],
+    "isActive": true,
+    "displayOrder": 9,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-05-b",
+    "name": "Preethi R.",
+    "phone": "9344114553",
+    "whatsapp": "9344114553",
+    "email": "preethi@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-05"
+    ],
+    "isActive": true,
+    "displayOrder": 10,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-06-a",
+    "name": "Mohammed Azhan U.",
+    "phone": "8428487798",
+    "whatsapp": "8428487798",
+    "email": "azhan@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-06"
+    ],
+    "isActive": true,
+    "displayOrder": 11,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-tech-06-b",
+    "name": "Sufiya Firdause A.",
+    "phone": "9487915961",
+    "whatsapp": "9487915961",
+    "email": "sufiya@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "tech-06"
+    ],
+    "isActive": true,
+    "displayOrder": 12,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-01-a",
+    "name": "Ismail",
+    "phone": "8098067668",
+    "whatsapp": "8098067668",
+    "email": "ismail@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-01"
+    ],
+    "isActive": true,
+    "displayOrder": 13,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-02-a",
+    "name": "Mohamed Abbas T.A.",
+    "phone": "9486976316",
+    "whatsapp": "9486976316",
+    "email": "abbas@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-02"
+    ],
+    "isActive": true,
+    "displayOrder": 14,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-02-b",
+    "name": "Syed Nounman A.",
+    "phone": "9844266605",
+    "whatsapp": "9844266605",
+    "email": "nounman@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-02"
+    ],
+    "isActive": true,
+    "displayOrder": 15,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-03-a",
+    "name": "Sugesh B.",
+    "phone": "9080344472",
+    "whatsapp": "9080344472",
+    "email": "sugesh@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-03"
+    ],
+    "isActive": true,
+    "displayOrder": 16,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-04-a",
+    "name": "Kaviya Shree",
+    "phone": "9025853558",
+    "whatsapp": "9025853558",
+    "email": "kaviya@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-04"
+    ],
+    "isActive": true,
+    "displayOrder": 17,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-04-b",
+    "name": "Pooja Sri",
+    "phone": "9345728863",
+    "whatsapp": "9345728863",
+    "email": "pooja@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-04"
+    ],
+    "isActive": true,
+    "displayOrder": 18,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-05-a",
+    "name": "Bala Murugan M.K.",
+    "phone": "8825905010",
+    "whatsapp": "8825905010",
+    "email": "balamurugan@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-05"
+    ],
+    "isActive": true,
+    "displayOrder": 19,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-05-b",
+    "name": "Vijaya Kumar M.",
+    "phone": "6382960769",
+    "whatsapp": "6382960769",
+    "email": "vijayakumar@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-05"
+    ],
+    "isActive": true,
+    "displayOrder": 20,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-06-a",
+    "name": "Mohammed Mussadiq",
+    "phone": "9344200079",
+    "whatsapp": "9344200079",
+    "email": "mussadiq@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-06"
+    ],
+    "isActive": true,
+    "displayOrder": 21,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "coord-nontech-06-b",
+    "name": "Mohammed Sharuk I.",
+    "phone": "9994580064",
+    "whatsapp": "9994580064",
+    "email": "sharuk@cahcet.edu.in",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-06"
+    ],
+    "isActive": true,
+    "displayOrder": 22,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  }
+]
