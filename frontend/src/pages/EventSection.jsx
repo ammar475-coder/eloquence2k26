@@ -2,10 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
 
-export default function EventSection({ onRegister }) {
+export default function EventSection({ onRegister, onViewRules }) {
+  const [eventsList, setEventsList] = useState(events);
   const [filter, setFilter] = useState('all');
   const [visible, setVisible] = useState(false);
   const sectionRef = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/events')
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setEventsList(result.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -16,8 +28,8 @@ export default function EventSection({ onRegister }) {
     return () => observer.disconnect();
   }, []);
 
-  const techEvents = events.filter((e) => e.category === 'technical');
-  const nonTechEvents = events.filter((e) => e.category === 'non-technical');
+  const techEvents = eventsList.filter((e) => e.category === 'technical');
+  const nonTechEvents = eventsList.filter((e) => e.category === 'non-technical');
 
   const showTech = filter === 'all' || filter === 'technical';
   const showNonTech = filter === 'all' || filter === 'non-technical';
@@ -45,10 +57,15 @@ export default function EventSection({ onRegister }) {
 
       {showTech && (
         <>
-          <div className="category-label"> TECHNICAL EVENTS</div>
+          <div className="category-label">TECHNICAL EVENTS</div>
           <div className="events-grid">
             {techEvents.map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onRegister={onRegister}
+                onViewRules={onViewRules}
+              />
             ))}
           </div>
         </>
@@ -56,10 +73,15 @@ export default function EventSection({ onRegister }) {
 
       {showNonTech && (
         <>
-          <div className="category-label"> NON-TECHNICAL EVENTS</div>
+          <div className="category-label">NON-TECHNICAL EVENTS</div>
           <div className="events-grid">
             {nonTechEvents.map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onRegister={onRegister}
+                onViewRules={onViewRules}
+              />
             ))}
           </div>
         </>

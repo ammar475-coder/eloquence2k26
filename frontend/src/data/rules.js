@@ -7,7 +7,7 @@ const rulesData = {
   /* ───── TECHNICAL EVENTS ───── */
   'tech-01': {
     id: 'tech-01',
-    name: 'PPT PRESENTATION',
+    name: 'SLIDE CRAFT',
     alias: 'Slide Craft',
     category: 'technical',
     fee: '₹100 per head',
@@ -51,7 +51,7 @@ const rulesData = {
 
   'tech-02': {
     id: 'tech-02',
-    name: 'CODING & DEBUGGING',
+    name: 'CRACK THE CODE',
     alias: 'Crack the Code',
     category: 'technical',
     fee: '₹50 per head',
@@ -94,7 +94,7 @@ const rulesData = {
 
   'tech-03': {
     id: 'tech-03',
-    name: 'TECH QUIZ (ONLINE)',
+    name: 'TECH BATTLE',
     alias: 'Tech Battle',
     category: 'technical',
     fee: '₹50 per head',
@@ -186,7 +186,7 @@ const rulesData = {
 
   'tech-05': {
     id: 'tech-05',
-    name: 'POSTER DESIGN (CHART)',
+    name: 'CHART CANVAS',
     alias: 'Chart Canvas',
     category: 'technical',
     fee: '₹50 per head',
@@ -229,7 +229,7 @@ const rulesData = {
 
   'tech-06': {
     id: 'tech-06',
-    name: 'POSTER DESIGN – UI/UX',
+    name: 'UI/UX',
     alias: 'UI/UX',
     category: 'technical',
     fee: '₹50 per head',

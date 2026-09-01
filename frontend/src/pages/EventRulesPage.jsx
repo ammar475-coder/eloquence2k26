@@ -13,12 +13,14 @@ import {
 import { motion } from 'framer-motion';
 import events from '../data/events.js';
 
-export default function EventRulesPage({ eventId, onNavigate }) {
+export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
   const event = events.find((e) => e.id === eventId) || events[0];
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [eventId]);
+
+  const isEsports = event.id === 'nontech-05';
 
   const handleRegister = () => {
     if (onNavigate) {
@@ -26,9 +28,30 @@ export default function EventRulesPage({ eventId, onNavigate }) {
     }
   };
 
+  const handleRegisterGame = (game) => {
+    if (onNavigate) {
+      onNavigate('register', { eventId: event.id, game });
+    }
+  };
+
+  const handleTopRegisterClick = () => {
+    if (isEsports) {
+      const el = document.querySelector('.esports-cta-wrap');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+    handleRegister();
+  };
+
   const handleBackToEvents = () => {
     if (onNavigate) {
-      onNavigate('events');
+      if (from === 'register') {
+        onNavigate('register', null, { categoryFilter });
+      } else {
+        onNavigate('events');
+      }
     }
   };
 
@@ -46,7 +69,7 @@ export default function EventRulesPage({ eventId, onNavigate }) {
             <FaArrowLeft style={{ marginRight: '0.45rem', verticalAlign: '-1px' }} />
             Back to Events
           </button>
-          <button className="rules-register-top-btn" onClick={handleRegister}>
+          <button className="rules-register-top-btn" onClick={handleTopRegisterClick}>
             Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
           </button>
         </motion.div>
@@ -62,7 +85,9 @@ export default function EventRulesPage({ eventId, onNavigate }) {
             {event.category === 'technical' ? '⚡ TECHNICAL EVENT' : '🎮 NON-TECHNICAL EVENT'}
           </span>
           <h1 className="rules-clean-main-title">{event.name}</h1>
-          {event.alias && <p className="rules-alias-sub">// {event.alias}</p>}
+          {event.alias && event.alias.toLowerCase() !== event.name.toLowerCase() && (
+            <p className="rules-alias-sub">// {event.alias}</p>
+          )}
         </motion.div>
 
         {/* 2-Column Split: Overview (Left) & Rules (Right) */}
@@ -121,11 +146,39 @@ export default function EventRulesPage({ eventId, onNavigate }) {
               </div>
             </div>
 
-            <div className="overview-card-cta-wrap">
-              <button className="btn btn-primary btn-full-width" onClick={handleRegister}>
-                REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.4rem' }} />
-              </button>
-            </div>
+            {isEsports ? (
+              <div className="overview-card-cta-wrap esports-cta-wrap">
+                <div className="esports-cta-heading">
+                  REGISTRATION FOR THIS EVENT
+                </div>
+                <div className="esports-buttons-grid">
+                  <button
+                    type="button"
+                    className="esports-action-btn esports-btn-freefire"
+                    onClick={() => handleRegisterGame('FREE FIRE')}
+                    id="btn-register-freefire"
+                  >
+                    <span>FREE FIRE</span>
+                    <FaArrowRight className="esports-btn-arrow" />
+                  </button>
+                  <button
+                    type="button"
+                    className="esports-action-btn esports-btn-bgmi"
+                    onClick={() => handleRegisterGame('BGMI')}
+                    id="btn-register-bgmi"
+                  >
+                    <span>BGMI</span>
+                    <FaArrowRight className="esports-btn-arrow" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="overview-card-cta-wrap">
+                <button className="btn btn-primary btn-full-width" onClick={handleRegister}>
+                  REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.4rem' }} />
+                </button>
+              </div>
+            )}
           </motion.div>
 
           {/* Right Side: Single Unified Rules Card */}

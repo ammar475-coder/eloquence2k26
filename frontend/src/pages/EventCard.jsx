@@ -20,7 +20,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardPptImg}
-            alt="PPT Presentation"
+            alt="Slide Craft"
             className="event-card-banner-img"
           />
         </div>
@@ -30,7 +30,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardCodingImg}
-            alt="Coding & Debugging"
+            alt="Crack the Code"
             className="event-card-banner-img"
           />
         </div>
@@ -40,7 +40,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardQuizImg}
-            alt="Tech Quiz"
+            alt="Tech Battle"
             className="event-card-banner-img"
           />
         </div>
@@ -60,7 +60,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardPosterImg}
-            alt="Poster Design"
+            alt="Chart Canvas"
             className="event-card-banner-img"
           />
         </div>
@@ -70,7 +70,7 @@ function getEventIllustration(id, alias, name) {
         <div className="event-banner-img-container">
           <img
             src={cardUiUxImg}
-            alt="UI / UX Prototype Showcase"
+            alt="UI/UX"
             className="event-card-banner-img"
           />
         </div>
@@ -175,8 +175,6 @@ function getEventIcon(id) {
 }
 
 export default function EventCard({ event, onRegister, onViewRules }) {
-  const [showRulesDropdown, setShowRulesDropdown] = useState(false);
-
   const handleRegister = (e) => {
     if (e) e.stopPropagation();
     if (onRegister) {
@@ -227,39 +225,12 @@ export default function EventCard({ event, onRegister, onViewRules }) {
             </div>
             <button
               type="button"
-              className={`view-rules-dropdown-trigger ${showRulesDropdown ? 'active' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowRulesDropdown(!showRulesDropdown);
-              }}
+              className="view-rules-dropdown-trigger"
+              onClick={handleViewRules}
             >
-              View Rules {showRulesDropdown ? '▴' : '▾'}
+              View Rules →
             </button>
           </div>
-
-          {/* Rules Dropdown Drawer inside Event Card */}
-          {showRulesDropdown && event.rules && (
-            <div className="event-rules-dropdown-drawer">
-              <div className="rules-dropdown-header">
-                <span>Key Rules (3-4 Lines):</span>
-                <button
-                  type="button"
-                  className="rules-dropdown-full-link"
-                  onClick={handleViewRules}
-                >
-                  Full Details →
-                </button>
-              </div>
-              <ul className="rules-dropdown-list">
-                {event.rules.slice(0, 4).map((rule, idx) => (
-                  <li key={idx} className="rules-dropdown-item">
-                    <span className="rules-dropdown-num">{idx + 1}.</span>
-                    <span>{rule}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
 
         {/* Single Primary Register Action Button */}
