@@ -1,4 +1,3 @@
-const supabase = require('../config/supabase');
 const fs = require('fs');
 const path = require('path');
 
@@ -61,7 +60,10 @@ function generateRegistrationId(existingCount) {
 }
 
 exports.getStatus = (req, res) => {
-  res.json({ success: true, message: 'API is working properly' });
+  res.json({
+    success: true,
+    message: 'API is working properly'
+  });
 };
 
 exports.registerEvent = async (req, res) => {

@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const supabase = require('../config/supabase');
+const fs = require('fs');
+const path = require('path');
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
@@ -116,6 +117,11 @@ const getRegistrationsData = () => {
 };
 
 // ==================== AUTH & TOKEN ====================
+exports.login = (req, res) => {
+  const { username, password } = req.body;
+
+  const users = getUsersData();
+  const user = users.find(u => u.username === username && u.password === password);
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
@@ -137,11 +143,35 @@ exports.login = async (req, res) => {
       return res.json({ success: true, token, user: { username: user.username, role: user.role } });
     }
 
+  if (user) {
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.json({ success: true, token, user: { username: user.username, role: user.role } });
+    // Fallback to Supabase if configured
+    if (supabase) {
+      const { data: supaUsers, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password);
+
+      if (!error && supaUsers && supaUsers.length > 0) {
+        const suUser = supaUsers[0];
+        const token = jwt.sign(
+          { id: suUser.id, username: suUser.username, role: suUser.role }, 
+          process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence', 
+          { expiresIn: '1d' }
+        );
+        return res.json({ success: true, token, user: { username: suUser.username, role: suUser.role } });
+      }
+    }
+
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   } catch (err) {
     console.error('Login error:', err);
     return res.status(500).json({ success: false, message: 'Server error during login' });
   }
+
+  return res.status(401).json({ success: false, message: 'Invalid credentials' });
 };
 
 exports.verifyToken = (req, res, next) => {
@@ -151,6 +181,8 @@ exports.verifyToken = (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Attach user info to request
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_for_eloquence');
     req.user = decoded; 
     next();
   } catch (err) {
@@ -158,11 +190,9 @@ exports.verifyToken = (req, res, next) => {
   }
 };
 
+// ==================== DASHBOARD STATS ====================
+exports.getDashboardData = (req, res) => {
 exports.getDashboardData = async (req, res) => {
-  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
-  }
-
   try {
     const sponsors = getSponsorsData();
     const coordinators = getCoordinatorsData();
@@ -173,20 +203,22 @@ exports.getDashboardData = async (req, res) => {
 
     // Try fetching registrations from Supabase
     try {
-      const { data: dbRegs, error: dbError } = await supabase
-        .from('registrations')
-        .select('id, full_name, event_id, total_fee, created_at, ticket_code')
-        .order('created_at', { ascending: false });
+      if (supabase) {
+        const { data: dbRegs, error: dbError } = await supabase
+          .from('registrations')
+          .select('id, full_name, event_id, total_fee, created_at, ticket_code')
+          .order('created_at', { ascending: false });
 
-      if (!dbError && Array.isArray(dbRegs)) {
-        allRegistrations = dbRegs.map(r => ({
-          id: r.ticket_code || r.id,
-          fullName: r.full_name || 'Anonymous',
-          eventName: r.event_id || 'General Registration',
-          totalAmount: Number(r.total_fee) || 0,
-          createdAt: r.created_at,
-          createdAtFormatted: r.created_at ? new Date(r.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recent'
-        }));
+        if (!dbError && Array.isArray(dbRegs)) {
+          allRegistrations = dbRegs.map(r => ({
+            id: r.ticket_code || r.id,
+            fullName: r.full_name || 'Anonymous',
+            eventName: r.event_id || 'General Registration',
+            totalAmount: Number(r.total_fee) || 0,
+            createdAt: r.created_at,
+            createdAtFormatted: r.created_at ? new Date(r.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) : 'Recent'
+          }));
+        }
       }
     } catch (e) {
       console.warn('Supabase registration query fallback:', e.message);
@@ -239,8 +271,8 @@ exports.getDashboardData = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Error fetching dashboard data:', err);
-    res.status(500).json({ success: false, message: 'Error fetching dashboard data' });
+    console.error('Error in getDashboardData:', err);
+    res.status(500).json({ success: false, message: 'Failed to compute dashboard metrics' });
   }
 };
 
@@ -249,6 +281,7 @@ exports.getUsers = (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
+
   const users = getUsersData().map(u => ({ id: u.id, username: u.username, role: u.role }));
   res.json({ success: true, data: users });
 };
@@ -264,6 +297,8 @@ exports.createUser = (req, res) => {
   }
 
   const users = getUsersData();
+  if (users.find(u => u.username === username)) {
+    return res.status(400).json({ success: false, message: 'Username already exists' });
   if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
     return res.status(400).json({ success: false, message: 'Username already taken' });
   }
@@ -288,6 +323,7 @@ exports.updateUser = (req, res) => {
   }
 
   const users = getUsersData();
+  const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
   const userIndex = users.findIndex(u => u.id === parseInt(id, 10) || u.id === id);
 
   if (userIndex === -1) {
@@ -319,6 +355,7 @@ exports.deleteUser = (req, res) => {
 
   const { id } = req.params;
   const users = getUsersData();
+  const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
   const userIndex = users.findIndex(u => u.id === parseInt(id, 10) || u.id === id);
 
   if (userIndex === -1) {
@@ -328,11 +365,17 @@ exports.deleteUser = (req, res) => {
   if (users[userIndex].username === 'admin') {
     return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
   }
+  
+
+  if (users[userIndex].username === 'admin') {
+    return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
+  }
 
   if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
     return res.status(403).json({ success: false, message: 'Cannot delete a superadmin' });
   }
 
+  if (users[userIndex].id === req.user.id) {
   if (users[userIndex].id.toString() === req.user.id.toString()) {
     return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
   }
