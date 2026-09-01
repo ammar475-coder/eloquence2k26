@@ -1,9 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabase');
 
-<<<<<<< HEAD
-exports.login = async (req, res) => {
-=======
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
 const eventsFilePath = path.join(__dirname, '../data/events.json');
@@ -117,8 +116,7 @@ const getRegistrationsData = () => {
 };
 
 // ==================== AUTH & TOKEN ====================
-exports.login = (req, res) => {
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
+exports.login = async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -161,61 +159,11 @@ exports.verifyToken = (req, res, next) => {
   }
 };
 
-<<<<<<< HEAD
 exports.getDashboardData = async (req, res) => {
-=======
-// ==================== DASHBOARD STATS ====================
-exports.getDashboardData = (req, res) => {
-  try {
-    const registrations = getRegistrationsData();
-    const sponsors = getSponsorsData();
-    const coordinators = getCoordinatorsData();
-    const events = getEventsData();
-
-    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
-    const activeSponsors = sponsors.filter(s => s.isActive !== false);
-    const activeCoordinators = coordinators.filter(c => c.isActive !== false);
-
-    // Format recent registrations
-    const recentRegistrations = [...registrations]
-      .reverse()
-      .slice(0, 5)
-      .map(r => ({
-        id: r.registrationId || r.id,
-        name: r.fullName || 'Anonymous',
-        event: r.eventName || 'General Registration',
-        date: r.createdAtFormatted || (r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : 'Recent')
-      }));
-
-    res.json({
-      success: true,
-      data: {
-        stats: {
-          totalRegistrations: registrations.length,
-          revenue: totalRevenue,
-          eventsActive: events.length || 12,
-          totalSponsors: sponsors.length,
-          activeSponsors: activeSponsors.length,
-          totalCoordinators: coordinators.length,
-          activeCoordinators: activeCoordinators.length
-        },
-        recentRegistrations
-      }
-    });
-  } catch (err) {
-    console.error('Error in getDashboardData:', err);
-    res.status(500).json({ success: false, message: 'Failed to compute dashboard metrics' });
-  }
-};
-
-// ==================== USER MANAGEMENT ====================
-exports.getUsers = (req, res) => {
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
-<<<<<<< HEAD
   try {
     // Fetch all registrations
     const { data: registrations, error } = await supabase
@@ -261,10 +209,6 @@ exports.getUsers = (req, res) => {
     console.error('Error fetching dashboard data:', err);
     res.status(500).json({ success: false, message: 'Error fetching dashboard data' });
   }
-=======
-  const users = getUsersData().map(u => ({ id: u.id, username: u.username, role: u.role }));
-  res.json({ success: true, data: users });
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
 };
 
 exports.getRoles = async (req, res) => {
@@ -361,15 +305,7 @@ exports.createUser = async (req, res) => {
     console.error('Error creating user:', err);
     res.status(500).json({ success: false, message: 'Error creating user' });
   }
-<<<<<<< HEAD
-=======
 
-  const newUser = { id: Date.now(), username, password, role };
-  users.push(newUser);
-  saveUsersData(users);
-
-  res.json({ success: true, message: 'User created successfully', data: { id: newUser.id, username: newUser.username, role: newUser.role } });
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
 };
 
 exports.updateUser = async (req, res) => {
@@ -425,26 +361,7 @@ exports.updateUser = async (req, res) => {
     console.error('Error updating user:', err);
     res.status(500).json({ success: false, message: 'Error updating user' });
   }
-<<<<<<< HEAD
-=======
 
-  if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
-    return res.status(403).json({ success: false, message: 'Cannot modify a superadmin' });
-  }
-
-  if (users.find(u => u.username === username && u.id !== parseInt(id, 10))) {
-    return res.status(400).json({ success: false, message: 'Username already taken' });
-  }
-
-  users[userIndex].username = username;
-  users[userIndex].role = role;
-  if (password) {
-    users[userIndex].password = password;
-  }
-
-  saveUsersData(users);
-  res.json({ success: true, message: 'User updated successfully', data: { id: users[userIndex].id, username: users[userIndex].username, role: users[userIndex].role } });
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
 };
 
 exports.deleteUser = async (req, res) => {

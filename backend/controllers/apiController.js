@@ -64,7 +64,6 @@ exports.getStatus = (req, res) => {
   res.json({ success: true, message: 'API is working properly' });
 };
 
-<<<<<<< HEAD
 exports.registerEvent = async (req, res) => {
   const { currentEvent, fields, totalFee } = req.body;
   
@@ -158,14 +157,14 @@ exports.registerEvent = async (req, res) => {
       errorDetails: err.message || JSON.stringify(err)
     });
   }
-=======
+};
+
 exports.getHealth = (req, res) => {
   res.json({
     status: 'OK',
     service: "ELOQUENCE'26 Registration API",
     timestamp: new Date().toISOString()
   });
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
 };
 
 exports.getPublicEvents = (req, res) => {

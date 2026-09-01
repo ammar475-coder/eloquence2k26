@@ -394,7 +394,6 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
     setIsSubmitting(true);
     setServerError(null);
 
-<<<<<<< HEAD
     fetch('/api/register', {
       method: 'POST',
       headers: {
@@ -426,43 +425,6 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
       .finally(() => {
         setIsSubmitting(false);
       });
-=======
-    const payload = {
-      fullName: fields.fullName,
-      email: fields.email,
-      phone: fields.phone,
-      whatsapp: fields.whatsapp || null,
-      college: fields.college,
-      department: fields.department,
-      year: fields.year,
-      eventId: selectedEvent.id,
-      eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
-      eventCategory: selectedEvent.category,
-      game: isEsports ? selectedGame : null,
-      isTeam: selectedEvent.isTeam,
-      teamName: fields.teamName || null,
-      teamMembers: fields.teamMembers || [],
-      feePerHead: selectedEvent.feePerHead,
-      totalFee: feeInfo.total,
-      feeFormula: feeInfo.formula,
-    };
-
-    try {
-      const result = await submitRegistration(payload);
-      if (result.success) {
-        setTicketData(result.data);
-        setStep('success');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        setServerError(result.error || 'Registration submission failed. Please try again.');
-      }
-    } catch (err) {
-      console.error('Submission error:', err);
-      setServerError('An unexpected network error occurred. Please verify your connection.');
-    } finally {
-      setIsSubmitting(false);
-    }
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
   };
 
   const handleCopyId = () => {

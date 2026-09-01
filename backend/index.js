@@ -1,16 +1,9 @@
-require('dotenv').config({ quiet: true });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env'), quiet: true });
 const express = require('express');
 const cors = require('cors');
-<<<<<<< HEAD
 const morgan = require('morgan');
 const supabase = require('./config/supabase');
-=======
-const path = require('path');
-let morgan;
-try {
-  morgan = require('morgan');
-} catch (e) {}
->>>>>>> 15fb93fdd29b33d6832e79b823712929df5586a7
 
 const app = express();
 const PORT = process.env.PORT || 5000;
