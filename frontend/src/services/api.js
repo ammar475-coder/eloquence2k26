@@ -75,7 +75,7 @@ export async function fetchActiveSponsors() {
     return [];
   } catch (err) {
     console.warn('Failed to fetch sponsors from server, using fallback', err);
-    return null;
+    return [];
   }
 }
 
