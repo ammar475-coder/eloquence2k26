@@ -5,6 +5,7 @@ import Home from '../pages/Home.jsx';
 import EventsPage from '../pages/EventsPage.jsx';
 import EventRulesPage from '../pages/EventRulesPage.jsx';
 import RegistrationPage from '../pages/RegistrationPage.jsx';
+import Admin from '../pages/Admin.jsx';
 import events from '../data/events.js';
 
 function parseHash(hash) {
@@ -44,14 +45,25 @@ function parseHash(hash) {
 export default function AppRouter() {
   const [route, setRoute] = useState(() => parseHash(window.location.hash));
   const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+  const [isAdminRoute, setIsAdminRoute] = useState(window.location.pathname.startsWith('/admin'));
 
   useEffect(() => {
     const handleHashChange = () => {
       setRoute(parseHash(window.location.hash));
     };
+    
+    // Minimal popstate listener to detect path changes for admin
+    const handlePopState = () => {
+      setIsAdminRoute(window.location.pathname.startsWith('/admin'));
+    };
 
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   const navigateTo = (page, extra = null, options = {}) => {
@@ -118,6 +130,11 @@ export default function AppRouter() {
       }
     }
   };
+
+  // If the path is /admin, render ONLY the Admin component (no Navbar/Footer)
+  if (isAdminRoute) {
+    return <Admin />;
+  }
 
   return (
     <div className="app-container">
