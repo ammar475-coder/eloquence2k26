@@ -59,8 +59,8 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
         {/* Right: Pill Register Button */}
         <div className="nav-pill-actions">
           <button
-            className={`nav-pill-register-btn ${isRegisterActive ? 'active' : ''}`}
-            onClick={() => handleNav('register')}
+            className={`nav-pill-register-btn ${isEventsActive ? 'active' : ''}`}
+            onClick={() => handleNav('events')}
           >
             Register Now
           </button>
@@ -100,7 +100,7 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
         </a>
         <button
           className="nav-pill-register-btn mobile-reg-btn"
-          onClick={() => handleNav('register')}
+          onClick={() => handleNav('events')}
         >
           Register Now
         </button>
