@@ -211,7 +211,6 @@ exports.login = async (req, res) => {
   const { username, password } = req.body;
 
   try {
-    // Try Supabase first
     const { data: dbUser, error } = await supabase
       .from('users')
       .select('*')
@@ -231,7 +230,6 @@ exports.login = async (req, res) => {
     console.warn('Supabase auth fallback:', e.message);
   }
 
-  // Fallback to local users.json
   const users = getUsersData();
   const user = users.find(u => u.username === username && u.password === password);
 
@@ -265,7 +263,6 @@ exports.getDashboardData = async (req, res) => {
     let coordinators = getCoordinatorsData();
     let events = getEventsData();
 
-    // Query Supabase live for metrics
     try {
       const [regRes, spRes, coRes, evRes] = await Promise.all([
         supabase.from('registrations').select('*'),
@@ -286,7 +283,6 @@ exports.getDashboardData = async (req, res) => {
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
 
-    // Format recent registrations
     const recentRegistrations = [...registrations]
       .reverse()
       .slice(0, 5)
@@ -354,7 +350,6 @@ exports.createUser = async (req, res) => {
 
   const newUser = { id: Date.now(), username, password, role };
 
-  // Write to Supabase Live DB
   try {
     const { error: dbError } = await supabase.from('users').insert([newUser]);
     if (dbError) console.error('Supabase createUser error:', dbError.message);
@@ -362,7 +357,6 @@ exports.createUser = async (req, res) => {
     console.error('Supabase createUser exception:', dbErr.message);
   }
 
-  // Sync to local JSON backup
   users.push(newUser);
   saveUsersData(users);
 
@@ -392,7 +386,6 @@ exports.updateUser = async (req, res) => {
   const updateFields = { username, role, updated_at: new Date().toISOString() };
   if (password) updateFields.password = password;
 
-  // Update Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('users').update(updateFields).eq('id', userId);
     if (dbErr) console.error('Supabase updateUser error:', dbErr.message);
@@ -400,7 +393,6 @@ exports.updateUser = async (req, res) => {
     console.error('Supabase updateUser exception:', e.message);
   }
 
-  // Update local JSON backup
   if (userIndex !== -1) {
     users[userIndex].username = username;
     users[userIndex].role = role;
@@ -435,7 +427,6 @@ exports.deleteUser = async (req, res) => {
     saveUsersData(users);
   }
 
-  // Delete from Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('users').delete().eq('id', userId);
     if (dbErr) console.error('Supabase deleteUser error:', dbErr.message);
@@ -484,7 +475,6 @@ exports.createRole = async (req, res) => {
 
   const newRole = { id: Date.now(), name: normalizedName };
 
-  // Write to Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('roles').insert([newRole]);
     if (dbErr) console.error('Supabase createRole error:', dbErr.message);
@@ -516,7 +506,6 @@ exports.updateRole = async (req, res) => {
 
   const normalizedName = name.toLowerCase().trim();
 
-  // Update Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('roles').update({ name: normalizedName }).eq('id', roleId);
     if (dbErr) console.error('Supabase updateRole error:', dbErr.message);
@@ -564,7 +553,6 @@ exports.deleteRole = async (req, res) => {
     saveRolesData(roles);
   }
 
-  // Delete from Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('roles').delete().eq('id', roleId);
     if (dbErr) console.error('Supabase deleteRole error:', dbErr.message);
@@ -590,37 +578,164 @@ exports.getEvents = async (req, res) => {
   res.json({ success: true, data: events });
 };
 
+exports.createEvent = async (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const {
+    id,
+    name,
+    alias,
+    subtitle,
+    category,
+    venue,
+    timing,
+    fee,
+    feePerHead,
+    feeType,
+    teamSize,
+    tag,
+    description,
+    image,
+    rules,
+    rounds,
+    guidelines,
+    highlights
+  } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'Event name is required' });
+  }
+
+  const events = getEventsData();
+  const cat = (category || 'technical').toLowerCase();
+  const catPrefix = cat === 'technical' ? 'tech' : 'nontech';
+
+  let eventId = id && id.trim() ? id.trim().toLowerCase().replace(/\s+/g, '-') : null;
+  if (!eventId) {
+    const existingCatEvents = events.filter(e => e.id.startsWith(catPrefix));
+    const nextNum = String(existingCatEvents.length + 1).padStart(2, '0');
+    eventId = `${catPrefix}-${nextNum}`;
+  }
+
+  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' ? Number(feePerHead) : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
+
+  const newEvent = {
+    id: eventId,
+    number: String(events.length + 1).padStart(2, '0'),
+    name: name.trim(),
+    alias: alias ? alias.trim() : name.trim(),
+    subtitle: subtitle ? subtitle.trim() : '',
+    category: cat,
+    teamSize: teamSize ? teamSize.trim() : 'Individual',
+    minMembers: 1,
+    maxMembers: teamSize && (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) ? 4 : 1,
+    fee: fee ? fee.trim() : '₹50 per head',
+    feePerHead: isNaN(parsedFeePerHead) ? 50 : parsedFeePerHead,
+    feeType: feeType || 'per_head',
+    isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) : false,
+    tag: tag ? tag.trim() : (cat === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
+    venue: venue ? venue.trim() : 'CSE Department',
+    timing: timing ? timing.trim() : '10:00 AM – 01:00 PM',
+    description: description ? description.trim() : '',
+    rules: Array.isArray(rules) && rules.length > 0 ? rules : [],
+    rounds: Array.isArray(rounds) && rounds.length > 0 ? rounds : [],
+    guidelines: Array.isArray(guidelines) && guidelines.length > 0 ? guidelines : [],
+    highlights: Array.isArray(highlights) && highlights.length > 0 ? highlights : []
+  };
+
+  try {
+    const dbPayload = {
+      id: newEvent.id,
+      number: newEvent.number,
+      name: newEvent.name,
+      alias: newEvent.alias,
+      subtitle: newEvent.subtitle,
+      category: newEvent.category,
+      team_size: newEvent.teamSize,
+      min_members: newEvent.minMembers,
+      max_members: newEvent.maxMembers,
+      fee: newEvent.fee,
+      fee_per_head: newEvent.feePerHead,
+      fee_type: newEvent.feeType,
+      is_team: newEvent.isTeam,
+      tag: newEvent.tag,
+      venue: newEvent.venue,
+      timing: newEvent.timing,
+      description: newEvent.description,
+      rules: newEvent.rules,
+      rounds: newEvent.rounds,
+      guidelines: newEvent.guidelines,
+      highlights: newEvent.highlights,
+      updated_at: new Date().toISOString()
+    };
+    const { error: dbErr } = await supabase.from('events').insert([dbPayload]);
+    if (dbErr) console.error('Supabase createEvent error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase createEvent exception:', e.message);
+  }
+
+  events.push(newEvent);
+  saveEventsData(events);
+
+  res.json({
+    success: true,
+    message: 'Event created successfully',
+    data: newEvent
+  });
+};
+
 exports.updateEvent = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const { id } = req.params;
-  const { name, venue, timing, fee, feePerHead, feeType, teamSize, subtitle, tag, description } = req.body;
+  const {
+    name,
+    alias,
+    subtitle,
+    category,
+    venue,
+    timing,
+    fee,
+    feePerHead,
+    feeType,
+    teamSize,
+    tag,
+    description,
+    image,
+    rules,
+    rounds,
+    guidelines,
+    highlights
+  } = req.body;
 
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
-
-  if (eventIndex === -1 && !events.length) {
-    return res.status(404).json({ success: false, message: 'Event not found' });
-  }
 
   const updateFields = {
     updated_at: new Date().toISOString()
   };
 
-  if (name) updateFields.name = name;
-  if (venue !== undefined) updateFields.venue = venue;
-  if (timing !== undefined) updateFields.timing = timing;
-  if (fee !== undefined) updateFields.fee = fee;
-  if (feePerHead !== undefined) updateFields.fee_per_head = Number(feePerHead);
+  if (name) updateFields.name = name.trim();
+  if (alias !== undefined) updateFields.alias = alias.trim();
+  if (subtitle !== undefined) updateFields.subtitle = subtitle.trim();
+  if (category !== undefined) updateFields.category = category;
+  if (venue !== undefined) updateFields.venue = venue.trim();
+  if (timing !== undefined) updateFields.timing = timing.trim();
+  if (fee !== undefined) updateFields.fee = fee.trim();
+  if (feePerHead !== undefined && feePerHead !== '') updateFields.fee_per_head = Number(feePerHead);
   if (feeType !== undefined) updateFields.fee_type = feeType;
-  if (teamSize !== undefined) updateFields.team_size = teamSize;
-  if (subtitle !== undefined) updateFields.subtitle = subtitle;
-  if (tag !== undefined) updateFields.tag = tag;
-  if (description !== undefined) updateFields.description = description;
+  if (teamSize !== undefined) updateFields.team_size = teamSize.trim();
+  if (tag !== undefined) updateFields.tag = tag.trim();
+  if (description !== undefined) updateFields.description = description.trim();
+  if (rules !== undefined && Array.isArray(rules)) updateFields.rules = rules;
+  if (rounds !== undefined && Array.isArray(rounds)) updateFields.rounds = rounds;
+  if (guidelines !== undefined && Array.isArray(guidelines)) updateFields.guidelines = guidelines;
+  if (highlights !== undefined && Array.isArray(highlights)) updateFields.highlights = highlights;
 
-  // Update Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('events').update(updateFields).eq('id', id);
     if (dbErr) console.error('Supabase updateEvent error:', dbErr.message);
@@ -628,18 +743,21 @@ exports.updateEvent = async (req, res) => {
     console.error('Supabase updateEvent exception:', e.message);
   }
 
-  // Update local JSON backup
   if (eventIndex !== -1) {
-    if (name) events[eventIndex].name = name;
-    if (venue !== undefined) events[eventIndex].venue = venue;
-    if (timing !== undefined) events[eventIndex].timing = timing;
-    if (fee !== undefined) events[eventIndex].fee = fee;
-    if (feePerHead !== undefined) events[eventIndex].feePerHead = feePerHead;
+    if (name) events[eventIndex].name = name.trim();
+    if (venue !== undefined) events[eventIndex].venue = venue.trim();
+    if (timing !== undefined) events[eventIndex].timing = timing.trim();
+    if (fee !== undefined) events[eventIndex].fee = fee.trim();
+    if (feePerHead !== undefined) events[eventIndex].feePerHead = Number(feePerHead);
     if (feeType !== undefined) events[eventIndex].feeType = feeType;
-    if (teamSize !== undefined) events[eventIndex].teamSize = teamSize;
-    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle;
-    if (tag !== undefined) events[eventIndex].tag = tag;
-    if (description !== undefined) events[eventIndex].description = description;
+    if (teamSize !== undefined) events[eventIndex].teamSize = teamSize.trim();
+    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
+    if (tag !== undefined) events[eventIndex].tag = tag.trim();
+    if (description !== undefined) events[eventIndex].description = description.trim();
+    if (rules !== undefined && Array.isArray(rules)) events[eventIndex].rules = rules;
+    if (rounds !== undefined && Array.isArray(rounds)) events[eventIndex].rounds = rounds;
+    if (guidelines !== undefined && Array.isArray(guidelines)) events[eventIndex].guidelines = guidelines;
+    if (highlights !== undefined && Array.isArray(highlights)) events[eventIndex].highlights = highlights;
     saveEventsData(events);
   }
 
@@ -648,6 +766,30 @@ exports.updateEvent = async (req, res) => {
     message: 'Event updated successfully in live database', 
     data: { id, ...req.body } 
   });
+};
+
+exports.deleteEvent = async (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const { id } = req.params;
+  const events = getEventsData();
+  const eventIndex = events.findIndex(e => e.id === id);
+
+  if (eventIndex !== -1) {
+    events.splice(eventIndex, 1);
+    saveEventsData(events);
+  }
+
+  try {
+    const { error: dbErr } = await supabase.from('events').delete().eq('id', id);
+    if (dbErr) console.error('Supabase deleteEvent error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase deleteEvent exception:', e.message);
+  }
+
+  res.json({ success: true, message: 'Event deleted successfully from live database' });
 };
 
 // ==================== SPONSOR MANAGEMENT ====================
@@ -728,7 +870,6 @@ exports.createSponsor = async (req, res) => {
     updatedAt: now
   };
 
-  // Insert into Supabase Live DB
   try {
     const dbPayload = sponsorToDb(newSponsor);
     const { error: dbErr } = await supabase.from('sponsors').insert([dbPayload]);
@@ -737,7 +878,6 @@ exports.createSponsor = async (req, res) => {
     console.error('Supabase createSponsor exception:', e.message);
   }
 
-  // Update local JSON backup
   sponsors.push(newSponsor);
   saveSponsorsData(sponsors);
 
@@ -783,7 +923,6 @@ exports.updateSponsor = async (req, res) => {
     updatedAt: new Date().toISOString()
   };
 
-  // Update Supabase Live DB
   try {
     const dbPayload = sponsorToDb(updatedSponsor);
     const { error: dbErr } = await supabase.from('sponsors').upsert([dbPayload], { onConflict: 'id' });
@@ -792,7 +931,6 @@ exports.updateSponsor = async (req, res) => {
     console.error('Supabase updateSponsor exception:', e.message);
   }
 
-  // Update local JSON backup
   if (index !== -1) {
     sponsors[index] = updatedSponsor;
     saveSponsorsData(sponsors);
@@ -814,7 +952,6 @@ exports.toggleSponsorStatus = async (req, res) => {
     saveSponsorsData(sponsors);
   }
 
-  // Toggle in Supabase Live DB
   try {
     const { data: dbSponsor } = await supabase.from('sponsors').select('is_active').eq('id', id).single();
     if (dbSponsor) {
@@ -843,7 +980,6 @@ exports.deleteSponsor = async (req, res) => {
     saveSponsorsData(sponsors);
   }
 
-  // Delete from Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('sponsors').delete().eq('id', id);
     if (dbErr) console.error('Supabase deleteSponsor error:', dbErr.message);
@@ -984,7 +1120,6 @@ exports.createCoordinator = async (req, res) => {
     updatedAt: now
   };
 
-  // Insert into Supabase Live DB
   try {
     const dbPayload = coordinatorToDb(newCoordinator);
     const { error: dbErr } = await supabase.from('coordinators').insert([dbPayload]);
@@ -993,7 +1128,6 @@ exports.createCoordinator = async (req, res) => {
     console.error('Supabase createCoordinator exception:', e.message);
   }
 
-  // Update local JSON backup
   coordinators.push(newCoordinator);
   saveCoordinatorsData(coordinators);
 
@@ -1038,7 +1172,6 @@ exports.updateCoordinator = async (req, res) => {
     updatedAt: new Date().toISOString()
   };
 
-  // Update Supabase Live DB
   try {
     const dbPayload = coordinatorToDb(updatedCoordinator);
     const { error: dbErr } = await supabase.from('coordinators').upsert([dbPayload], { onConflict: 'id' });
@@ -1047,7 +1180,6 @@ exports.updateCoordinator = async (req, res) => {
     console.error('Supabase updateCoordinator exception:', e.message);
   }
 
-  // Update local JSON backup
   if (index !== -1) {
     coordinators[index] = updatedCoordinator;
     saveCoordinatorsData(coordinators);
@@ -1069,7 +1201,6 @@ exports.toggleCoordinatorStatus = async (req, res) => {
     saveCoordinatorsData(coordinators);
   }
 
-  // Toggle in Supabase Live DB
   try {
     const { data: dbCoord } = await supabase.from('coordinators').select('is_active').eq('id', id).single();
     if (dbCoord) {
@@ -1098,7 +1229,6 @@ exports.deleteCoordinator = async (req, res) => {
     saveCoordinatorsData(coordinators);
   }
 
-  // Delete from Supabase Live DB
   try {
     const { error: dbErr } = await supabase.from('coordinators').delete().eq('id', id);
     if (dbErr) console.error('Supabase deleteCoordinator error:', dbErr.message);

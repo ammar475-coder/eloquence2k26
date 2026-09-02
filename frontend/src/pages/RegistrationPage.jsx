@@ -33,9 +33,27 @@ import { submitRegistration } from '../services/api.js';
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'];
 
 export default function RegistrationPage({ eventId, initialGame, initialCategoryFilter = 'all', onNavigate }) {
+  const [eventsList, setEventsList] = useState(events);
   // Determine initially selected event
-  const initialEvent = eventId ? events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) : null;
+  const initialEvent = eventId ? (events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || null) : null;
   const [selectedEvent, setSelectedEvent] = useState(initialEvent);
+
+  useEffect(() => {
+    fetch('/api/events')
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setEventsList(result.data);
+          if (eventId) {
+            const found = result.data.find(
+              (e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()
+            );
+            if (found) setSelectedEvent(found);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [eventId]);
 
   // Event-specific student coordinators (live from backend with local fallback)
   const [liveCoordinators, setLiveCoordinators] = useState(() => {
@@ -90,13 +108,13 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
       setSelectedEvent(null);
       setStep('select');
     } else {
-      const found = events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
+      const found = eventsList.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
       if (found) {
         setSelectedEvent(found);
         setStep('participant');
       }
     }
-  }, [eventId]);
+  }, [eventId, eventsList]);
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
@@ -539,7 +557,7 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
   };
 
   // Filter events for Step 1
-  const filteredEvents = events.filter((e) => {
+  const filteredEvents = eventsList.filter((e) => {
     const matchCat = categoryFilter === 'all' || e.category === categoryFilter;
     const matchSearch =
       searchFilter.trim() === '' ||
