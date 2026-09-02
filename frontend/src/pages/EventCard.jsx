@@ -1,154 +1,21 @@
 import { useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa';
-import cardPptImg from '../assets/card_ppt_presentation.png';
-import cardCodingImg from '../assets/card_coding_debugging.png';
-import cardQuizImg from '../assets/card_tech_quiz.png';
-import cardWebImg from '../assets/card_web_prompt.png';
-import cardPosterImg from '../assets/card_poster_design.png';
-import cardUiUxImg from '../assets/card_ui_ux.png';
-import cardSnapImg from '../assets/card_snap_reel.png';
-import cardLinkUpImg from '../assets/card_link_up.png';
-import cardHuntZoneImg from '../assets/card_hunt_zone.png';
-import cardHennaImg from '../assets/card_henna_heist.png';
-import cardBattleImg from '../assets/card_battle_of_champions.png';
-import cardChessImg from '../assets/card_chess.png';
+import { getEventBanner } from '../data/eventImages.js';
 
 function getEventIllustration(event) {
-  if (event && event.image) {
+  const bannerSrc = getEventBanner(event);
+  if (bannerSrc) {
     return (
       <div className="event-banner-img-container">
         <img
-          src={event.image}
-          alt={event.alias || event.name || 'Event'}
+          src={bannerSrc}
+          alt={event?.alias || event?.name || 'Event'}
           className="event-card-banner-img"
         />
       </div>
     );
   }
-  const id = event?.id || event;
-  switch (id) {
-    case 'tech-01':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardPptImg}
-            alt="Slide Craft"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'tech-02':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardCodingImg}
-            alt="Crack the Code"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'tech-03':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardQuizImg}
-            alt="Tech Battle"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'tech-04':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardWebImg}
-            alt="Web / Prompt"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'tech-05':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardPosterImg}
-            alt="Chart Canvas"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'tech-06':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardUiUxImg}
-            alt="UI/UX"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'nontech-01':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardSnapImg}
-            alt="Snap & Reel"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'nontech-02':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardLinkUpImg}
-            alt="Link Up (Connection)"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'nontech-03':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardHuntZoneImg}
-            alt="Hunt Zone (Treasure Hunt)"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'nontech-04':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardHennaImg}
-            alt="Henna Heist (Mehandi)"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'nontech-05':
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardBattleImg}
-            alt="Battle of Champions"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-    case 'nontech-06':
-    default:
-      return (
-        <div className="event-banner-img-container">
-          <img
-            src={cardChessImg}
-            alt="64 Squares Grandmaster Chess"
-            className="event-card-banner-img"
-          />
-        </div>
-      );
-  }
+  return null;
 }
 
 function getEventIcon(id) {
