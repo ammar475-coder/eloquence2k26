@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -14,7 +14,19 @@ import { motion } from 'framer-motion';
 import events from '../data/events.js';
 
 export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
-  const event = events.find((e) => e.id === eventId) || events[0];
+  const [eventsList, setEventsList] = useState(events);
+  const event = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()) || eventsList[0] || events[0];
+
+  useEffect(() => {
+    fetch('/api/events')
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setEventsList(result.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

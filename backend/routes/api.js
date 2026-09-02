@@ -32,8 +32,11 @@ router.get('/admin/roles', adminController.verifyToken, adminController.getRoles
 router.post('/admin/roles', adminController.verifyToken, adminController.createRole);
 router.put('/admin/roles/:id', adminController.verifyToken, adminController.updateRole);
 router.delete('/admin/roles/:id', adminController.verifyToken, adminController.deleteRole);
+// ── Admin Event Management ───────────────────────────────────────────────────
 router.get('/admin/events', adminController.verifyToken, adminController.getEvents);
+router.post('/admin/events', adminController.verifyToken, adminController.createEvent);
 router.put('/admin/events/:id', adminController.verifyToken, adminController.updateEvent);
+router.delete('/admin/events/:id', adminController.verifyToken, adminController.deleteEvent);
 
 // ── Admin Sponsor Management ─────────────────────────────────────────────────
 router.get('/admin/sponsors', adminController.verifyToken, adminController.getSponsors);

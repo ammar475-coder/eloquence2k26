@@ -13,7 +13,19 @@ import cardHennaImg from '../assets/card_henna_heist.png';
 import cardBattleImg from '../assets/card_battle_of_champions.png';
 import cardChessImg from '../assets/card_chess.png';
 
-function getEventIllustration(id, alias, name) {
+function getEventIllustration(event) {
+  if (event && event.image) {
+    return (
+      <div className="event-banner-img-container">
+        <img
+          src={event.image}
+          alt={event.alias || event.name || 'Event'}
+          className="event-card-banner-img"
+        />
+      </div>
+    );
+  }
+  const id = event?.id || event;
   switch (id) {
     case 'tech-01':
       return (
@@ -195,7 +207,7 @@ export default function EventCard({ event, onRegister, onViewRules }) {
     <div className={`event-poster-card ${isTech ? 'poster-tech' : 'poster-nontech'}`}>
       {/* Top Banner Container with Poster Illustration */}
       <div className="event-card-top-banner">
-        {getEventIllustration(event.id, event.alias, event.name)}
+        {getEventIllustration(event)}
       </div>
 
       {/* Bottom Content Block */}

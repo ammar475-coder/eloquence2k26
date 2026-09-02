@@ -76,10 +76,20 @@ export default function AdminDashboard({ token, onLogout }) {
 
   // Event Edit Form Fields
   const [eventName, setEventName] = useState('');
+  const [eventAlias, setEventAlias] = useState('');
+  const [eventSubtitle, setEventSubtitle] = useState('');
+  const [eventCategory, setEventCategory] = useState('technical');
   const [eventVenue, setEventVenue] = useState('');
   const [eventTiming, setEventTiming] = useState('');
   const [eventFee, setEventFee] = useState('');
   const [eventTeamSize, setEventTeamSize] = useState('');
+  const [eventTag, setEventTag] = useState('');
+  const [eventDesc, setEventDesc] = useState('');
+  const [eventImage, setEventImage] = useState('');
+  const [eventImagePreview, setEventImagePreview] = useState('');
+  const [isUploadingEventImage, setIsUploadingEventImage] = useState(false);
+
+  const eventFileInputRef = useRef(null);
 
   // ==================== SPONSORS STATE ====================
   const [sponsors, setSponsors] = useState([]);
@@ -364,58 +374,161 @@ export default function AdminDashboard({ token, onLogout }) {
       .catch(() => toast.error('Server error', { id: loadingToast }));
   };
 
-  // ==================== EVENT EDIT HANDLERS ====================
+  // ==================== EVENT HANDLERS ====================
   const resetEventEditModal = () => {
     setEditingEvent(null);
     setEventName('');
+    setEventAlias('');
+    setEventSubtitle('');
+    setEventCategory('technical');
     setEventVenue('');
     setEventTiming('');
     setEventFee('');
     setEventTeamSize('');
+    setEventTag('');
+    setEventDesc('');
+    setEventImage('');
+    setEventImagePreview('');
     setIsEventEditModalOpen(false);
+    if (eventFileInputRef.current) eventFileInputRef.current.value = '';
+  };
+
+  const handleOpenCreateEventModal = () => {
+    resetEventEditModal();
+    setEventFee('₹50 per head');
+    setEventTiming('10:00 AM – 01:00 PM');
+    setEventVenue('CSE Seminar Hall');
+    setEventTeamSize('Individual');
+    setIsEventEditModalOpen(true);
   };
 
   const handleOpenEditEventModal = (eventItem) => {
     setEditingEvent(eventItem);
     setEventName(eventItem.name || '');
+    setEventAlias(eventItem.alias || eventItem.name || '');
+    setEventSubtitle(eventItem.subtitle || '');
+    setEventCategory(eventItem.category || 'technical');
     setEventVenue(eventItem.venue || '');
     setEventTiming(eventItem.timing || '');
     setEventFee(eventItem.fee || '');
     setEventTeamSize(eventItem.teamSize || '');
+    setEventTag(eventItem.tag || '');
+    setEventDesc(eventItem.description || '');
+    setEventImage(eventItem.image || '');
+    setEventImagePreview(eventItem.image || '');
     setIsEventEditModalOpen(true);
+  };
+
+  const handleEventImageFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error('Image size exceeds 5MB limit');
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      setEventImagePreview(base64);
+
+      setIsUploadingEventImage(true);
+      const loadingToast = toast.loading('Uploading event picture...');
+
+      fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          imageBase64: base64,
+          fileName: file.name,
+          type: 'event'
+        })
+      })
+        .then(res => res.json())
+        .then(result => {
+          if (result.success) {
+            setEventImage(result.url);
+            toast.success('Event picture uploaded successfully', { id: loadingToast });
+          } else {
+            toast.error(result.message || 'Upload failed', { id: loadingToast });
+          }
+        })
+        .catch(() => {
+          toast.error('Network error uploading picture', { id: loadingToast });
+        })
+        .finally(() => setIsUploadingEventImage(false));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmitEventEdit = (e) => {
     e.preventDefault();
-    if (!editingEvent) return;
     if (!eventName.trim() || !eventVenue.trim() || !eventTiming.trim() || !eventFee.trim()) {
       return toast.error('Please fill in all required event details');
     }
 
-    const loadingToast = toast.loading('Saving event changes...');
+    const loadingToast = toast.loading(editingEvent ? 'Saving event changes...' : 'Creating new event...');
+    const url = editingEvent ? `/api/admin/events/${editingEvent.id}` : '/api/admin/events';
+    const method = editingEvent ? 'PUT' : 'POST';
 
-    fetch(`/api/admin/events/${editingEvent.id}`, {
-      method: 'PUT',
+    const payload = {
+      name: eventName.trim(),
+      alias: eventAlias.trim() || eventName.trim(),
+      subtitle: eventSubtitle.trim(),
+      category: eventCategory,
+      venue: eventVenue.trim(),
+      timing: eventTiming.trim(),
+      fee: eventFee.trim(),
+      teamSize: eventTeamSize.trim(),
+      tag: eventTag.trim() || (eventCategory === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
+      description: eventDesc.trim(),
+      image: eventImage.trim()
+    };
+
+    fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({
-        name: eventName.trim(),
-        venue: eventVenue.trim(),
-        timing: eventTiming.trim(),
-        fee: eventFee.trim(),
-        teamSize: eventTeamSize.trim()
-      })
+      body: JSON.stringify(payload)
     })
       .then(res => res.json())
       .then(result => {
         if (result.success) {
-          toast.success('Event updated! Changes live on main events page.', { id: loadingToast });
-          setEventsList(eventsList.map(item => item.id === editingEvent.id ? result.data : item));
+          toast.success(editingEvent ? 'Event updated! Changes live on main events page.' : 'Event created successfully!', { id: loadingToast });
+          if (editingEvent) {
+            setEventsList(eventsList.map(item => item.id === editingEvent.id ? result.data : item));
+          } else {
+            setEventsList([...eventsList, result.data]);
+          }
           resetEventEditModal();
         } else {
-          toast.error(result.message || 'Failed to update event', { id: loadingToast });
+          toast.error(result.message || 'Failed to save event', { id: loadingToast });
         }
       })
       .catch(() => toast.error('Server connection error', { id: loadingToast }));
+  };
+
+  const handleDeleteEvent = (eventId, name) => {
+    if (!window.confirm(`Are you sure you want to permanently delete event "${name}"?`)) {
+      return;
+    }
+    const loadingToast = toast.loading(`Deleting event ${name}...`);
+    fetch(`/api/admin/events/${eventId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          toast.success('Event deleted successfully', { id: loadingToast });
+          setEventsList(eventsList.filter(e => e.id !== eventId));
+        } else {
+          toast.error(result.message || 'Failed to delete event', { id: loadingToast });
+        }
+      })
+      .catch(() => toast.error('Server error deleting event', { id: loadingToast }));
   };
 
   // ==================== SPONSOR HANDLERS ====================
@@ -1179,6 +1292,9 @@ export default function AdminDashboard({ token, onLogout }) {
                     </button>
                   </div>
                 </div>
+                <button onClick={handleOpenCreateEventModal} style={S.createBtn}>
+                  <FaPlus style={{ marginRight: '8px' }} /> Add New Event
+                </button>
               </div>
 
               <div style={S.card}>
@@ -1192,6 +1308,7 @@ export default function AdminDashboard({ token, onLogout }) {
                   <table style={S.table}>
                     <thead>
                       <tr>
+                        <th style={S.th}>Poster</th>
                         <th style={S.th}>Event Name</th>
                         <th style={S.th}>Category</th>
                         <th style={S.th}>Venue</th>
@@ -1203,6 +1320,25 @@ export default function AdminDashboard({ token, onLogout }) {
                     <tbody>
                       {filteredEventsList.map(evt => (
                         <tr key={evt.id} style={S.tr}>
+                          <td style={S.td}>
+                            <div style={{
+                              width: '54px',
+                              height: '40px',
+                              borderRadius: '8px',
+                              background: isDark ? '#1f2937' : '#f1f5f9',
+                              border: isDark ? '1px solid #374151' : '1px solid #cbd5e1',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {evt.image ? (
+                                <img src={evt.image} alt={evt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <FaImage color="#94a3b8" size={18} />
+                              )}
+                            </div>
+                          </td>
                           <td style={S.td}>
                             <div>
                               <span style={S.strongText}>{evt.name}</span>
@@ -1238,20 +1374,27 @@ export default function AdminDashboard({ token, onLogout }) {
                               {evt.teamSize && <div style={S.tableSubText}>{evt.teamSize}</div>}
                             </div>
                           </td>
-                          <td style={{ ...S.td, textAlign: 'right' }}>
+                          <td style={{ ...S.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <button
                               onClick={() => handleOpenEditEventModal(evt)}
                               style={S.actionBtnEdit}
-                              title="Edit Event Details"
+                              title="Edit Event Details & Poster"
                             >
                               <FaEdit style={{ marginRight: '4px' }} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEvent(evt.id, evt.name)}
+                              style={S.actionBtnDelete}
+                              title="Delete Event"
+                            >
+                              <FaTrash style={{ marginRight: '4px' }} /> Delete
                             </button>
                           </td>
                         </tr>
                       ))}
                       {!filteredEventsList.length && (
                         <tr>
-                          <td colSpan="6" style={S.emptyState}>
+                          <td colSpan="7" style={S.emptyState}>
                             No events match the search criteria.
                           </td>
                         </tr>
@@ -1778,19 +1921,19 @@ export default function AdminDashboard({ token, onLogout }) {
       </main>
 
       {/* ======================================================== */}
-      {/* MODAL: EDIT EVENT                                        */}
+      {/* MODAL: CREATE / EDIT EVENT                               */}
       {/* ======================================================== */}
-      {isEventEditModalOpen && editingEvent && (
+      {isEventEditModalOpen && (
         <div style={S.modalBackdrop} onClick={resetEventEditModal}>
-          <div style={S.modalCard} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.modalCard, maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div style={S.modalHeader}>
               <div style={S.modalHeaderLeft}>
                 <div style={S.modalIconBoxEvent}>
                   <FaCalendarAlt size={18} />
                 </div>
                 <div>
-                  <h3 style={S.modalTitle}>Edit Event: {editingEvent.id.toUpperCase()}</h3>
-                  <p style={S.modalSubtitle}>Updates made here immediately reflect on the live events page.</p>
+                  <h3 style={S.modalTitle}>{editingEvent ? `Edit Event: ${editingEvent.name || editingEvent.id.toUpperCase()}` : 'Add New Symposium Event'}</h3>
+                  <p style={S.modalSubtitle}>Updates made here synchronize directly with the live events and registration pages.</p>
                 </div>
               </div>
               <button onClick={resetEventEditModal} style={S.modalCloseBtn} title="Close (Esc)">
@@ -1800,41 +1943,156 @@ export default function AdminDashboard({ token, onLogout }) {
 
             <form onSubmit={handleSubmitEventEdit} style={S.modalForm}>
               <div style={S.modalFormBody}>
+                {/* Event Poster / Picture Upload */}
                 <div style={S.modalInputGroup}>
-                  <label style={S.label}>Event Name *</label>
-                  <input 
-                    type="text" 
-                    value={eventName}
-                    onChange={(e) => setEventName(e.target.value)}
-                    style={S.input}
-                    placeholder="e.g. PPT PRESENTATION"
-                    required 
-                    autoFocus
-                  />
+                  <label style={S.label}>Event Poster / Picture</label>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                    <div style={{
+                      width: '90px',
+                      height: '70px',
+                      borderRadius: '10px',
+                      background: isDark ? '#1f2937' : '#f8fafc',
+                      border: isDark ? '2px dashed #4b5563' : '2px dashed #cbd5e1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      flexShrink: 0
+                    }}>
+                      {eventImagePreview ? (
+                        <img src={eventImagePreview} alt="Event Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <FaImage color="#94a3b8" size={26} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <input 
+                        type="file" 
+                        ref={eventFileInputRef} 
+                        onChange={handleEventImageFileSelect} 
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        style={{ display: 'none' }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          type="button" 
+                          onClick={() => eventFileInputRef.current?.click()}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '0.55rem 1rem',
+                            background: isDark ? '#312e81' : '#eff6ff',
+                            border: isDark ? '1px solid #4338ca' : '1px solid #bfdbfe',
+                            color: isDark ? '#c7d2fe' : '#2563eb',
+                            borderRadius: '8px',
+                            fontSize: '0.85rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                          disabled={isUploadingEventImage}
+                        >
+                          <FaUpload size={12} /> {isUploadingEventImage ? 'Uploading Picture...' : 'Upload Event Picture'}
+                        </button>
+                        {eventImagePreview && (
+                          <button 
+                            type="button" 
+                            onClick={() => { setEventImage(''); setEventImagePreview(''); }}
+                            style={{
+                              padding: '0.55rem 0.85rem',
+                              background: isDark ? '#1f2937' : '#f8fafc',
+                              border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+                              color: isDark ? '#9ca3af' : '#64748b',
+                              borderRadius: '8px',
+                              fontSize: '0.85rem',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Remove Picture
+                          </button>
+                        )}
+                      </div>
+                      <span style={S.inputHelper}>Upload high-res event poster banner. PNG, JPG, WEBP (Max 5MB)</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div style={S.modalInputGroup}>
-                  <label style={S.label}>Venue *</label>
-                  <input 
-                    type="text" 
-                    value={eventVenue}
-                    onChange={(e) => setEventVenue(e.target.value)}
-                    style={S.input}
-                    placeholder="e.g. CSE Seminar Hall / Drawing Hall"
-                    required 
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Event Name *</label>
+                    <input 
+                      type="text" 
+                      value={eventName}
+                      onChange={(e) => setEventName(e.target.value)}
+                      style={S.input}
+                      placeholder="e.g. PPT PRESENTATION"
+                      required 
+                      autoFocus
+                    />
+                  </div>
+
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Category *</label>
+                    <select 
+                      value={eventCategory} 
+                      onChange={(e) => setEventCategory(e.target.value)}
+                      style={S.select}
+                      required
+                    >
+                      <option value="technical">Technical</option>
+                      <option value="non-technical">Non-Technical</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div style={S.modalInputGroup}>
-                  <label style={S.label}>Time / Schedule *</label>
-                  <input 
-                    type="text" 
-                    value={eventTiming}
-                    onChange={(e) => setEventTiming(e.target.value)}
-                    style={S.input}
-                    placeholder="e.g. 10:00 AM – 01:00 PM"
-                    required 
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Tagline / Subtitle</label>
+                    <input 
+                      type="text" 
+                      value={eventSubtitle}
+                      onChange={(e) => setEventSubtitle(e.target.value)}
+                      style={S.input}
+                      placeholder="e.g. PowerPoint & Idea Pitch Deck"
+                    />
+                  </div>
+
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Event Tag / Badge</label>
+                    <input 
+                      type="text" 
+                      value={eventTag}
+                      onChange={(e) => setEventTag(e.target.value)}
+                      style={S.input}
+                      placeholder="e.g. Technical Presentation"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Venue *</label>
+                    <input 
+                      type="text" 
+                      value={eventVenue}
+                      onChange={(e) => setEventVenue(e.target.value)}
+                      style={S.input}
+                      placeholder="e.g. CSE Seminar Hall / Drawing Hall"
+                      required 
+                    />
+                  </div>
+
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Time / Schedule *</label>
+                    <input 
+                      type="text" 
+                      value={eventTiming}
+                      onChange={(e) => setEventTiming(e.target.value)}
+                      style={S.input}
+                      placeholder="e.g. 10:00 AM – 01:00 PM"
+                      required 
+                    />
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -1861,6 +2119,17 @@ export default function AdminDashboard({ token, onLogout }) {
                     />
                   </div>
                 </div>
+
+                <div style={S.modalInputGroup}>
+                  <label style={S.label}>Description</label>
+                  <textarea 
+                    value={eventDesc}
+                    onChange={(e) => setEventDesc(e.target.value)}
+                    style={{ ...S.input, resize: 'vertical' }}
+                    rows={3}
+                    placeholder="Brief description of the event, objective, and format..."
+                  />
+                </div>
               </div>
 
               <div style={S.modalFooter}>
@@ -1868,7 +2137,7 @@ export default function AdminDashboard({ token, onLogout }) {
                   Cancel
                 </button>
                 <button type="submit" style={S.primaryBtn}>
-                  Save Event Changes
+                  {editingEvent ? 'Save Event Changes' : 'Create Event'}
                 </button>
               </div>
             </form>

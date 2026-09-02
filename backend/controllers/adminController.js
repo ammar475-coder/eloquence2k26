@@ -409,13 +409,129 @@ exports.getEvents = (req, res) => {
   res.json({ success: true, data: events });
 };
 
+exports.createEvent = (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const {
+    id,
+    name,
+    alias,
+    subtitle,
+    category,
+    venue,
+    timing,
+    fee,
+    feePerHead,
+    feeType,
+    teamSize,
+    tag,
+    description,
+    image,
+    rules,
+    rounds,
+    guidelines,
+    highlights
+  } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'Event name is required' });
+  }
+
+  const events = getEventsData();
+  const cat = (category || 'technical').toLowerCase();
+  const catPrefix = cat === 'technical' ? 'tech' : 'nontech';
+
+  let eventId = id && id.trim() ? id.trim().toLowerCase().replace(/\s+/g, '-') : null;
+  if (!eventId) {
+    const existingCatEvents = events.filter(e => e.id.startsWith(catPrefix));
+    const nextNum = String(existingCatEvents.length + 1).padStart(2, '0');
+    eventId = `${catPrefix}-${nextNum}`;
+    if (events.some(e => e.id === eventId)) {
+      eventId = `${catPrefix}-${Date.now().toString().slice(-4)}`;
+    }
+  } else {
+    if (events.some(e => e.id === eventId)) {
+      return res.status(400).json({ success: false, message: `Event ID '${eventId}' already exists` });
+    }
+  }
+
+  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' ? Number(feePerHead) : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
+
+  const newEvent = {
+    id: eventId,
+    number: String(events.length + 1).padStart(2, '0'),
+    name: name.trim(),
+    alias: alias ? alias.trim() : name.trim(),
+    subtitle: subtitle ? subtitle.trim() : '',
+    category: cat,
+    teamSize: teamSize ? teamSize.trim() : 'Individual',
+    minMembers: 1,
+    maxMembers: teamSize && (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) ? 4 : 1,
+    fee: fee ? fee.trim() : '₹50 per head',
+    feePerHead: isNaN(parsedFeePerHead) ? 50 : parsedFeePerHead,
+    feeType: feeType || 'per_head',
+    isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) : false,
+    tag: tag ? tag.trim() : (cat === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
+    venue: venue ? venue.trim() : 'CSE Department',
+    timing: timing ? timing.trim() : '10:00 AM – 01:00 PM',
+    description: description ? description.trim() : '',
+    image: image ? image.trim() : '',
+    rules: Array.isArray(rules) && rules.length > 0 ? rules : [
+      'Standard symposium rules apply.',
+      'Participants must report to the venue 15 minutes before event start.'
+    ],
+    rounds: Array.isArray(rounds) && rounds.length > 0 ? rounds : [
+      { name: 'Preliminary Round', time: '30 Mins', desc: 'Initial qualifier round' },
+      { name: 'Final Round', time: '45 Mins', desc: 'Final judging and presentation' }
+    ],
+    guidelines: Array.isArray(guidelines) && guidelines.length > 0 ? guidelines : [
+      'Report on time with college ID card.',
+      'Decision of judges will be final.'
+    ],
+    coordinators: [],
+    highlights: Array.isArray(highlights) && highlights.length > 0 ? highlights : [
+      fee ? fee.trim() : '₹50/head',
+      'Certificate for all participants'
+    ]
+  };
+
+  events.push(newEvent);
+  saveEventsData(events);
+
+  res.json({
+    success: true,
+    message: 'Event created successfully',
+    data: newEvent
+  });
+};
+
 exports.updateEvent = (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const { id } = req.params;
-  const { name, venue, timing, fee, feePerHead, feeType, teamSize, subtitle, tag, description } = req.body;
+  const {
+    name,
+    alias,
+    subtitle,
+    category,
+    venue,
+    timing,
+    fee,
+    feePerHead,
+    feeType,
+    teamSize,
+    tag,
+    description,
+    image,
+    rules,
+    rounds,
+    guidelines,
+    highlights
+  } = req.body;
 
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
@@ -424,16 +540,23 @@ exports.updateEvent = (req, res) => {
     return res.status(404).json({ success: false, message: 'Event not found' });
   }
 
-  if (name) events[eventIndex].name = name;
-  if (venue !== undefined) events[eventIndex].venue = venue;
-  if (timing !== undefined) events[eventIndex].timing = timing;
-  if (fee !== undefined) events[eventIndex].fee = fee;
-  if (feePerHead !== undefined) events[eventIndex].feePerHead = feePerHead;
+  if (name !== undefined) events[eventIndex].name = name.trim();
+  if (alias !== undefined) events[eventIndex].alias = alias.trim();
+  if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
+  if (category !== undefined) events[eventIndex].category = category;
+  if (venue !== undefined) events[eventIndex].venue = venue.trim();
+  if (timing !== undefined) events[eventIndex].timing = timing.trim();
+  if (fee !== undefined) events[eventIndex].fee = fee.trim();
+  if (feePerHead !== undefined && feePerHead !== '') events[eventIndex].feePerHead = Number(feePerHead);
   if (feeType !== undefined) events[eventIndex].feeType = feeType;
-  if (teamSize !== undefined) events[eventIndex].teamSize = teamSize;
-  if (subtitle !== undefined) events[eventIndex].subtitle = subtitle;
-  if (tag !== undefined) events[eventIndex].tag = tag;
-  if (description !== undefined) events[eventIndex].description = description;
+  if (teamSize !== undefined) events[eventIndex].teamSize = teamSize.trim();
+  if (tag !== undefined) events[eventIndex].tag = tag.trim();
+  if (description !== undefined) events[eventIndex].description = description.trim();
+  if (image !== undefined) events[eventIndex].image = image.trim();
+  if (rules !== undefined && Array.isArray(rules)) events[eventIndex].rules = rules;
+  if (rounds !== undefined && Array.isArray(rounds)) events[eventIndex].rounds = rounds;
+  if (guidelines !== undefined && Array.isArray(guidelines)) events[eventIndex].guidelines = guidelines;
+  if (highlights !== undefined && Array.isArray(highlights)) events[eventIndex].highlights = highlights;
 
   saveEventsData(events);
 
@@ -441,6 +564,29 @@ exports.updateEvent = (req, res) => {
     success: true, 
     message: 'Event updated successfully', 
     data: events[eventIndex] 
+  });
+};
+
+exports.deleteEvent = (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  const { id } = req.params;
+  const events = getEventsData();
+  const eventIndex = events.findIndex(e => e.id === id);
+
+  if (eventIndex === -1) {
+    return res.status(404).json({ success: false, message: 'Event not found' });
+  }
+
+  const deleted = events.splice(eventIndex, 1)[0];
+  saveEventsData(events);
+
+  res.json({
+    success: true,
+    message: `Event '${deleted.name}' deleted successfully`,
+    data: deleted
   });
 };
 
