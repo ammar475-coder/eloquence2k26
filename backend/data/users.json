@@ -10,5 +10,11 @@
     "username": "musthafa",
     "password": "musthafa",
     "role": "admin"
+  },
+  {
+    "id": 1788330069356,
+    "username": "bada bai",
+    "password": "admin",
+    "role": "superadmin"
   }
 ]

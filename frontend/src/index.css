@@ -3546,18 +3546,23 @@ img {
   width: max-content;
   gap: 1.5rem;
   padding: 0.5rem 0.75rem;
-  animation: sponsorScrollLeft 34s linear infinite;
+  animation: sponsorScrollLeft 32s linear infinite;
+  will-change: transform;
 }
 
 .sponsor-track-reverse {
-  animation-name: sponsorScrollLeft;
-  animation-direction: reverse;
-  animation-duration: 30s;
+  animation: sponsorScrollRight 32s linear infinite;
+  will-change: transform;
 }
 
 @keyframes sponsorScrollLeft {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes sponsorScrollRight {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
 }
 
 /* Pause the loop while the user is reading/interacting with a card */

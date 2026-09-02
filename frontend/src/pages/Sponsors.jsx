@@ -65,7 +65,14 @@ function SponsorCard({ sponsor, tier }) {
 
 function SponsorRow({ tier, label, items, direction }) {
   if (!items || items.length === 0) return null;
-  const loopItems = [...items, ...items];
+
+  // Build a base list that contains at least 8 items so the track easily spans across any screen
+  const targetMin = 8;
+  const repeatCount = Math.max(1, Math.ceil(targetMin / items.length));
+  const baseItems = Array.from({ length: repeatCount }, () => items).flat();
+
+  // Clone baseItems once for the seamless 50% translateX marquee loop
+  const loopItems = [...baseItems, ...baseItems];
 
   return (
     <div className="sponsor-tier">
@@ -79,7 +86,7 @@ function SponsorRow({ tier, label, items, direction }) {
           className={`sponsor-track ${direction === 'right' ? 'sponsor-track-reverse' : ''}`}
         >
           {loopItems.map((sponsor, i) => (
-            <SponsorCard key={`${sponsor.id}-${i}`} sponsor={sponsor} tier={tier} />
+            <SponsorCard key={`${sponsor.id}-${tier}-${i}`} sponsor={sponsor} tier={tier} />
           ))}
         </div>
       </div>
