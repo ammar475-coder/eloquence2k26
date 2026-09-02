@@ -96,5 +96,21 @@
     "teamName": "sdd",
     "totalAmount": 300,
     "createdAt": "2026-09-01T10:34:55.254Z"
+  },
+  {
+    "registrationId": "ELQ26-TCH-32052",
+    "id": "04b2e8c7-acb4-4e09-a185-96f3730a2edd",
+    "fullName": "shahid basha ",
+    "email": "shahidbasha@gmail.com",
+    "phone": "9623587155",
+    "college": "cahcet",
+    "department": "cse",
+    "year": "4th Year",
+    "eventId": "tech-01",
+    "eventName": "PPT PRESENTATION",
+    "isTeam": true,
+    "teamName": "badu shahid",
+    "totalAmount": 100,
+    "createdAt": "2026-09-02T05:58:02.629Z"
   }
 ]

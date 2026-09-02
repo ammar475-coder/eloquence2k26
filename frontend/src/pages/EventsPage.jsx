@@ -128,10 +128,10 @@ export default function EventsPage({ onNavigate }) {
     }
   };
 
-  // Register button on event cards navigates to registration page with selected event
+  // Register button on event cards leads to rules page as requested
   const handleRegister = (eventId) => {
     if (onNavigate) {
-      onNavigate('register', eventId);
+      onNavigate('event-rules', eventId, { from: 'events' });
     }
   };
 

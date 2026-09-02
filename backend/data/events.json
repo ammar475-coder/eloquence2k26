@@ -237,7 +237,7 @@
   {
     "id": "tech-06",
     "number": "06",
-    "name": "POSTER DESIGN – UI/UX",
+    "name": "UI/UX",
     "alias": "UI/UX",
     "subtitle": "Digital Prototype & Experience Design",
     "category": "technical",
@@ -627,5 +627,28 @@
       "FIDE standard rules",
       "Digital clocks provided"
     ]
+  },
+  {
+    "id": "nontech-07",
+    "number": "13",
+    "name": "ACTION",
+    "alias": "ACTION",
+    "subtitle": "",
+    "category": "non-technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Non-Technical Event",
+    "venue": "CSE Seminar Hall",
+    "timing": "10:00 AM – 01:00 PM",
+    "description": "",
+    "rules": [],
+    "rounds": [],
+    "guidelines": [],
+    "highlights": []
   }
 ]

@@ -35,6 +35,22 @@ import {
   FaMoon
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
+import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
+
+const EXISTING_POSTER_PRESETS = [
+  { id: 'tech-01', label: 'Slide Craft (PPT)', img: defaultEventImages['tech-01'] },
+  { id: 'tech-02', label: 'Crack the Code (Coding)', img: defaultEventImages['tech-02'] },
+  { id: 'tech-03', label: 'Tech Battle (Quiz)', img: defaultEventImages['tech-03'] },
+  { id: 'tech-04', label: 'Web / Prompt Design', img: defaultEventImages['tech-04'] },
+  { id: 'tech-05', label: 'Chart Canvas (Poster)', img: defaultEventImages['tech-05'] },
+  { id: 'tech-06', label: 'UI / UX Design', img: defaultEventImages['tech-06'] },
+  { id: 'nontech-01', label: 'Snap & Reel (Media)', img: defaultEventImages['nontech-01'] },
+  { id: 'nontech-02', label: 'Link Up (Connections)', img: defaultEventImages['nontech-02'] },
+  { id: 'nontech-03', label: 'Hunt Zone (Treasure)', img: defaultEventImages['nontech-03'] },
+  { id: 'nontech-04', label: 'Henna Heist (Mehandi)', img: defaultEventImages['nontech-04'] },
+  { id: 'nontech-05', label: 'Battle of Champions (Gaming)', img: defaultEventImages['nontech-05'] },
+  { id: 'nontech-06', label: '64 Squares (Chess)', img: defaultEventImages['nontech-06'] },
+];
 
 export default function AdminDashboard({ token, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -415,7 +431,7 @@ export default function AdminDashboard({ token, onLogout }) {
     setEventTag(eventItem.tag || '');
     setEventDesc(eventItem.description || '');
     setEventImage(eventItem.image || '');
-    setEventImagePreview(eventItem.image || '');
+    setEventImagePreview(getEventBanner(eventItem) || '');
     setIsEventEditModalOpen(true);
   };
 
@@ -1318,22 +1334,25 @@ export default function AdminDashboard({ token, onLogout }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredEventsList.map(evt => (
+                      {filteredEventsList.map(evt => {
+                        const eventBannerSrc = getEventBanner(evt);
+                        return (
                         <tr key={evt.id} style={S.tr}>
                           <td style={S.td}>
                             <div style={{
-                              width: '54px',
-                              height: '40px',
+                              width: '56px',
+                              height: '42px',
                               borderRadius: '8px',
                               background: isDark ? '#1f2937' : '#f1f5f9',
                               border: isDark ? '1px solid #374151' : '1px solid #cbd5e1',
                               overflow: 'hidden',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              flexShrink: 0
                             }}>
-                              {evt.image ? (
-                                <img src={evt.image} alt={evt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              {eventBannerSrc ? (
+                                <img src={eventBannerSrc} alt={evt.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <FaImage color="#94a3b8" size={18} />
                               )}
@@ -1391,7 +1410,8 @@ export default function AdminDashboard({ token, onLogout }) {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                       {!filteredEventsList.length && (
                         <tr>
                           <td colSpan="7" style={S.emptyState}>
@@ -1943,13 +1963,13 @@ export default function AdminDashboard({ token, onLogout }) {
 
             <form onSubmit={handleSubmitEventEdit} style={S.modalForm}>
               <div style={S.modalFormBody}>
-                {/* Event Poster / Picture Upload */}
+                {/* Event Poster / Picture Upload & Presets */}
                 <div style={S.modalInputGroup}>
                   <label style={S.label}>Event Poster / Picture</label>
-                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <div style={{
-                      width: '90px',
-                      height: '70px',
+                      width: '100px',
+                      height: '75px',
                       borderRadius: '10px',
                       background: isDark ? '#1f2937' : '#f8fafc',
                       border: isDark ? '2px dashed #4b5563' : '2px dashed #cbd5e1',
@@ -1959,13 +1979,17 @@ export default function AdminDashboard({ token, onLogout }) {
                       overflow: 'hidden',
                       flexShrink: 0
                     }}>
-                      {eventImagePreview ? (
-                        <img src={eventImagePreview} alt="Event Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      {(eventImagePreview || (editingEvent && getEventBanner(editingEvent))) ? (
+                        <img 
+                          src={eventImagePreview || getEventBanner(editingEvent)} 
+                          alt="Event Preview" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
                       ) : (
                         <FaImage color="#94a3b8" size={26} />
                       )}
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <input 
                         type="file" 
                         ref={eventFileInputRef} 
@@ -1973,7 +1997,7 @@ export default function AdminDashboard({ token, onLogout }) {
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"
                         style={{ display: 'none' }}
                       />
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         <button 
                           type="button" 
                           onClick={() => eventFileInputRef.current?.click()}
@@ -1992,7 +2016,7 @@ export default function AdminDashboard({ token, onLogout }) {
                           }}
                           disabled={isUploadingEventImage}
                         >
-                          <FaUpload size={12} /> {isUploadingEventImage ? 'Uploading Picture...' : 'Upload Event Picture'}
+                          <FaUpload size={12} /> {isUploadingEventImage ? 'Uploading Picture...' : 'Upload Custom Picture'}
                         </button>
                         {eventImagePreview && (
                           <button 
@@ -2008,11 +2032,41 @@ export default function AdminDashboard({ token, onLogout }) {
                               cursor: 'pointer'
                             }}
                           >
-                            Remove Picture
+                            Reset to Default
                           </button>
                         )}
                       </div>
-                      <span style={S.inputHelper}>Upload high-res event poster banner. PNG, JPG, WEBP (Max 5MB)</span>
+                      
+                      {/* Quick preset selector for existing artwork */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '500' }}>
+                          Or pick existing poster:
+                        </span>
+                        <select
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val && defaultEventImages[val]) {
+                              setEventImage(defaultEventImages[val]);
+                              setEventImagePreview(defaultEventImages[val]);
+                            }
+                          }}
+                          defaultValue=""
+                          style={{
+                            ...S.select,
+                            padding: '0.35rem 0.65rem',
+                            fontSize: '0.8rem',
+                            width: 'auto',
+                            maxWidth: '240px'
+                          }}
+                        >
+                          <option value="" disabled>Choose existing artwork...</option>
+                          {EXISTING_POSTER_PRESETS.map((p) => (
+                            <option key={p.id} value={p.id}>{p.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <span style={S.inputHelper}>Upload new artwork (PNG, JPG, WEBP max 5MB) or select from existing event posters.</span>
                     </div>
                   </div>
                 </div>

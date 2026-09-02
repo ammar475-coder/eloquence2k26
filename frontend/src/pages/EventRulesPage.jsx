@@ -12,10 +12,20 @@ import {
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import events from '../data/events.js';
+import rulesData from '../data/rules.js';
+import coordinatorsData from '../data/coordinator.js';
 
 export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
   const [eventsList, setEventsList] = useState(events);
   const event = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()) || eventsList[0] || events[0];
+
+  const rulesList = (Array.isArray(event.rules) && event.rules.length > 0)
+    ? event.rules
+    : (rulesData[event.id]?.rules || []);
+
+  const coordsList = (Array.isArray(event.coordinators) && event.coordinators.length > 0)
+    ? event.coordinators
+    : (coordinatorsData[event.id]?.coordinators || []);
 
   useEffect(() => {
     fetch('/api/events')
@@ -204,14 +214,14 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
               <h2 className="rules-card-title">
                 <FaListOl className="rules-card-icon" /> Rules & Guidelines
               </h2>
-              {event.rules && (
-                <span className="rules-count-badge">{event.rules.length} Rules</span>
+              {rulesList.length > 0 && (
+                <span className="rules-count-badge">{rulesList.length} Rules</span>
               )}
             </div>
 
-            {event.rules && event.rules.length > 0 ? (
+            {rulesList.length > 0 ? (
               <ol className="rules-unified-list">
-                {event.rules.map((rule, idx) => (
+                {rulesList.map((rule, idx) => (
                   <motion.li
                     key={idx}
                     initial={{ opacity: 0, x: 10 }}
@@ -231,7 +241,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
         </div>
 
         {/* Down / Bottom Section: Compact Coordinator Cards */}
-        {event.coordinators && event.coordinators.length > 0 && (
+        {coordsList.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
@@ -245,7 +255,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
             </div>
 
             <div className="rules-contact-grid">
-              {event.coordinators.map((coord, idx) => (
+              {coordsList.map((coord, idx) => (
                 <div key={idx} className="rules-coord-card">
                   <div className="coord-card-badge">{coord.role || `Coordinator ${idx + 1}`}</div>
                   <h3 className="coord-card-name">{coord.name}</h3>
