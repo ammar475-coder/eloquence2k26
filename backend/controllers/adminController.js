@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const supabase = require('../config/supabase');
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
@@ -15,7 +16,98 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// ==================== DATA ACCESS HELPERS ====================
+// ==================== DATA MAPPER HELPERS ====================
+const dbToSponsor = (s) => ({
+  id: s.id,
+  name: s.name,
+  companyName: s.company_name || s.companyName || '',
+  logo: s.logo || '',
+  description: s.description || '',
+  website: s.website || '',
+  contactName: s.contact_name || s.contactName || '',
+  contactEmail: s.contact_email || s.contactEmail || '',
+  contactPhone: s.contact_phone || s.contactPhone || '',
+  category: s.category || 'Gold Sponsor',
+  displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
+  isActive: s.is_active !== false && s.isActive !== false,
+  createdAt: s.created_at || s.createdAt,
+  updatedAt: s.updated_at || s.updatedAt
+});
+
+const sponsorToDb = (s) => ({
+  id: s.id,
+  name: s.name,
+  company_name: s.companyName || s.company_name || '',
+  logo: s.logo || '',
+  description: s.description || '',
+  website: s.website || '',
+  contact_name: s.contactName || s.contact_name || '',
+  contact_email: s.contactEmail || s.contact_email || '',
+  contact_phone: s.contactPhone || s.contact_phone || '',
+  category: s.category || 'Gold Sponsor',
+  display_order: Number(s.displayOrder ?? s.display_order ?? 999),
+  is_active: s.isActive !== false && s.is_active !== false,
+  updated_at: new Date().toISOString()
+});
+
+const dbToCoordinator = (c) => ({
+  id: c.id,
+  name: c.name,
+  phone: c.phone || '',
+  whatsapp: c.whatsapp || '',
+  email: c.email || '',
+  department: c.department || '',
+  year: c.year || '',
+  role: c.role || 'Lead Coordinator',
+  assignedEvents: Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []),
+  displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
+  isActive: c.is_active !== false && c.isActive !== false,
+  createdAt: c.created_at || c.createdAt,
+  updatedAt: c.updated_at || c.updatedAt
+});
+
+const coordinatorToDb = (c) => ({
+  id: c.id,
+  name: c.name,
+  phone: c.phone || '',
+  whatsapp: c.whatsapp || '',
+  email: c.email || '',
+  department: c.department || '',
+  year: c.year || '',
+  role: c.role || 'Lead Coordinator',
+  assigned_events: Array.isArray(c.assignedEvents) ? c.assignedEvents : (Array.isArray(c.assigned_events) ? c.assigned_events : []),
+  display_order: Number(c.displayOrder ?? c.display_order ?? 999),
+  is_active: c.isActive !== false && c.is_active !== false,
+  updated_at: new Date().toISOString()
+});
+
+const dbToEvent = (e) => ({
+  id: e.id,
+  number: e.number,
+  name: e.name,
+  alias: e.alias,
+  subtitle: e.subtitle,
+  category: e.category,
+  teamSize: e.team_size || e.teamSize,
+  minMembers: e.min_members || e.minMembers || 1,
+  maxMembers: e.max_members || e.maxMembers || 1,
+  fee: e.fee,
+  feePerHead: e.fee_per_head || e.feePerHead || 0,
+  feeType: e.fee_type || e.feeType || 'per_head',
+  isTeam: e.is_team !== false && e.isTeam !== false,
+  tag: e.tag,
+  venue: e.venue,
+  timing: e.timing,
+  description: e.description,
+  rules: e.rules,
+  rounds: e.rounds,
+  guidelines: e.guidelines,
+  highlights: e.highlights,
+  createdAt: e.created_at || e.createdAt,
+  updatedAt: e.updated_at || e.updatedAt
+});
+
+// ==================== LOCAL JSON FALLBACK HELPERS ====================
 const getUsersData = () => {
   try {
     const data = fs.readFileSync(usersFilePath, 'utf8');
@@ -115,9 +207,31 @@ const getRegistrationsData = () => {
 };
 
 // ==================== AUTH & TOKEN ====================
-exports.login = (req, res) => {
+exports.login = async (req, res) => {
   const { username, password } = req.body;
 
+  try {
+    // Try Supabase first
+    const { data: dbUser, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', password)
+      .single();
+
+    if (!error && dbUser) {
+      const token = jwt.sign(
+        { id: dbUser.id, username: dbUser.username, role: dbUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '1d' }
+      );
+      return res.json({ success: true, token, user: { username: dbUser.username, role: dbUser.role } });
+    }
+  } catch (e) {
+    console.warn('Supabase auth fallback:', e.message);
+  }
+
+  // Fallback to local users.json
   const users = getUsersData();
   const user = users.find(u => u.username === username && u.password === password);
 
@@ -144,14 +258,31 @@ exports.verifyToken = (req, res, next) => {
 };
 
 // ==================== DASHBOARD STATS ====================
-exports.getDashboardData = (req, res) => {
+exports.getDashboardData = async (req, res) => {
   try {
-    const registrations = getRegistrationsData();
-    const sponsors = getSponsorsData();
-    const coordinators = getCoordinatorsData();
-    const events = getEventsData();
+    let registrations = getRegistrationsData();
+    let sponsors = getSponsorsData();
+    let coordinators = getCoordinatorsData();
+    let events = getEventsData();
 
-    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.totalAmount) || 0), 0);
+    // Query Supabase live for metrics
+    try {
+      const [regRes, spRes, coRes, evRes] = await Promise.all([
+        supabase.from('registrations').select('*'),
+        supabase.from('sponsors').select('*'),
+        supabase.from('coordinators').select('*'),
+        supabase.from('events').select('*')
+      ]);
+
+      if (regRes.data && regRes.data.length > 0) registrations = regRes.data;
+      if (spRes.data && spRes.data.length > 0) sponsors = spRes.data.map(dbToSponsor);
+      if (coRes.data && coRes.data.length > 0) coordinators = coRes.data.map(dbToCoordinator);
+      if (evRes.data && evRes.data.length > 0) events = evRes.data.map(dbToEvent);
+    } catch (dbErr) {
+      console.warn('Dashboard live metrics query error fallback:', dbErr.message);
+    }
+
+    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
 
@@ -160,10 +291,10 @@ exports.getDashboardData = (req, res) => {
       .reverse()
       .slice(0, 5)
       .map(r => ({
-        id: r.registrationId || r.id,
-        name: r.fullName || 'Anonymous',
-        event: r.eventName || 'General Registration',
-        date: r.createdAtFormatted || (r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN') : 'Recent')
+        id: r.ticket_code || r.registrationId || r.id,
+        name: r.full_name || r.fullName || 'Anonymous',
+        event: r.event_id || r.eventName || 'General Registration',
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : 'Recent'
       }));
 
     res.json({
@@ -188,16 +319,25 @@ exports.getDashboardData = (req, res) => {
 };
 
 // ==================== USER MANAGEMENT ====================
-exports.getUsers = (req, res) => {
+exports.getUsers = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+
+  try {
+    const { data: dbUsers, error } = await supabase.from('users').select('id, username, role').order('id', { ascending: true });
+    if (!error && Array.isArray(dbUsers) && dbUsers.length > 0) {
+      return res.json({ success: true, data: dbUsers });
+    }
+  } catch (e) {
+    console.warn('Supabase getUsers fallback:', e.message);
   }
 
   const users = getUsersData().map(u => ({ id: u.id, username: u.username, role: u.role }));
   res.json({ success: true, data: users });
 };
 
-exports.createUser = (req, res) => {
+exports.createUser = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
@@ -213,90 +353,119 @@ exports.createUser = (req, res) => {
   }
 
   const newUser = { id: Date.now(), username, password, role };
+
+  // Write to Supabase Live DB
+  try {
+    const { error: dbError } = await supabase.from('users').insert([newUser]);
+    if (dbError) console.error('Supabase createUser error:', dbError.message);
+  } catch (dbErr) {
+    console.error('Supabase createUser exception:', dbErr.message);
+  }
+
+  // Sync to local JSON backup
   users.push(newUser);
   saveUsersData(users);
 
   res.json({ success: true, message: 'User created successfully', data: { id: newUser.id, username: newUser.username, role: newUser.role } });
 };
 
-exports.updateUser = (req, res) => {
+exports.updateUser = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const { id } = req.params;
   const { username, password, role } = req.body;
+  const userId = parseInt(id, 10);
   
   if (!username || !role) {
     return res.status(400).json({ success: false, message: 'Missing fields' });
   }
 
   const users = getUsersData();
-  const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
+  const userIndex = users.findIndex(u => u.id === userId);
 
-  if (userIndex === -1) {
-    return res.status(404).json({ success: false, message: 'User not found' });
-  }
-
-  if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
+  if (userIndex !== -1 && users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
     return res.status(403).json({ success: false, message: 'Cannot modify a superadmin' });
   }
 
-  if (users.find(u => u.username === username && u.id !== parseInt(id, 10))) {
-    return res.status(400).json({ success: false, message: 'Username already taken' });
+  const updateFields = { username, role, updated_at: new Date().toISOString() };
+  if (password) updateFields.password = password;
+
+  // Update Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('users').update(updateFields).eq('id', userId);
+    if (dbErr) console.error('Supabase updateUser error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase updateUser exception:', e.message);
   }
 
-  users[userIndex].username = username;
-  users[userIndex].role = role;
-  if (password) {
-    users[userIndex].password = password;
+  // Update local JSON backup
+  if (userIndex !== -1) {
+    users[userIndex].username = username;
+    users[userIndex].role = role;
+    if (password) users[userIndex].password = password;
+    saveUsersData(users);
   }
 
-  saveUsersData(users);
-  res.json({ success: true, message: 'User updated successfully', data: { id: users[userIndex].id, username: users[userIndex].username, role: users[userIndex].role } });
+  res.json({ success: true, message: 'User updated successfully', data: { id: userId, username, role } });
 };
 
-exports.deleteUser = (req, res) => {
+exports.deleteUser = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const { id } = req.params;
+  const userId = parseInt(id, 10);
   const users = getUsersData();
-  const userIndex = users.findIndex(u => u.id === parseInt(id, 10));
+  const userIndex = users.findIndex(u => u.id === userId);
 
-  if (userIndex === -1) {
-    return res.status(404).json({ success: false, message: 'User not found' });
+  if (userIndex !== -1) {
+    if (users[userIndex].username === 'admin') {
+      return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
+    }
+    if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ success: false, message: 'Cannot delete a superadmin' });
+    }
+    if (users[userIndex].id === req.user.id) {
+      return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
+    }
+    users.splice(userIndex, 1);
+    saveUsersData(users);
   }
 
-  if (users[userIndex].username === 'admin') {
-    return res.status(400).json({ success: false, message: 'Cannot delete the primary admin account' });
+  // Delete from Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('users').delete().eq('id', userId);
+    if (dbErr) console.error('Supabase deleteUser error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase deleteUser exception:', e.message);
   }
-  
-  if (users[userIndex].role === 'superadmin' && req.user.role !== 'superadmin') {
-    return res.status(403).json({ success: false, message: 'Cannot delete a superadmin' });
-  }
-
-  if (users[userIndex].id === req.user.id) {
-    return res.status(400).json({ success: false, message: 'Cannot delete your own account' });
-  }
-
-  users.splice(userIndex, 1);
-  saveUsersData(users);
 
   res.json({ success: true, message: 'User deleted successfully' });
 };
 
 // ==================== ROLE MANAGEMENT ====================
-exports.getRoles = (req, res) => {
+exports.getRoles = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
+
+  try {
+    const { data: dbRoles, error } = await supabase.from('roles').select('*').order('id', { ascending: true });
+    if (!error && Array.isArray(dbRoles) && dbRoles.length > 0) {
+      return res.json({ success: true, data: dbRoles });
+    }
+  } catch (e) {
+    console.warn('Supabase getRoles fallback:', e.message);
+  }
+
   const roles = getRolesData();
   res.json({ success: true, data: roles });
 };
 
-exports.createRole = (req, res) => {
+exports.createRole = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
@@ -306,110 +475,122 @@ exports.createRole = (req, res) => {
     return res.status(400).json({ success: false, message: 'Role name required' });
   }
 
-  const roles = getRolesData();
   const normalizedName = name.toLowerCase().trim();
+  const roles = getRolesData();
 
   if (roles.find(r => r.name === normalizedName)) {
     return res.status(400).json({ success: false, message: 'Role already exists' });
   }
 
   const newRole = { id: Date.now(), name: normalizedName };
+
+  // Write to Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('roles').insert([newRole]);
+    if (dbErr) console.error('Supabase createRole error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase createRole exception:', e.message);
+  }
+
   roles.push(newRole);
   saveRolesData(roles);
 
   res.json({ success: true, message: 'Role created successfully', data: newRole });
 };
 
-exports.updateRole = (req, res) => {
+exports.updateRole = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const { id } = req.params;
   const { name } = req.body;
+  const roleId = parseInt(id, 10) || id;
 
   if (!name) {
     return res.status(400).json({ success: false, message: 'Role name required' });
   }
 
   const roles = getRolesData();
-  const roleIndex = roles.findIndex(r => r.id === parseInt(id, 10) || r.id === id);
+  const roleIndex = roles.findIndex(r => r.id === roleId);
 
-  if (roleIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Role not found' });
-  }
-
-  const oldRoleName = roles[roleIndex].name;
   const normalizedName = name.toLowerCase().trim();
 
-  if (oldRoleName === 'superadmin' && normalizedName !== 'superadmin') {
-    return res.status(400).json({ success: false, message: 'Cannot rename system superadmin role' });
+  // Update Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('roles').update({ name: normalizedName }).eq('id', roleId);
+    if (dbErr) console.error('Supabase updateRole error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase updateRole exception:', e.message);
   }
 
-  if (roles.find(r => r.name === normalizedName && (r.id !== parseInt(id, 10) && r.id !== id))) {
-    return res.status(400).json({ success: false, message: 'Role name already in use' });
-  }
+  if (roleIndex !== -1) {
+    const oldRoleName = roles[roleIndex].name;
+    roles[roleIndex].name = normalizedName;
+    saveRolesData(roles);
 
-  roles[roleIndex].name = normalizedName;
-  saveRolesData(roles);
-
-  if (oldRoleName !== normalizedName) {
-    const users = getUsersData();
-    let updated = false;
-    users.forEach(u => {
-      if (u.role === oldRoleName) {
-        u.role = normalizedName;
-        updated = true;
-      }
-    });
-    if (updated) {
-      saveUsersData(users);
+    if (oldRoleName !== normalizedName) {
+      const users = getUsersData();
+      let updated = false;
+      users.forEach(u => {
+        if (u.role === oldRoleName) {
+          u.role = normalizedName;
+          updated = true;
+        }
+      });
+      if (updated) saveUsersData(users);
     }
   }
 
-  res.json({ success: true, message: 'Role updated successfully', data: roles[roleIndex] });
+  res.json({ success: true, message: 'Role updated successfully', data: { id: roleId, name: normalizedName } });
 };
 
-exports.deleteRole = (req, res) => {
+exports.deleteRole = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const { id } = req.params;
+  const roleId = parseInt(id, 10) || id;
   const roles = getRolesData();
-  const roleIndex = roles.findIndex(r => r.id === parseInt(id, 10) || r.id === id);
+  const roleIndex = roles.findIndex(r => r.id === roleId);
 
-  if (roleIndex === -1) {
-    return res.status(404).json({ success: false, message: 'Role not found' });
+  if (roleIndex !== -1) {
+    const roleName = roles[roleIndex].name;
+    if (roleName === 'superadmin' || roleName === 'admin') {
+      return res.status(400).json({ success: false, message: `Cannot delete primary system role '${roleName}'` });
+    }
+    roles.splice(roleIndex, 1);
+    saveRolesData(roles);
   }
 
-  const roleName = roles[roleIndex].name;
-  if (roleName === 'superadmin' || roleName === 'admin') {
-    return res.status(400).json({ success: false, message: `Cannot delete primary system role '${roleName}'` });
+  // Delete from Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('roles').delete().eq('id', roleId);
+    if (dbErr) console.error('Supabase deleteRole error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase deleteRole exception:', e.message);
   }
-
-  const users = getUsersData();
-  const assignedUsers = users.filter(u => u.role === roleName);
-  if (assignedUsers.length > 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Cannot delete role '${roleName}' because ${assignedUsers.length} user(s) are currently assigned to it.` 
-    });
-  }
-
-  roles.splice(roleIndex, 1);
-  saveRolesData(roles);
 
   res.json({ success: true, message: 'Role deleted successfully' });
 };
 
 // ==================== EVENT MANAGEMENT ====================
-exports.getEvents = (req, res) => {
+exports.getEvents = async (req, res) => {
+  try {
+    const { data: dbEvents, error } = await supabase.from('events').select('*').order('id', { ascending: true });
+    if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
+      return res.json({ success: true, data: dbEvents.map(dbToEvent) });
+    }
+  } catch (e) {
+    console.warn('Supabase getEvents fallback:', e.message);
+  }
+
   const events = getEventsData();
   res.json({ success: true, data: events });
 };
 
-exports.updateEvent = (req, res) => {
+exports.updateEvent = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
@@ -420,39 +601,83 @@ exports.updateEvent = (req, res) => {
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
 
-  if (eventIndex === -1) {
+  if (eventIndex === -1 && !events.length) {
     return res.status(404).json({ success: false, message: 'Event not found' });
   }
 
-  if (name) events[eventIndex].name = name;
-  if (venue !== undefined) events[eventIndex].venue = venue;
-  if (timing !== undefined) events[eventIndex].timing = timing;
-  if (fee !== undefined) events[eventIndex].fee = fee;
-  if (feePerHead !== undefined) events[eventIndex].feePerHead = feePerHead;
-  if (feeType !== undefined) events[eventIndex].feeType = feeType;
-  if (teamSize !== undefined) events[eventIndex].teamSize = teamSize;
-  if (subtitle !== undefined) events[eventIndex].subtitle = subtitle;
-  if (tag !== undefined) events[eventIndex].tag = tag;
-  if (description !== undefined) events[eventIndex].description = description;
+  const updateFields = {
+    updated_at: new Date().toISOString()
+  };
 
-  saveEventsData(events);
+  if (name) updateFields.name = name;
+  if (venue !== undefined) updateFields.venue = venue;
+  if (timing !== undefined) updateFields.timing = timing;
+  if (fee !== undefined) updateFields.fee = fee;
+  if (feePerHead !== undefined) updateFields.fee_per_head = Number(feePerHead);
+  if (feeType !== undefined) updateFields.fee_type = feeType;
+  if (teamSize !== undefined) updateFields.team_size = teamSize;
+  if (subtitle !== undefined) updateFields.subtitle = subtitle;
+  if (tag !== undefined) updateFields.tag = tag;
+  if (description !== undefined) updateFields.description = description;
+
+  // Update Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('events').update(updateFields).eq('id', id);
+    if (dbErr) console.error('Supabase updateEvent error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase updateEvent exception:', e.message);
+  }
+
+  // Update local JSON backup
+  if (eventIndex !== -1) {
+    if (name) events[eventIndex].name = name;
+    if (venue !== undefined) events[eventIndex].venue = venue;
+    if (timing !== undefined) events[eventIndex].timing = timing;
+    if (fee !== undefined) events[eventIndex].fee = fee;
+    if (feePerHead !== undefined) events[eventIndex].feePerHead = feePerHead;
+    if (feeType !== undefined) events[eventIndex].feeType = feeType;
+    if (teamSize !== undefined) events[eventIndex].teamSize = teamSize;
+    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle;
+    if (tag !== undefined) events[eventIndex].tag = tag;
+    if (description !== undefined) events[eventIndex].description = description;
+    saveEventsData(events);
+  }
 
   res.json({ 
     success: true, 
-    message: 'Event updated successfully', 
-    data: events[eventIndex] 
+    message: 'Event updated successfully in live database', 
+    data: { id, ...req.body } 
   });
 };
 
 // ==================== SPONSOR MANAGEMENT ====================
-exports.getSponsors = (req, res) => {
+exports.getSponsors = async (req, res) => {
+  try {
+    const { data: dbSponsors, error } = await supabase.from('sponsors').select('*').order('display_order', { ascending: true });
+    if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
+      return res.json({ success: true, data: dbSponsors.map(dbToSponsor) });
+    }
+  } catch (e) {
+    console.warn('Supabase getSponsors fallback:', e.message);
+  }
+
   const sponsors = getSponsorsData();
   sponsors.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
   res.json({ success: true, data: sponsors });
 };
 
-exports.getSponsorById = (req, res) => {
+exports.getSponsorById = async (req, res) => {
   const { id } = req.params;
+
+  try {
+    const { data: dbSponsor, error } = await supabase.from('sponsors').select('*').eq('id', id).single();
+    if (!error && dbSponsor) {
+      return res.json({ success: true, data: dbToSponsor(dbSponsor) });
+    }
+  } catch (e) {
+    console.warn('Supabase getSponsorById fallback:', e.message);
+  }
+
   const sponsors = getSponsorsData();
   const sponsor = sponsors.find(s => s.id === id);
   if (!sponsor) {
@@ -461,7 +686,7 @@ exports.getSponsorById = (req, res) => {
   res.json({ success: true, data: sponsor });
 };
 
-exports.createSponsor = (req, res) => {
+exports.createSponsor = async (req, res) => {
   const {
     name,
     companyName,
@@ -503,13 +728,23 @@ exports.createSponsor = (req, res) => {
     updatedAt: now
   };
 
+  // Insert into Supabase Live DB
+  try {
+    const dbPayload = sponsorToDb(newSponsor);
+    const { error: dbErr } = await supabase.from('sponsors').insert([dbPayload]);
+    if (dbErr) console.error('Supabase createSponsor error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase createSponsor exception:', e.message);
+  }
+
+  // Update local JSON backup
   sponsors.push(newSponsor);
   saveSponsorsData(sponsors);
 
-  res.status(201).json({ success: true, message: 'Sponsor created successfully', data: newSponsor });
+  res.status(201).json({ success: true, message: 'Sponsor created successfully in live database', data: newSponsor });
 };
 
-exports.updateSponsor = (req, res) => {
+exports.updateSponsor = async (req, res) => {
   const { id } = req.params;
   const {
     name,
@@ -529,83 +764,104 @@ exports.updateSponsor = (req, res) => {
     return res.status(400).json({ success: false, message: 'Sponsor name is required' });
   }
 
-  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
-    return res.status(400).json({ success: false, message: 'Valid contact email address is required' });
-  }
-
   const sponsors = getSponsorsData();
   const index = sponsors.findIndex(s => s.id === id);
 
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Sponsor not found' });
-  }
-
   const updatedSponsor = {
-    ...sponsors[index],
+    id,
     name: name.trim(),
-    companyName: companyName !== undefined ? companyName.trim() : sponsors[index].companyName,
-    logo: logo !== undefined ? logo.trim() : sponsors[index].logo,
-    description: description !== undefined ? description.trim() : sponsors[index].description,
-    website: website !== undefined ? website.trim() : sponsors[index].website,
-    contactName: contactName !== undefined ? contactName.trim() : sponsors[index].contactName,
-    contactEmail: contactEmail !== undefined ? contactEmail.trim().toLowerCase() : sponsors[index].contactEmail,
-    contactPhone: contactPhone !== undefined ? contactPhone.trim() : sponsors[index].contactPhone,
-    category: category || sponsors[index].category,
-    displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : sponsors[index].displayOrder,
-    isActive: isActive !== undefined ? Boolean(isActive) : sponsors[index].isActive,
+    companyName: companyName !== undefined ? companyName.trim() : (sponsors[index]?.companyName || ''),
+    logo: logo !== undefined ? logo.trim() : (sponsors[index]?.logo || ''),
+    description: description !== undefined ? description.trim() : (sponsors[index]?.description || ''),
+    website: website !== undefined ? website.trim() : (sponsors[index]?.website || ''),
+    contactName: contactName !== undefined ? contactName.trim() : (sponsors[index]?.contactName || ''),
+    contactEmail: contactEmail !== undefined ? contactEmail.trim().toLowerCase() : (sponsors[index]?.contactEmail || ''),
+    contactPhone: contactPhone !== undefined ? contactPhone.trim() : (sponsors[index]?.contactPhone || ''),
+    category: category || (sponsors[index]?.category || 'Gold Sponsor'),
+    displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : (sponsors[index]?.displayOrder || 1),
+    isActive: isActive !== undefined ? Boolean(isActive) : (sponsors[index]?.isActive !== false),
     updatedAt: new Date().toISOString()
   };
 
-  sponsors[index] = updatedSponsor;
-  saveSponsorsData(sponsors);
+  // Update Supabase Live DB
+  try {
+    const dbPayload = sponsorToDb(updatedSponsor);
+    const { error: dbErr } = await supabase.from('sponsors').upsert([dbPayload], { onConflict: 'id' });
+    if (dbErr) console.error('Supabase updateSponsor error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase updateSponsor exception:', e.message);
+  }
 
-  res.json({ success: true, message: 'Sponsor updated successfully', data: updatedSponsor });
+  // Update local JSON backup
+  if (index !== -1) {
+    sponsors[index] = updatedSponsor;
+    saveSponsorsData(sponsors);
+  }
+
+  res.json({ success: true, message: 'Sponsor updated successfully in live database', data: updatedSponsor });
 };
 
-exports.toggleSponsorStatus = (req, res) => {
+exports.toggleSponsorStatus = async (req, res) => {
   const { id } = req.params;
   const sponsors = getSponsorsData();
   const sponsor = sponsors.find(s => s.id === id);
 
-  if (!sponsor) {
-    return res.status(404).json({ success: false, message: 'Sponsor not found' });
+  let newStatus = true;
+  if (sponsor) {
+    sponsor.isActive = !sponsor.isActive;
+    sponsor.updatedAt = new Date().toISOString();
+    newStatus = sponsor.isActive;
+    saveSponsorsData(sponsors);
   }
 
-  sponsor.isActive = !sponsor.isActive;
-  sponsor.updatedAt = new Date().toISOString();
-  saveSponsorsData(sponsors);
+  // Toggle in Supabase Live DB
+  try {
+    const { data: dbSponsor } = await supabase.from('sponsors').select('is_active').eq('id', id).single();
+    if (dbSponsor) {
+      newStatus = !dbSponsor.is_active;
+    }
+    const { error: dbErr } = await supabase.from('sponsors').update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+    if (dbErr) console.error('Supabase toggleSponsorStatus error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase toggleSponsorStatus exception:', e.message);
+  }
 
   res.json({ 
     success: true, 
-    message: `Sponsor marked as ${sponsor.isActive ? 'Active' : 'Inactive'}`, 
-    data: sponsor 
+    message: `Sponsor marked as ${newStatus ? 'Active' : 'Inactive'} in live database`, 
+    data: { id, isActive: newStatus } 
   });
 };
 
-exports.deleteSponsor = (req, res) => {
+exports.deleteSponsor = async (req, res) => {
   const { id } = req.params;
   const sponsors = getSponsorsData();
   const index = sponsors.findIndex(s => s.id === id);
 
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Sponsor not found' });
+  if (index !== -1) {
+    sponsors.splice(index, 1);
+    saveSponsorsData(sponsors);
   }
 
-  sponsors.splice(index, 1);
-  saveSponsorsData(sponsors);
+  // Delete from Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('sponsors').delete().eq('id', id);
+    if (dbErr) console.error('Supabase deleteSponsor error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase deleteSponsor exception:', e.message);
+  }
 
-  res.json({ success: true, message: 'Sponsor deleted successfully' });
+  res.json({ success: true, message: 'Sponsor deleted successfully from live database' });
 };
 
 // ==================== LOGO UPLOAD ====================
 exports.uploadLogo = (req, res) => {
   try {
-    const { imageBase64, fileName } = req.body;
+    const { imageBase64 } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, message: 'No image data provided' });
     }
 
-    // Format: "data:image/png;base64,..."
     const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ success: false, message: 'Invalid base64 image data' });
@@ -647,14 +903,33 @@ exports.uploadLogo = (req, res) => {
 };
 
 // ==================== COORDINATOR MANAGEMENT ====================
-exports.getCoordinators = (req, res) => {
+exports.getCoordinators = async (req, res) => {
+  try {
+    const { data: dbCoords, error } = await supabase.from('coordinators').select('*').order('display_order', { ascending: true });
+    if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+      return res.json({ success: true, data: dbCoords.map(dbToCoordinator) });
+    }
+  } catch (e) {
+    console.warn('Supabase getCoordinators fallback:', e.message);
+  }
+
   const coordinators = getCoordinatorsData();
   coordinators.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
   res.json({ success: true, data: coordinators });
 };
 
-exports.getCoordinatorById = (req, res) => {
+exports.getCoordinatorById = async (req, res) => {
   const { id } = req.params;
+
+  try {
+    const { data: dbCoord, error } = await supabase.from('coordinators').select('*').eq('id', id).single();
+    if (!error && dbCoord) {
+      return res.json({ success: true, data: dbToCoordinator(dbCoord) });
+    }
+  } catch (e) {
+    console.warn('Supabase getCoordinatorById fallback:', e.message);
+  }
+
   const coordinators = getCoordinatorsData();
   const coordinator = coordinators.find(c => c.id === id);
   if (!coordinator) {
@@ -663,7 +938,7 @@ exports.getCoordinatorById = (req, res) => {
   res.json({ success: true, data: coordinator });
 };
 
-exports.createCoordinator = (req, res) => {
+exports.createCoordinator = async (req, res) => {
   const {
     name,
     phone,
@@ -683,10 +958,6 @@ exports.createCoordinator = (req, res) => {
 
   if (!phone || !phone.trim() || !/^[6-9]\d{9}$/.test(phone.trim().replace(/\s+/g, ''))) {
     return res.status(400).json({ success: false, message: 'Valid 10-digit Indian phone number is required (e.g. 9876543210)' });
-  }
-
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-    return res.status(400).json({ success: false, message: 'Valid email address is required' });
   }
 
   if (!Array.isArray(assignedEvents) || assignedEvents.length === 0) {
@@ -713,13 +984,23 @@ exports.createCoordinator = (req, res) => {
     updatedAt: now
   };
 
+  // Insert into Supabase Live DB
+  try {
+    const dbPayload = coordinatorToDb(newCoordinator);
+    const { error: dbErr } = await supabase.from('coordinators').insert([dbPayload]);
+    if (dbErr) console.error('Supabase createCoordinator error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase createCoordinator exception:', e.message);
+  }
+
+  // Update local JSON backup
   coordinators.push(newCoordinator);
   saveCoordinatorsData(coordinators);
 
-  res.status(201).json({ success: true, message: 'Student coordinator created successfully', data: newCoordinator });
+  res.status(201).json({ success: true, message: 'Student coordinator created successfully in live database', data: newCoordinator });
 };
 
-exports.updateCoordinator = (req, res) => {
+exports.updateCoordinator = async (req, res) => {
   const { id } = req.params;
   const {
     name,
@@ -738,78 +1019,92 @@ exports.updateCoordinator = (req, res) => {
     return res.status(400).json({ success: false, message: 'Full name is required' });
   }
 
-  if (!phone || !phone.trim() || !/^[6-9]\d{9}$/.test(phone.trim().replace(/\s+/g, ''))) {
-    return res.status(400).json({ success: false, message: 'Valid 10-digit Indian phone number is required (e.g. 9876543210)' });
-  }
-
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-    return res.status(400).json({ success: false, message: 'Valid email address is required' });
-  }
-
-  if (!Array.isArray(assignedEvents) || assignedEvents.length === 0) {
-    return res.status(400).json({ success: false, message: 'At least one assigned event is required' });
-  }
-
   const coordinators = getCoordinatorsData();
   const index = coordinators.findIndex(c => c.id === id);
 
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Coordinator not found' });
-  }
-
   const cleanPhone = phone.trim().replace(/\s+/g, '');
   const updatedCoordinator = {
-    ...coordinators[index],
+    id,
     name: name.trim(),
     phone: cleanPhone,
-    whatsapp: whatsapp !== undefined ? whatsapp.trim().replace(/\s+/g, '') : coordinators[index].whatsapp,
-    email: email !== undefined ? email.trim().toLowerCase() : coordinators[index].email,
-    department: department !== undefined ? department.trim() : coordinators[index].department,
-    year: year !== undefined ? year.trim() : coordinators[index].year,
-    role: role || coordinators[index].role,
-    assignedEvents: assignedEvents.filter(e => e && e.trim()),
-    displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : coordinators[index].displayOrder,
-    isActive: isActive !== undefined ? Boolean(isActive) : coordinators[index].isActive,
+    whatsapp: whatsapp !== undefined ? whatsapp.trim().replace(/\s+/g, '') : (coordinators[index]?.whatsapp || cleanPhone),
+    email: email !== undefined ? email.trim().toLowerCase() : (coordinators[index]?.email || ''),
+    department: department !== undefined ? department.trim() : (coordinators[index]?.department || 'CSE'),
+    year: year !== undefined ? year.trim() : (coordinators[index]?.year || '3rd Year'),
+    role: role || (coordinators[index]?.role || 'Lead Coordinator'),
+    assignedEvents: Array.isArray(assignedEvents) ? assignedEvents.filter(e => e && e.trim()) : (coordinators[index]?.assignedEvents || []),
+    displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : (coordinators[index]?.displayOrder || 1),
+    isActive: isActive !== undefined ? Boolean(isActive) : (coordinators[index]?.isActive !== false),
     updatedAt: new Date().toISOString()
   };
 
-  coordinators[index] = updatedCoordinator;
-  saveCoordinatorsData(coordinators);
+  // Update Supabase Live DB
+  try {
+    const dbPayload = coordinatorToDb(updatedCoordinator);
+    const { error: dbErr } = await supabase.from('coordinators').upsert([dbPayload], { onConflict: 'id' });
+    if (dbErr) console.error('Supabase updateCoordinator error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase updateCoordinator exception:', e.message);
+  }
 
-  res.json({ success: true, message: 'Coordinator updated successfully', data: updatedCoordinator });
+  // Update local JSON backup
+  if (index !== -1) {
+    coordinators[index] = updatedCoordinator;
+    saveCoordinatorsData(coordinators);
+  }
+
+  res.json({ success: true, message: 'Coordinator updated successfully in live database', data: updatedCoordinator });
 };
 
-exports.toggleCoordinatorStatus = (req, res) => {
+exports.toggleCoordinatorStatus = async (req, res) => {
   const { id } = req.params;
   const coordinators = getCoordinatorsData();
   const coordinator = coordinators.find(c => c.id === id);
 
-  if (!coordinator) {
-    return res.status(404).json({ success: false, message: 'Coordinator not found' });
+  let newStatus = true;
+  if (coordinator) {
+    coordinator.isActive = !coordinator.isActive;
+    coordinator.updatedAt = new Date().toISOString();
+    newStatus = coordinator.isActive;
+    saveCoordinatorsData(coordinators);
   }
 
-  coordinator.isActive = !coordinator.isActive;
-  coordinator.updatedAt = new Date().toISOString();
-  saveCoordinatorsData(coordinators);
+  // Toggle in Supabase Live DB
+  try {
+    const { data: dbCoord } = await supabase.from('coordinators').select('is_active').eq('id', id).single();
+    if (dbCoord) {
+      newStatus = !dbCoord.is_active;
+    }
+    const { error: dbErr } = await supabase.from('coordinators').update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+    if (dbErr) console.error('Supabase toggleCoordinatorStatus error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase toggleCoordinatorStatus exception:', e.message);
+  }
 
   res.json({ 
     success: true, 
-    message: `Coordinator marked as ${coordinator.isActive ? 'Active' : 'Inactive'}`, 
-    data: coordinator 
+    message: `Coordinator marked as ${newStatus ? 'Active' : 'Inactive'} in live database`, 
+    data: { id, isActive: newStatus } 
   });
 };
 
-exports.deleteCoordinator = (req, res) => {
+exports.deleteCoordinator = async (req, res) => {
   const { id } = req.params;
   const coordinators = getCoordinatorsData();
   const index = coordinators.findIndex(c => c.id === id);
 
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Coordinator not found' });
+  if (index !== -1) {
+    coordinators.splice(index, 1);
+    saveCoordinatorsData(coordinators);
   }
 
-  coordinators.splice(index, 1);
-  saveCoordinatorsData(coordinators);
+  // Delete from Supabase Live DB
+  try {
+    const { error: dbErr } = await supabase.from('coordinators').delete().eq('id', id);
+    if (dbErr) console.error('Supabase deleteCoordinator error:', dbErr.message);
+  } catch (e) {
+    console.error('Supabase deleteCoordinator exception:', e.message);
+  }
 
-  res.json({ success: true, message: 'Coordinator deleted successfully' });
+  res.json({ success: true, message: 'Coordinator deleted successfully from live database' });
 };

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const supabase = require('../config/supabase');
 
 // Persistent Data Storage Path
 const DATA_DIR = path.join(__dirname, '../data');
@@ -53,11 +54,64 @@ function readCoordinators() {
   }
 }
 
-function generateRegistrationId(existingCount) {
-  const year = '2026';
-  const nextNum = existingCount + 101;
-  return `ELQ26-${year}-${String(nextNum).padStart(4, '0')}`;
-}
+const dbToSponsor = (s) => ({
+  id: s.id,
+  name: s.name,
+  companyName: s.company_name || s.companyName || '',
+  logo: s.logo || '',
+  description: s.description || '',
+  website: s.website || '',
+  contactName: s.contact_name || s.contactName || '',
+  contactEmail: s.contact_email || s.contactEmail || '',
+  contactPhone: s.contact_phone || s.contactPhone || '',
+  category: s.category || 'Gold Sponsor',
+  displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
+  isActive: s.is_active !== false && s.isActive !== false,
+  createdAt: s.created_at || s.createdAt,
+  updatedAt: s.updated_at || s.updatedAt
+});
+
+const dbToCoordinator = (c) => ({
+  id: c.id,
+  name: c.name,
+  phone: c.phone || '',
+  whatsapp: c.whatsapp || '',
+  email: c.email || '',
+  department: c.department || '',
+  year: c.year || '',
+  role: c.role || 'Lead Coordinator',
+  assignedEvents: Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []),
+  displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
+  isActive: c.is_active !== false && c.isActive !== false,
+  createdAt: c.created_at || c.createdAt,
+  updatedAt: c.updated_at || c.updatedAt
+});
+
+const dbToEvent = (e) => ({
+  id: e.id,
+  number: e.number,
+  name: e.name,
+  alias: e.alias,
+  subtitle: e.subtitle,
+  category: e.category,
+  teamSize: e.team_size || e.teamSize,
+  minMembers: e.min_members || e.minMembers || 1,
+  maxMembers: e.max_members || e.maxMembers || 1,
+  fee: e.fee,
+  feePerHead: e.fee_per_head || e.feePerHead || 0,
+  feeType: e.fee_type || e.feeType || 'per_head',
+  isTeam: e.is_team !== false && e.isTeam !== false,
+  tag: e.tag,
+  venue: e.venue,
+  timing: e.timing,
+  description: e.description,
+  rules: e.rules,
+  rounds: e.rounds,
+  guidelines: e.guidelines,
+  highlights: e.highlights,
+  createdAt: e.created_at || e.createdAt,
+  updatedAt: e.updated_at || e.updatedAt
+});
 
 exports.getStatus = (req, res) => {
   res.json({
@@ -199,7 +253,16 @@ exports.getHealth = (req, res) => {
   });
 };
 
-exports.getPublicEvents = (req, res) => {
+exports.getPublicEvents = async (req, res) => {
+  try {
+    const { data: dbEvents, error } = await supabase.from('events').select('*').order('id', { ascending: true });
+    if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
+      return res.json({ success: true, data: dbEvents.map(dbToEvent) });
+    }
+  } catch (e) {
+    console.warn('Supabase getPublicEvents fallback:', e.message);
+  }
+
   try {
     const eventsFile = path.join(DATA_DIR, 'events.json');
     if (fs.existsSync(eventsFile)) {
@@ -217,7 +280,7 @@ exports.getRegistrations = async (req, res) => {
   try {
     const { eventId, category, status } = req.query;
 
-    // First try querying Supabase with joined registration_members
+    // Query Supabase live
     try {
       let query = supabase
         .from('registrations')
@@ -299,8 +362,24 @@ exports.getRegistrationById = async (req, res) => {
 };
 
 // ==================== PUBLIC SPONSOR ENDPOINTS ====================
-exports.getActiveSponsors = (req, res) => {
+exports.getActiveSponsors = async (req, res) => {
   try {
+    // Try Supabase first
+    try {
+      const { data: dbSponsors, error } = await supabase
+        .from('sponsors')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
+        const active = dbSponsors.map(dbToSponsor);
+        return res.json({ success: true, count: active.length, data: active });
+      }
+    } catch (e) {
+      console.warn('Supabase getActiveSponsors fallback:', e.message);
+    }
+
     const sponsors = readSponsors();
     const active = sponsors.filter(s => s.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
@@ -311,8 +390,23 @@ exports.getActiveSponsors = (req, res) => {
   }
 };
 
-exports.getPublicSponsorById = (req, res) => {
+exports.getPublicSponsorById = async (req, res) => {
   try {
+    try {
+      const { data: dbSponsor, error } = await supabase
+        .from('sponsors')
+        .select('*')
+        .eq('id', req.params.id)
+        .eq('is_active', true)
+        .single();
+
+      if (!error && dbSponsor) {
+        return res.json({ success: true, data: dbToSponsor(dbSponsor) });
+      }
+    } catch (e) {
+      console.warn('Supabase getPublicSponsorById fallback:', e.message);
+    }
+
     const sponsors = readSponsors();
     const sponsor = sponsors.find(s => s.id === req.params.id && s.isActive !== false);
     if (!sponsor) {
@@ -325,8 +419,23 @@ exports.getPublicSponsorById = (req, res) => {
 };
 
 // ==================== PUBLIC COORDINATOR ENDPOINTS ====================
-exports.getActiveCoordinators = (req, res) => {
+exports.getActiveCoordinators = async (req, res) => {
   try {
+    try {
+      const { data: dbCoords, error } = await supabase
+        .from('coordinators')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+        const active = dbCoords.map(dbToCoordinator);
+        return res.json({ success: true, count: active.length, data: active });
+      }
+    } catch (e) {
+      console.warn('Supabase getActiveCoordinators fallback:', e.message);
+    }
+
     const coordinators = readCoordinators();
     const active = coordinators.filter(c => c.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
@@ -337,11 +446,34 @@ exports.getActiveCoordinators = (req, res) => {
   }
 };
 
-exports.getCoordinatorsByEvent = (req, res) => {
+exports.getCoordinatorsByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
     if (!eventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
+    }
+
+    try {
+      const { data: dbCoords, error } = await supabase
+        .from('coordinators')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+        const matching = dbCoords
+          .map(dbToCoordinator)
+          .filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase()));
+
+        return res.json({
+          success: true,
+          eventId,
+          count: matching.length,
+          data: matching
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase getCoordinatorsByEvent fallback:', e.message);
     }
 
     const coordinators = readCoordinators();
