@@ -87,6 +87,30 @@ export default function AdminDashboard({ token, user, onLogout }) {
     }
   }, [activeTab, isAdminOrSuper, isRegCoordinator]);
 
+  // ==================== EVENTS STATE ====================
+  const [eventsList, setEventsList] = useState(defaultEvents);
+  const [eventFilter, setEventFilter] = useState('all');
+  const [eventSearch, setEventSearch] = useState('');
+  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+
+  // Event Edit Form Fields
+  const [eventName, setEventName] = useState('');
+  const [eventAlias, setEventAlias] = useState('');
+  const [eventSubtitle, setEventSubtitle] = useState('');
+  const [eventCategory, setEventCategory] = useState('technical');
+  const [eventVenue, setEventVenue] = useState('');
+  const [eventTiming, setEventTiming] = useState('');
+  const [eventFee, setEventFee] = useState('');
+  const [eventTeamSize, setEventTeamSize] = useState('');
+  const [eventTag, setEventTag] = useState('');
+  const [eventDesc, setEventDesc] = useState('');
+  const [eventImage, setEventImage] = useState('');
+  const [eventImagePreview, setEventImagePreview] = useState('');
+  const [isUploadingEventImage, setIsUploadingEventImage] = useState(false);
+
+  const eventFileInputRef = useRef(null);
+
   // ==================== REGISTRATIONS STATE ====================
   const [registrationsList, setRegistrationsList] = useState([]);
   const [regSearch, setRegSearch] = useState('');
@@ -128,9 +152,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const getEventCategory = (r) => {
-    const evt = eventsList.find(e => e.id === (r.event_id || r.eventId));
-    if (evt) return evt.category;
-    const id = (r.event_id || r.eventId || '').toLowerCase();
+    if (!r) return 'non-technical';
+    const evtId = r.event_id || r.eventId;
+    if (eventsList && Array.isArray(eventsList)) {
+      const evt = eventsList.find(e => e.id === evtId);
+      if (evt && evt.category) return evt.category;
+    }
+    const id = String(evtId || '').toLowerCase();
     return id.startsWith('tech') ? 'technical' : 'non-technical';
   };
 
@@ -379,30 +407,6 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isRoleFormVisible, setIsRoleFormVisible] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState(null);
   const [roleNameInput, setRoleNameInput] = useState('');
-
-  // ==================== EVENTS STATE ====================
-  const [eventsList, setEventsList] = useState(defaultEvents);
-  const [eventFilter, setEventFilter] = useState('all');
-  const [eventSearch, setEventSearch] = useState('');
-  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-
-  // Event Edit Form Fields
-  const [eventName, setEventName] = useState('');
-  const [eventAlias, setEventAlias] = useState('');
-  const [eventSubtitle, setEventSubtitle] = useState('');
-  const [eventCategory, setEventCategory] = useState('technical');
-  const [eventVenue, setEventVenue] = useState('');
-  const [eventTiming, setEventTiming] = useState('');
-  const [eventFee, setEventFee] = useState('');
-  const [eventTeamSize, setEventTeamSize] = useState('');
-  const [eventTag, setEventTag] = useState('');
-  const [eventDesc, setEventDesc] = useState('');
-  const [eventImage, setEventImage] = useState('');
-  const [eventImagePreview, setEventImagePreview] = useState('');
-  const [isUploadingEventImage, setIsUploadingEventImage] = useState(false);
-
-  const eventFileInputRef = useRef(null);
 
   // ==================== SPONSORS STATE ====================
   const [sponsors, setSponsors] = useState([]);
