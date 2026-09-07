@@ -8,15 +8,27 @@
     "name": "admin"
   },
   {
-    "id": 3,
-    "name": "moderator"
-  },
-  {
     "id": 4,
     "name": "coordinator"
   },
   {
     "id": 5,
     "name": "web-coordinator"
+  },
+  {
+    "id": 6,
+    "name": "registration coordinator"
+  },
+  {
+    "id": 8,
+    "name": "event coordinator"
+  },
+  {
+    "id": 9,
+    "name": "certification team"
+  },
+  {
+    "id": 10,
+    "name": "lead coordinator"
   }
 ]

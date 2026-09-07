@@ -57,7 +57,7 @@
       "< 7 slides limit",
       "₹100/head"
     ],
-    "image": "/uploads/sponsor-1788323670774-4855.png"
+    "image": "/assets/card_ppt_presentation.png"
   },
   {
     "id": "tech-02",
@@ -115,7 +115,8 @@
       "No built-in libraries",
       "Round 1: Written test",
       "Round 2: Coding & Debugging"
-    ]
+    ],
+    "image": "/assets/card_coding_debugging.png"
   },
   {
     "id": "tech-03",
@@ -176,7 +177,8 @@
       "Screen lock enforcement",
       "3 Rounds (15 mins/round)",
       "Total 45 mins"
-    ]
+    ],
+    "image": "/assets/card_tech_quiz.png"
   },
   {
     "id": "tech-04",
@@ -232,7 +234,8 @@
       "Systems provided",
       "Round 1: Landing page",
       "Round 2: Overall website"
-    ]
+    ],
+    "image": "/assets/card_web_prompt.png"
   },
   {
     "id": "tech-06",
@@ -290,7 +293,8 @@
       "AI strictly restricted",
       "Round 1: Login page",
       "Round 2: Dashboard"
-    ]
+    ],
+    "image": "/assets/card_ui_ux.png"
   },
   {
     "id": "nontech-01",
@@ -346,7 +350,8 @@
       "Original campus footage",
       "30-60 sec reel length",
       "Background music allowed"
-    ]
+    ],
+    "image": "/assets/card_snap_reel.png"
   },
   {
     "id": "nontech-02",
@@ -402,7 +407,8 @@
       "Visual connection puzzles",
       "Fast buzzer mechanics",
       "Max 3 per squad"
-    ]
+    ],
+    "image": "/assets/card_link_up.png"
   },
   {
     "id": "nontech-03",
@@ -458,7 +464,8 @@
       "Campus-wide trail",
       "Cryptic clue checkpoints",
       "Timed squad adventure"
-    ]
+    ],
+    "image": "/assets/card_hunt_zone.png"
   },
   {
     "id": "nontech-04",
@@ -514,7 +521,8 @@
       "1 hour duration",
       "Intricate traditional & modern patterns",
       "Bring cones"
-    ]
+    ],
+    "image": "/assets/card_henna_heist.png"
   },
   {
     "id": "nontech-05",
@@ -570,7 +578,8 @@
       "Emotes strictly restricted",
       "4-Player squad match only",
       "Flat ₹200 per squad"
-    ]
+    ],
+    "image": "/assets/card_battle_of_champions.png"
   },
   {
     "id": "nontech-06",
@@ -626,7 +635,8 @@
       "Rapid / Blitz time control",
       "FIDE standard rules",
       "Digital clocks provided"
-    ]
+    ],
+    "image": "/assets/card_chess.png"
   },
   {
     "id": "nontech-07",
@@ -649,6 +659,7 @@
     "rules": [],
     "rounds": [],
     "guidelines": [],
-    "highlights": []
+    "highlights": [],
+    "image": ""
   }
 ]

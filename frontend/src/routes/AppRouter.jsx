@@ -66,16 +66,21 @@ function parseHash(hash) {
 export default function AppRouter() {
   const [route, setRoute] = useState(() => parseHash(window.location.hash));
   const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
-  const [isAdminRoute, setIsAdminRoute] = useState(window.location.pathname.startsWith('/admin'));
+  const checkIsAdminOrCoordinator = () => {
+    const path = window.location.pathname;
+    return path.startsWith('/admin') || path.startsWith('/coordinators');
+  };
+
+  const [isAdminRoute, setIsAdminRoute] = useState(checkIsAdminOrCoordinator);
 
   useEffect(() => {
     const handleHashChange = () => {
       setRoute(parseHash(window.location.hash));
     };
 
-    // Minimal popstate listener to detect path changes for admin
+    // Minimal popstate listener to detect path changes for admin & coordinators
     const handlePopState = () => {
-      setIsAdminRoute(window.location.pathname.startsWith('/admin'));
+      setIsAdminRoute(checkIsAdminOrCoordinator());
     };
 
     window.addEventListener('hashchange', handleHashChange);

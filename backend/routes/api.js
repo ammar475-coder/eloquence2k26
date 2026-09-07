@@ -17,6 +17,12 @@ router.get('/sponsors/:id', apiController.getPublicSponsorById);
 router.get('/coordinators', apiController.getActiveCoordinators);
 router.get('/coordinators/event/:eventId', apiController.getCoordinatorsByEvent);
 
+// Participant List Dispatch
+router.post('/send-participant-list', apiController.sendParticipantList);
+router.get('/dispatches', apiController.getDispatches);
+router.put('/dispatches/:id', apiController.updateDispatch);
+router.delete('/dispatches/:id', apiController.deleteDispatch);
+
 // ── Admin Auth & Dashboard ───────────────────────────────────────────────────
 router.post('/admin/login', adminController.login);
 router.get('/admin/dashboard', adminController.verifyToken, adminController.getDashboardData);

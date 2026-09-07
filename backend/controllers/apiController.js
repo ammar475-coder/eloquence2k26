@@ -497,3 +497,103 @@ exports.getCoordinatorsByEvent = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch coordinators for event' });
   }
 };
+
+// ── Participant List Dispatch ──────────────────────────────────────────────────
+const DISPATCHES_FILE = path.join(DATA_DIR, 'dispatches.json');
+
+function readDispatches() {
+  try {
+    const raw = fs.readFileSync(DISPATCHES_FILE, 'utf-8');
+    return JSON.parse(raw || '[]');
+  } catch (err) {
+    return [];
+  }
+}
+
+function writeDispatches(data) {
+  try {
+    fs.writeFileSync(DISPATCHES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+exports.sendParticipantList = async (req, res) => {
+  try {
+    const { eventId, eventName, coordinatorId, coordinatorName } = req.body;
+    if (!eventId || !coordinatorName) {
+      return res.status(400).json({ success: false, message: 'Event ID and Coordinator Name are required' });
+    }
+
+    const dispatches = readDispatches();
+    const newDispatch = {
+      id: Date.now().toString(),
+      eventId,
+      eventName: eventName || eventId,
+      coordinatorId: coordinatorId || null,
+      coordinatorName,
+      sentAt: new Date().toISOString()
+    };
+
+    dispatches.push(newDispatch);
+    writeDispatches(dispatches);
+
+    res.json({
+      success: true,
+      message: `Participant list for "${eventName || eventId}" sent to ${coordinatorName} successfully!`,
+      dispatch: newDispatch
+    });
+  } catch (err) {
+    console.error('Error sending participant list:', err);
+    res.status(500).json({ success: false, message: 'Failed to send participant list' });
+  }
+};
+
+exports.getDispatches = async (req, res) => {
+  try {
+    const dispatches = readDispatches();
+    res.json({ success: true, data: dispatches });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch dispatches' });
+  }
+};
+
+exports.updateDispatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { coordinatorName, eventName } = req.body;
+    let dispatches = readDispatches();
+    const index = dispatches.findIndex(d => d.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Dispatch record not found' });
+    }
+
+    if (coordinatorName) dispatches[index].coordinatorName = coordinatorName;
+    if (eventName) dispatches[index].eventName = eventName;
+    dispatches[index].updatedAt = new Date().toISOString();
+
+    writeDispatches(dispatches);
+    res.json({ success: true, message: 'Sent dispatch updated successfully', data: dispatches[index] });
+  } catch (err) {
+    console.error('Error updating dispatch:', err);
+    res.status(500).json({ success: false, message: 'Failed to update dispatch' });
+  }
+};
+
+exports.deleteDispatch = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let dispatches = readDispatches();
+    const filtered = dispatches.filter(d => d.id !== id);
+    if (filtered.length === dispatches.length) {
+      return res.status(404).json({ success: false, message: 'Dispatch record not found' });
+    }
+
+    writeDispatches(filtered);
+    res.json({ success: true, message: 'Sent dispatch deleted and revoked successfully' });
+  } catch (err) {
+    console.error('Error deleting dispatch:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete dispatch' });
+  }
+};

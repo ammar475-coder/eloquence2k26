@@ -474,7 +474,7 @@ exports.createRole = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Role already exists' });
   }
 
-  const newRole = { id: Date.now(), name: normalizedName };
+  const newRole = { id: Math.floor(Math.random() * 900000) + 100, name: normalizedName };
 
   try {
     const { error: dbErr } = await supabase.from('roles').insert([newRole]);
@@ -994,12 +994,16 @@ exports.deleteSponsor = async (req, res) => {
   res.json({ success: true, message: 'Sponsor deleted successfully from live database' });
 };
 
-// ==================== LOGO UPLOAD ====================
-exports.uploadLogo = (req, res) => {
+// ==================== LOGO / EVENT IMAGE UPLOAD (SUPABASE ONLY) ====================
+exports.uploadLogo = async (req, res) => {
   try {
-    const { imageBase64 } = req.body;
+    const { imageBase64, fileName } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, message: 'No image data provided' });
+    }
+
+    if (imageBase64.startsWith('http://') || imageBase64.startsWith('https://')) {
+      return res.json({ success: true, url: imageBase64, fileName: fileName || 'external-image' });
     }
 
     const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -1009,6 +1013,7 @@ exports.uploadLogo = (req, res) => {
 
     const mimeType = matches[1].toLowerCase();
     const base64Data = matches[2];
+    const imageBuffer = Buffer.from(base64Data, 'base64');
 
     const allowedMime = {
       'image/jpeg': 'jpg',
@@ -1024,21 +1029,50 @@ exports.uploadLogo = (req, res) => {
     }
 
     const ext = allowedMime[mimeType];
-    const safeName = `sponsor-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
-    const filePath = path.join(uploadsDir, safeName);
+    const safeName = `img-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
 
-    fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+    // 1. Try uploading to Supabase Storage bucket 'uploads'
+    try {
+      const { data: uploadData, error: uploadErr } = await supabase
+        .storage
+        .from('uploads')
+        .upload(safeName, imageBuffer, {
+          contentType: mimeType,
+          upsert: true
+        });
 
-    const publicUrl = `/uploads/${safeName}`;
-    res.json({
+      if (!uploadErr && uploadData) {
+        const { data: publicUrlData } = supabase
+          .storage
+          .from('uploads')
+          .getPublicUrl(safeName);
+
+        if (publicUrlData && publicUrlData.publicUrl) {
+          return res.json({
+            success: true,
+            message: 'Image uploaded to Supabase storage',
+            url: publicUrlData.publicUrl,
+            fileName: safeName
+          });
+        }
+      } else {
+        console.warn('Supabase storage upload fallback:', uploadErr ? uploadErr.message : 'No upload data');
+      }
+    } catch (storageErr) {
+      console.warn('Supabase storage exception fallback:', storageErr.message);
+    }
+
+    // 2. Fallback: Store Base64 Data URL directly in Database (Zero local disk file writing!)
+    return res.json({
       success: true,
-      message: 'Logo uploaded successfully',
-      url: publicUrl,
+      message: 'Image stored directly in database',
+      url: imageBase64,
       fileName: safeName
     });
+
   } catch (err) {
-    console.error('Logo upload error:', err);
-    res.status(500).json({ success: false, message: 'Failed to process logo upload' });
+    console.error('Image upload error:', err);
+    res.status(500).json({ success: false, message: 'Failed to process image upload' });
   }
 };
 
