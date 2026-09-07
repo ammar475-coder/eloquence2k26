@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env'), quiet: true });
 const express = require('express');
@@ -15,6 +16,7 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
 // Middleware
 if (morgan) {
@@ -27,18 +29,41 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Serve static uploaded files (sponsor logos, assets)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+// API Routes
 const apiRoutes = require('./routes/api');
 app.use('/api', apiRoutes);
 
-// Base route for testing
-app.get('/', (req, res) => {
-  res.send('Backend Server is running');
+// Frontend static build serving (Unified deployment on Render)
+const frontendDist = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+  
+  // SPA Catch-all middleware for client routing (Express 5 compatible)
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      return res.sendFile(path.join(frontendDist, 'index.html'));
+    }
+    next();
+  });
+} else {
+  // Standalone API Mode fallback
+  app.get('/', (req, res) => {
+    res.json({
+      name: "ELOQUENCE '26 Backend API",
+      status: "Running",
+      healthCheck: "/api/health"
+    });
+  });
+}
+
+// 404 handler for unmatched API requests or invalid paths
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'API endpoint or resource not found' });
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`[ELOQUENCE'26 Backend] Server running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`[ELOQUENCE'26 Backend] Server running on http://${HOST}:${PORT}`);
 });
 
 module.exports = app;

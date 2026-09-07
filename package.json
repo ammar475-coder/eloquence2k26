@@ -1,0 +1,21 @@
+{
+  "name": "eloquence2k26",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ELOQUENCE '26 Full-Stack Event Registration & Management Platform",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install",
+    "start": "node backend/index.js",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  },
+  "keywords": [
+    "eloquence",
+    "symposium",
+    "fullstack",
+    "render"
+  ],
+  "author": "",
+  "license": "ISC"
+}
