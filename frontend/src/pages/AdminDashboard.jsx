@@ -1442,16 +1442,18 @@ export default function AdminDashboard({ token, user, onLogout }) {
         <nav style={S.navMenu}>
           {/* Dashboard Tab */}
           <button 
+            type="button"
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }}
           >
             <FaChartBar style={S.navIcon} /> Dashboard
           </button>
 
           {/* Events Tab */}
           <button 
+            type="button"
             style={activeTab === 'events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('events')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('events'); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1505,8 +1507,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
           {/* Sponsors Tab */}
           <button 
+            type="button"
             style={activeTab === 'manage-sponsors' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('manage-sponsors')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('manage-sponsors'); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1519,8 +1522,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
           {/* Student Coordinators Tab */}
           <button 
+            type="button"
             style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('manage-coordinators')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('manage-coordinators'); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1533,8 +1537,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
           {/* Participant List Tab */}
           <button 
+            type="button"
             style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('participant-list')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('participant-list'); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1708,19 +1713,22 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </div>
                   <div style={S.filterGroup}>
                     <button
-                      onClick={() => setEventFilter('all')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setEventFilter('all'); }}
                       style={eventFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       All ({eventsList.length})
                     </button>
                     <button
-                      onClick={() => setEventFilter('technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setEventFilter('technical'); }}
                       style={eventFilter === 'technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaBolt size={11} /> Technical ({eventsList.filter(e => e.category === 'technical').length})
                     </button>
                     <button
-                      onClick={() => setEventFilter('non-technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setEventFilter('non-technical'); }}
                       style={eventFilter === 'non-technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaGamepad size={12} /> Non-Tech ({eventsList.filter(e => e.category === 'non-technical').length})
@@ -2367,13 +2375,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => setViewMode('cards')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setViewMode('cards'); }}
                       style={viewMode === 'cards' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaThLarge size={12} /> Event Cards View
                     </button>
                     <button
-                      onClick={() => setViewMode('table')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setViewMode('table'); }}
                       style={viewMode === 'table' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaTable size={12} /> Detailed Table View
@@ -2382,19 +2392,22 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => setPartCategoryFilter('all')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setPartCategoryFilter('all'); }}
                       style={partCategoryFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       All ({eventsList.length})
                     </button>
                     <button
-                      onClick={() => setPartCategoryFilter('technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setPartCategoryFilter('technical'); }}
                       style={partCategoryFilter === 'technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaBolt size={11} /> Tech ({eventsList.filter(e => e.category === 'technical').length})
                     </button>
                     <button
-                      onClick={() => setPartCategoryFilter('non-technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setPartCategoryFilter('non-technical'); }}
                       style={partCategoryFilter === 'non-technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaGamepad size={11} /> Non-Tech ({eventsList.filter(e => e.category === 'non-technical').length})
