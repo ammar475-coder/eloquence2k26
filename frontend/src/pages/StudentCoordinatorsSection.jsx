@@ -169,19 +169,37 @@ function CoordinatorSlideCard({ item, index }) {
 
           <div className="coordinator-names-list">
             {membersList.length > 0 ? (
-              membersList.map((member, i) => (
-                <div className="coordinator-name-item" key={typeof member === 'string' ? member : member.name || i}>
-                  <span className="coordinator-name-bullet">❖</span>
-                  <div className="coordinator-member-info">
-                    <span className="coordinator-name-text">
-                      {typeof member === 'string' ? member : member.name}
-                    </span>
-                    {typeof member === 'object' && member.role && (
-                      <span className="coordinator-sub-role">{member.role}</span>
-                    )}
+              membersList.map((member, i) => {
+                const nameStr = typeof member === 'string' ? member : member.name;
+                const normalized = (nameStr || '').trim().toUpperCase();
+                const isShahid = normalized.includes('SHAHID AHMED') || normalized.includes('SHAHID ADMED');
+                const glowType =
+                  typeof member === 'object' && member.glow
+                    ? (member.glow === true ? 'gold' : member.glow)
+                    : isShahid
+                    ? 'gold'
+                    : null;
+
+                const isGlowing = Boolean(glowType);
+                const glowClasses = isGlowing ? `is-glowing glow-${glowType} is-glowing-${glowType}` : '';
+
+                return (
+                  <div
+                    className={`coordinator-name-item ${glowClasses}`}
+                    key={typeof member === 'string' ? member : member.name || i}
+                  >
+                    <span className="coordinator-name-bullet">❖</span>
+                    <div className="coordinator-member-info">
+                      <span className="coordinator-name-text">
+                        {nameStr}
+                      </span>
+                      {typeof member === 'object' && member.role && (
+                        <span className="coordinator-sub-role">{member.role}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="coordinator-pending-members">
                 <span className="coordinator-pending-dot" />

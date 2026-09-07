@@ -9,9 +9,9 @@
     "names": [
       "SYED MUSTHAFA S",
       "MOHAMMED AYAZ A",
-      "SHAHID AHMED VS",
       "SHAWOOR SAQIB SK",
-      "FAAZIL AMMAR"
+      "FAAZIL AMMAR",
+      { "name": "SHAHID AHAMED VS", "glow": "blue" }
     ]
   },
   {
