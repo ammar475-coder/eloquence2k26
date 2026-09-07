@@ -32,7 +32,11 @@ import {
   FaBolt,
   FaGamepad,
   FaSun,
-  FaMoon
+  FaMoon,
+  FaFilePdf,
+  FaPaperPlane,
+  FaThLarge,
+  FaTable
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
@@ -52,8 +56,16 @@ const EXISTING_POSTER_PRESETS = [
   { id: 'nontech-06', label: '64 Squares (Chess)', img: defaultEventImages['nontech-06'] },
 ];
 
-export default function AdminDashboard({ token, onLogout }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+export default function AdminDashboard({ token, user, onLogout }) {
+  const loggedRole = String(user?.role || 'admin').toLowerCase();
+  const isAdminOrSuper = loggedRole === 'admin' || loggedRole === 'superadmin';
+  const isRegCoordinator = loggedRole.includes('registration') || loggedRole.includes('reg_coord') || loggedRole === 'registration coordinator';
+
+  const [activeTab, setActiveTab] = useState(() => {
+    if (isRegCoordinator) return 'registration';
+    return 'dashboard';
+  });
+
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +79,291 @@ export default function AdminDashboard({ token, onLogout }) {
     setTheme(next);
     localStorage.setItem('admin_theme', next);
   };
+
+  // Redirect if non-admin user accesses restricted tabs
+  useEffect(() => {
+    if (!isAdminOrSuper && (activeTab === 'manage-users' || activeTab === 'manage-roles')) {
+      setActiveTab(isRegCoordinator ? 'registration' : 'dashboard');
+    }
+  }, [activeTab, isAdminOrSuper, isRegCoordinator]);
+
+  // ==================== REGISTRATIONS STATE ====================
+  const [registrationsList, setRegistrationsList] = useState([]);
+  const [regSearch, setRegSearch] = useState('');
+  const [regCategoryFilter, setRegCategoryFilter] = useState('all');
+  const [onlineRegSearch, setOnlineRegSearch] = useState('');
+  const [onlineRegCategoryFilter, setOnlineRegCategoryFilter] = useState('all');
+
+  // ==================== PARTICIPANT LIST STATE & HELPERS ====================
+  const [partEventFilter, setPartEventFilter] = useState('all');
+  const [partCategoryFilter, setPartCategoryFilter] = useState('all');
+  const [partSearch, setPartSearch] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+
+  // Send Modal States
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [sendTargetEvent, setSendTargetEvent] = useState(null);
+  const [selectedCoordName, setSelectedCoordName] = useState('');
+  const [isSendingList, setIsSendingList] = useState(false);
+
+  const getTeamMembers = (r) => {
+    if (Array.isArray(r.registration_members) && r.registration_members.length > 0) {
+      return r.registration_members.map(m => m.member_name || m.name || m);
+    }
+    if (Array.isArray(r.teamMembersList) && r.teamMembersList.length > 0) {
+      return r.teamMembersList;
+    }
+    if (Array.isArray(r.teamMembers) && r.teamMembers.length > 0) {
+      return r.teamMembers;
+    }
+    if (typeof r.team_members === 'string') {
+      try {
+        const parsed = JSON.parse(r.team_members);
+        if (Array.isArray(parsed)) return parsed.map(m => typeof m === 'string' ? m : (m.name || m));
+      } catch (e) {
+        if (r.team_members.trim()) return [r.team_members.trim()];
+      }
+    }
+    return [];
+  };
+
+  const getEventCategory = (r) => {
+    const evt = eventsList.find(e => e.id === (r.event_id || r.eventId));
+    if (evt) return evt.category;
+    const id = (r.event_id || r.eventId || '').toLowerCase();
+    return id.startsWith('tech') ? 'technical' : 'non-technical';
+  };
+
+  const getFee = (r) => Number(r.total_fee || r.totalAmount || r.total_amount || 0);
+
+  const participantFilteredRegs = registrationsList.filter(r => {
+    if (partEventFilter !== 'all' && (r.event_id || r.eventId) !== partEventFilter) return false;
+    if (partCategoryFilter !== 'all' && getEventCategory(r) !== partCategoryFilter) return false;
+
+    const q = partSearch.toLowerCase().trim();
+    if (!q) return true;
+    const name = (r.full_name || r.fullName || '').toLowerCase();
+    const teamName = (r.team_name || r.teamName || '').toLowerCase();
+    const ticket = (r.ticket_code || r.registrationId || r.id || '').toString().toLowerCase();
+    const phone = (r.phone || '').toLowerCase();
+    const college = (r.college || '').toLowerCase();
+    const members = getTeamMembers(r).join(' ').toLowerCase();
+
+    return name.includes(q) || teamName.includes(q) || ticket.includes(q) || phone.includes(q) || college.includes(q) || members.includes(q);
+  });
+
+  const handleExportPDF = (targetEvt) => {
+    const evtRegs = registrationsList.filter(r => (r.event_id || r.eventId) === targetEvt.id);
+    const win = window.open('', '_blank');
+    if (!win) return toast.error('Please allow popups to export PDF');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${targetEvt.name} - Official Participant Sheet</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 25px; color: #1e293b; line-height: 1.5; }
+          .header { text-align: center; margin-bottom: 25px; border-bottom: 3px solid #2563eb; padding-bottom: 12px; }
+          .header h1 { margin: 0; color: #1e3a8a; font-size: 24px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .header p { margin: 6px 0 0 0; color: #64748b; font-size: 14px; font-weight: 600; }
+          .info-bar { display: flex; justify-content: space-between; background: #f8fafc; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; font-size: 13px; font-weight: 600; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+          th, td { border: 1px solid #cbd5e1; padding: 9px 12px; text-align: left; vertical-align: top; }
+          th { background: #1e293b; color: #ffffff; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+          tr:nth-child(even) { background: #f8fafc; }
+          .badge { display: inline-block; background: #059669; color: #ffffff; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+          .members-box { background: #f1f5f9; padding: 6px 8px; border-radius: 6px; font-size: 11px; margin-top: 3px; }
+          .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 12px; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ELOQUENCE 2026 — OFFICIAL PARTICIPANT SHEET</h1>
+          <p>DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING</p>
+        </div>
+
+        <div class="info-bar">
+          <div><strong>EVENT:</strong> ${targetEvt.name} (${targetEvt.category.toUpperCase()})</div>
+          <div><strong>TOTAL REGISTRATIONS:</strong> ${evtRegs.length}</div>
+          <div><strong>DATE:</strong> ${new Date().toLocaleDateString()}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 30px;">#</th>
+              <th style="width: 100px;">Ticket Code</th>
+              <th style="width: 110px;">Team Name</th>
+              <th>Lead Participant</th>
+              <th>Phone & Email</th>
+              <th>Team Members</th>
+              <th>College & Dept</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${evtRegs.map((r, i) => {
+              const members = getTeamMembers(r);
+              return `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td><strong>${r.ticket_code || r.registrationId || r.id || '-'}</strong></td>
+                  <td>${r.team_name || r.teamName ? `<span class="badge">${r.team_name || r.teamName}</span>` : 'Individual'}</td>
+                  <td><strong>${r.full_name || r.fullName || 'Anonymous'}</strong></td>
+                  <td>${r.phone || '-'}<br/><span style="color:#64748b;font-size:11px;">${r.email || '-'}</span></td>
+                  <td>
+                    ${members.length > 0 ? `<strong>${members.length + 1} Members:</strong><div class="members-box">1. ${r.full_name || r.fullName} (Lead)<br/>${members.map((m, idx) => `${idx + 2}. ${m}`).join('<br/>')}</div>` : 'Individual Entry'}
+                  </td>
+                  <td>${r.college || 'CAHCET'}<br/><span style="color:#64748b;font-size:11px;">${r.department || ''} (${r.year || ''})</span></td>
+                </tr>
+              `;
+            }).join('')}
+            ${evtRegs.length === 0 ? '<tr><td colspan="7" style="text-align:center;padding:20px;">No registered participants for this event.</td></tr>' : ''}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <div>Generated on: ${new Date().toLocaleString()}</div>
+          <div>Authorized Signature: _______________________</div>
+        </div>
+
+        <script>
+          window.onload = function() { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+    win.document.write(htmlContent);
+    win.document.close();
+  };
+
+  const handleOpenSendModal = (evt) => {
+    setSendTargetEvent(evt);
+    const assigned = coordinators.find(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(evt.id.toLowerCase()));
+    if (assigned) {
+      setSelectedCoordName(assigned.name);
+    } else if (coordinators.length > 0) {
+      setSelectedCoordName(coordinators[0].name);
+    } else {
+      setSelectedCoordName('');
+    }
+    setIsSendModalOpen(true);
+  };
+
+  const handleConfirmSendList = () => {
+    if (!sendTargetEvent || !selectedCoordName.trim()) {
+      return toast.error('Please select an Event Coordinator');
+    }
+
+    setIsSendingList(true);
+    const toastId = toast.loading(`Dispatching list for "${sendTargetEvent.name}"...`);
+
+    fetch('/api/send-participant-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventId: sendTargetEvent.id,
+        eventName: sendTargetEvent.name,
+        coordinatorName: selectedCoordName.trim()
+      })
+    })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.success) {
+          toast.success(resData.message || 'Participant list sent successfully!', { id: toastId, duration: 5000 });
+          setIsSendModalOpen(false);
+          fetchDispatches();
+        } else {
+          toast.error(resData.message || 'Failed to send list', { id: toastId });
+        }
+      })
+      .catch(err => {
+        console.error('Send list error:', err);
+        toast.error('Network error while dispatching list', { id: toastId });
+      })
+      .finally(() => setIsSendingList(false));
+  };
+
+  // Dispatches State & Handlers
+  const [dispatchesList, setDispatchesList] = useState([]);
+  const [editingDispatchId, setEditingDispatchId] = useState(null);
+  const [editCoordNameInput, setEditCoordNameInput] = useState('');
+  const [isEditDispatchModalOpen, setIsEditDispatchModalOpen] = useState(false);
+
+  const fetchDispatches = () => {
+    fetch('/api/dispatches')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && Array.isArray(result.data)) {
+          setDispatchesList(result.data);
+        }
+      })
+      .catch(err => console.warn('Error fetching dispatches list:', err));
+  };
+
+  const handleDeleteDispatch = (id, eventName, coordinatorName) => {
+    if (!window.confirm(`Are you sure you want to delete and revoke the dispatched list for "${eventName}" sent to ${coordinatorName}?`)) return;
+
+    const toastId = toast.loading(`Revoking dispatched list for ${eventName}...`);
+    fetch(`/api/dispatches/${id}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          toast.success(result.message || 'Dispatch deleted & revoked successfully!', { id: toastId });
+          fetchDispatches();
+        } else {
+          toast.error(result.message || 'Failed to delete dispatch', { id: toastId });
+        }
+      })
+      .catch(err => {
+        console.error('Delete dispatch error:', err);
+        toast.error('Network error while deleting dispatch', { id: toastId });
+      });
+  };
+
+  const handleOpenEditDispatchModal = (dispatch) => {
+    setEditingDispatchId(dispatch.id);
+    setEditCoordNameInput(dispatch.coordinatorName);
+    setIsEditDispatchModalOpen(true);
+  };
+
+  const handleSaveDispatchEdit = (e) => {
+    e.preventDefault();
+    if (!editingDispatchId || !editCoordNameInput.trim()) return toast.error('Please enter a coordinator name');
+
+    const toastId = toast.loading('Updating dispatched list...');
+    fetch(`/api/dispatches/${editingDispatchId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinatorName: editCoordNameInput.trim() })
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          toast.success('Dispatch re-assigned successfully!', { id: toastId });
+          setIsEditDispatchModalOpen(false);
+          fetchDispatches();
+        } else {
+          toast.error(result.message || 'Failed to update dispatch', { id: toastId });
+        }
+      })
+      .catch(err => {
+        console.error('Update dispatch error:', err);
+        toast.error('Network error while updating dispatch', { id: toastId });
+      });
+  };
+
+  // Form State for On-Site Registration Tab
+  const [onSiteEventId, setOnSiteEventId] = useState('');
+  const [onSiteFullName, setOnSiteFullName] = useState('');
+  const [onSiteEmail, setOnSiteEmail] = useState('');
+  const [onSitePhone, setOnSitePhone] = useState('');
+  const [onSiteCollege, setOnSiteCollege] = useState('C. Abdul Hakeem College of Engineering & Technology');
+  const [onSiteDept, setOnSiteDept] = useState('CSE');
+  const [onSiteYear, setOnSiteYear] = useState('3rd Year');
+  const [onSiteTeamName, setOnSiteTeamName] = useState('');
+  const [onSiteTeamMembers, setOnSiteTeamMembers] = useState(['']);
+  const [isRegisteringOnSite, setIsRegisteringOnSite] = useState(false);
 
   // ==================== USERS STATE ====================
   const [users, setUsers] = useState([]);
@@ -150,6 +447,19 @@ export default function AdminDashboard({ token, onLogout }) {
   const [coordDisplayOrder, setCoordDisplayOrder] = useState('1');
   const [coordIsActive, setCoordIsActive] = useState(true);
 
+  const fetchRegistrations = () => {
+    fetch('/api/registrations')
+      .then(res => res.json())
+      .then(result => {
+        if (result.success && Array.isArray(result.registrations)) {
+          setRegistrationsList(result.registrations);
+        } else if (Array.isArray(result)) {
+          setRegistrationsList(result);
+        }
+      })
+      .catch(err => console.warn('Error fetching registrations list:', err));
+  };
+
   // ==================== INITIAL DATA FETCH ====================
   useEffect(() => {
     fetchDashboardData();
@@ -158,6 +468,7 @@ export default function AdminDashboard({ token, onLogout }) {
     fetchEvents();
     fetchSponsors();
     fetchCoordinators();
+    fetchRegistrations();
   }, [token]);
 
   // Handle ESC key to close modal overlays
@@ -178,6 +489,69 @@ export default function AdminDashboard({ token, onLogout }) {
   const handleAuthError = () => {
     toast.error('Session expired or unauthorized');
     onLogout();
+  };
+
+  const handleOnSiteRegisterSubmit = (e) => {
+    e.preventDefault();
+    if (!onSiteEventId) return toast.error('Please select an event');
+    if (!onSiteFullName.trim()) return toast.error('Participant name is required');
+    if (!onSitePhone.trim() || !/^[6-9]\d{9}$/.test(onSitePhone.trim().replace(/\s+/g, ''))) {
+      return toast.error('Valid 10-digit phone number is required');
+    }
+    if (!onSiteEmail.trim()) return toast.error('Email address is required');
+
+    const selectedEvt = eventsList.find(evt => evt.id === onSiteEventId);
+    if (!selectedEvt) return toast.error('Event not found');
+
+    const validMembers = onSiteTeamMembers.filter(m => m.trim().length > 0);
+    const memberCount = 1 + validMembers.length;
+    const feePerHead = selectedEvt.feePerHead || 50;
+    const totalFee = selectedEvt.isTeam && selectedEvt.feeType === 'fixed' ? feePerHead : (feePerHead * memberCount);
+
+    const payload = {
+      currentEvent: selectedEvt,
+      fields: {
+        fullName: onSiteFullName.trim(),
+        email: onSiteEmail.trim(),
+        phone: onSitePhone.trim(),
+        college: onSiteCollege.trim(),
+        department: onSiteDept.trim(),
+        year: onSiteYear,
+        teamName: selectedEvt.isTeam ? onSiteTeamName.trim() : null,
+        teamMembers: validMembers
+      },
+      totalFee
+    };
+
+    setIsRegisteringOnSite(true);
+    const toastId = toast.loading('Processing on-site registration...');
+
+    fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.success) {
+          const ticketCode = resData.ticketData?.ticketCode || 'ELQ26-REG';
+          toast.success(`Registration successful! Ticket Code: ${ticketCode}`, { id: toastId, duration: 6000 });
+          setOnSiteFullName('');
+          setOnSiteEmail('');
+          setOnSitePhone('');
+          setOnSiteTeamName('');
+          setOnSiteTeamMembers(['']);
+          fetchRegistrations();
+          fetchDashboardData();
+        } else {
+          toast.error(resData.message || 'Registration failed', { id: toastId });
+        }
+      })
+      .catch(err => {
+        console.error('Registration API error:', err);
+        toast.error('Network error during registration', { id: toastId });
+      })
+      .finally(() => setIsRegisteringOnSite(false));
   };
 
   const fetchDashboardData = () => {
@@ -1086,44 +1460,46 @@ export default function AdminDashboard({ token, onLogout }) {
             </div>
           </button>
 
-          {/* User Management Dropdown Group */}
-          <div style={S.dropdownGroup}>
-            <button 
-              style={isUserManagementActive ? { ...S.dropdownToggle, ...S.dropdownToggleActive } : S.dropdownToggle}
-              onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-            >
-              <div style={S.dropdownToggleLeft}>
-                <FaUsers style={S.navIcon} />
-                <span>User Management</span>
-              </div>
-              <span style={S.dropdownChevron}>
-                {isUserDropdownOpen ? <FaChevronDown size={12} /> : <FaChevronRight size={12} />}
-              </span>
-            </button>
+          {/* User Management Dropdown Group (Superadmin & Admin only) */}
+          {isAdminOrSuper && (
+            <div style={S.dropdownGroup}>
+              <button 
+                style={isUserManagementActive ? { ...S.dropdownToggle, ...S.dropdownToggleActive } : S.dropdownToggle}
+                onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+              >
+                <div style={S.dropdownToggleLeft}>
+                  <FaUsers style={S.navIcon} />
+                  <span>User Management</span>
+                </div>
+                <span style={S.dropdownChevron}>
+                  {isUserDropdownOpen ? <FaChevronDown size={12} /> : <FaChevronRight size={12} />}
+                </span>
+              </button>
 
-            {/* Dropdown Submenu */}
-            {isUserDropdownOpen && (
-              <div style={S.submenu}>
-                <button 
-                  style={activeTab === 'manage-users' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                  onClick={() => setActiveTab('manage-users')}
-                >
-                  <FaUserCheck style={S.subnavIcon} />
-                  <span>Manage Users</span>
-                  <span style={S.badgeCount}>{users.length}</span>
-                </button>
+              {/* Dropdown Submenu */}
+              {isUserDropdownOpen && (
+                <div style={S.submenu}>
+                  <button 
+                    style={activeTab === 'manage-users' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
+                    onClick={() => setActiveTab('manage-users')}
+                  >
+                    <FaUserCheck style={S.subnavIcon} />
+                    <span>Manage Users</span>
+                    <span style={S.badgeCount}>{users.length}</span>
+                  </button>
 
-                <button 
-                  style={activeTab === 'manage-roles' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                  onClick={() => setActiveTab('manage-roles')}
-                >
-                  <FaShieldAlt style={S.subnavIcon} />
-                  <span>Manage Roles</span>
-                  <span style={S.badgeCount}>{roles.length}</span>
-                </button>
-              </div>
-            )}
-          </div>
+                  <button 
+                    style={activeTab === 'manage-roles' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
+                    onClick={() => setActiveTab('manage-roles')}
+                  >
+                    <FaShieldAlt style={S.subnavIcon} />
+                    <span>Manage Roles</span>
+                    <span style={S.badgeCount}>{roles.length}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Sponsors Tab */}
           <button 
@@ -1152,6 +1528,20 @@ export default function AdminDashboard({ token, onLogout }) {
               <span style={S.badgeCount}>{coordinators.length}</span>
             </div>
           </button>
+
+          {/* Participant List Tab */}
+          <button 
+            style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={() => setActiveTab('participant-list')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaUsers style={S.navIcon} />
+                <span>Participant List</span>
+              </div>
+              <span style={S.badgeCount}>{registrationsList.length}</span>
+            </div>
+          </button>
         </nav>
 
         <div style={S.sidebarFooter}>
@@ -1174,6 +1564,7 @@ export default function AdminDashboard({ token, onLogout }) {
               {activeTab === 'manage-roles' && 'Role Management'}
               {activeTab === 'manage-sponsors' && 'Sponsor Management'}
               {activeTab === 'manage-coordinators' && 'Student Coordinator Management'}
+              {activeTab === 'participant-list' && 'Event-Wise Participant & Team List'}
             </h1>
             <p style={S.pageSubtitle}>
               {activeTab === 'dashboard' && 'Live event analytics, registrations, and entity metrics.'}
@@ -1182,9 +1573,10 @@ export default function AdminDashboard({ token, onLogout }) {
               {activeTab === 'manage-roles' && 'Configure custom access roles, permissions, and security hierarchy.'}
               {activeTab === 'manage-sponsors' && 'Manage event partners, categories, logos, contact info, and public visibility.'}
               {activeTab === 'manage-coordinators' && 'Assign student leads and coordinators dynamically to symposium events.'}
+              {activeTab === 'participant-list' && 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.'}
             </p>
           </div>
-          <div style={S.headerRight}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
               onClick={toggleTheme}
               style={S.themeToggleBtn}
@@ -1193,8 +1585,33 @@ export default function AdminDashboard({ token, onLogout }) {
             >
               {isDark ? <FaSun size={17} style={{ color: '#fbbf24' }} /> : <FaMoon size={16} style={{ color: '#6366f1' }} />}
             </button>
-            <div style={S.userProfile}>
-              <div style={S.avatar}>A</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '800',
+                fontSize: '1.25rem',
+                border: '2px solid #ffffff',
+                boxShadow: '0 3px 10px rgba(37, 99, 235, 0.35)',
+                userSelect: 'none',
+                flexShrink: 0
+              }}>
+                {(user?.username || 'Admin').charAt(0).toUpperCase()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
+                  {user?.username || 'Admin'}
+                </span>
+                <span style={{ fontSize: '0.72rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '700', marginTop: '2px', textTransform: 'uppercase' }}>
+                  {user?.role || 'Admin'}
+                </span>
+              </div>
             </div>
           </div>
         </header>
@@ -1937,8 +2354,600 @@ export default function AdminDashboard({ token, onLogout }) {
               </div>
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* PARTICIPANT LIST VIEW & EVENT CARDS                       */}
+          {/* ======================================================== */}
+          {activeTab === 'participant-list' && (
+            <div style={S.viewContainer}>
+              {/* Event Filter & View Mode Header */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: isDark ? '#111827' : '#ffffff', padding: '1.25rem 1.5rem', borderRadius: '16px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setViewMode('cards')}
+                      style={viewMode === 'cards' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaThLarge size={12} /> Event Cards View
+                    </button>
+                    <button
+                      onClick={() => setViewMode('table')}
+                      style={viewMode === 'table' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaTable size={12} /> Detailed Table View
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setPartCategoryFilter('all')}
+                      style={partCategoryFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      All ({eventsList.length})
+                    </button>
+                    <button
+                      onClick={() => setPartCategoryFilter('technical')}
+                      style={partCategoryFilter === 'technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaBolt size={11} /> Tech ({eventsList.filter(e => e.category === 'technical').length})
+                    </button>
+                    <button
+                      onClick={() => setPartCategoryFilter('non-technical')}
+                      style={partCategoryFilter === 'non-technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaGamepad size={11} /> Non-Tech ({eventsList.filter(e => e.category === 'non-technical').length})
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'center' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Select Event</label>
+                    <select
+                      value={partEventFilter}
+                      onChange={(e) => setPartEventFilter(e.target.value)}
+                      style={S.select}
+                    >
+                      <option value="all">-- All Symposium Events ({eventsList.length}) --</option>
+                      {eventsList.map(evt => (
+                        <option key={evt.id} value={evt.id}>
+                          [{evt.category.toUpperCase()}] {evt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ ...S.modalInputGroup, gridColumn: 'span 2' }}>
+                    <label style={S.label}>Search Participants / Teams</label>
+                    <input
+                      type="text"
+                      placeholder="Search participant name, team name, team member, phone, ticket..."
+                      value={partSearch}
+                      onChange={(e) => setPartSearch(e.target.value)}
+                      style={S.searchInput}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ================= EVENT CARDS VIEW ================= */}
+              {viewMode === 'cards' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem' }}>
+                  {eventsList
+                    .filter(evt => partEventFilter === 'all' || evt.id === partEventFilter)
+                    .filter(evt => partCategoryFilter === 'all' || evt.category === partCategoryFilter)
+                    .map(evt => {
+                      const evtRegs = registrationsList.filter(r => (r.event_id || r.eventId) === evt.id);
+                      const isTech = evt.category === 'technical';
+                      const teamsCount = evtRegs.filter(r => getTeamMembers(r).length > 0 || r.team_name || r.teamName).length;
+
+                      return (
+                        <div key={evt.id} style={{ ...S.card, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                          <div>
+                            <div style={S.cardHeaderFlex}>
+                              <div>
+                                <h3 style={S.cardTitle}>{evt.name}</h3>
+                                <span style={isTech ? S.badgeTech : S.badgeNonTech}>
+                                  {isTech ? 'Technical Event' : 'Non-Technical Event'}
+                                </span>
+                              </div>
+                              <span style={S.idBadge}>
+                                {evt.fee || `₹${evt.feePerHead || 50}`}
+                              </span>
+                            </div>
+
+                            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                              {/* Event Stats Summary Bar */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', background: isDark ? '#1f2937' : '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: isDark ? '1px solid #374151' : '1px solid #e2e8f0' }}>
+                                <div>
+                                  <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '600' }}>Registrations</span>
+                                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>{evtRegs.length}</div>
+                                </div>
+                                <div>
+                                  <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '600' }}>Teams Count</span>
+                                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#10b981' }}>{teamsCount}</div>
+                                </div>
+                                <div>
+                                  <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '600' }}>Venue</span>
+                                  <div style={{ fontSize: '0.85rem', fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', marginTop: '4px' }}>{evt.venue || 'Main Lab'}</div>
+                                </div>
+                              </div>
+
+                              {/* Participant & Team Member Preview */}
+                              <div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: isDark ? '#cbd5e1' : '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                  Participants & Team Members ({evtRegs.length})
+                                </span>
+                                <div style={{ maxHeight: '180px', overflowY: 'auto', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                  {evtRegs.map((reg, idx) => {
+                                    const members = getTeamMembers(reg);
+                                    const teamName = reg.team_name || reg.teamName;
+
+                                    return (
+                                      <div key={idx} style={{ background: isDark ? '#1f2937' : '#f1f5f9', padding: '0.65rem 0.85rem', borderRadius: '8px', border: isDark ? '1px solid #374151' : '1px solid #e2e8f0' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <span style={{ fontWeight: '700', fontSize: '0.88rem', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                                            {reg.full_name || reg.fullName || 'Participant'}
+                                          </span>
+                                          {teamName && (
+                                            <span style={{ background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700' }}>
+                                              {teamName}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '2px' }}>
+                                          {reg.college} • {reg.department}
+                                        </div>
+                                        {members.length > 0 && (
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                            <span style={{ fontSize: '0.72rem', color: isDark ? '#93c5fd' : '#1d4ed8', fontWeight: '700' }}>
+                                              Members ({members.length + 1}):
+                                            </span>
+                                            {members.map((m, i) => (
+                                              <span key={i} style={{ background: isDark ? '#374151' : '#cbd5e1', color: isDark ? '#f9fafb' : '#0f172a', padding: '0.1rem 0.35rem', borderRadius: '4px', fontSize: '0.7rem' }}>
+                                                {m}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                  {evtRegs.length === 0 && (
+                                    <div style={{ color: isDark ? '#6b7280' : '#94a3b8', fontSize: '0.82rem', padding: '0.75rem', textAlign: 'center' }}>
+                                      No participants registered yet for this event.
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons: Export PDF & Send to Event Coordinator */}
+                          <div style={{ padding: '1rem 1.25rem', borderTop: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', background: isDark ? '#1a2234' : '#f8fafc', display: 'flex', gap: '0.5rem' }}>
+                            <button
+                              onClick={() => handleExportPDF(evt)}
+                              style={{ ...S.filterBtn, flex: 1, justifyContent: 'center', background: isDark ? '#1e3a8a' : '#eff6ff', color: isDark ? '#93c5fd' : '#1d4ed8', borderColor: isDark ? '#1e40af' : '#bfdbfe' }}
+                            >
+                              <FaFilePdf size={13} /> Export PDF
+                            </button>
+                            <button
+                              onClick={() => handleOpenSendModal(evt)}
+                              style={{ ...S.primaryBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem', padding: '0.55rem 0.85rem' }}
+                            >
+                              <FaPaperPlane size={12} /> Send
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {/* ================= DETAILED TABLE VIEW ================= */}
+              {viewMode === 'table' && (
+                <div style={S.card}>
+                  <div style={S.cardHeaderFlex}>
+                    <h3 style={S.cardTitle}>
+                      Participant & Team List ({participantFilteredRegs.length})
+                    </h3>
+                    <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      Showing participants for {partEventFilter === 'all' ? 'All Events' : (eventsList.find(e => e.id === partEventFilter)?.name || partEventFilter)}.
+                    </span>
+                  </div>
+
+                  <div style={S.tableResponsive}>
+                    <table style={S.table}>
+                      <thead>
+                        <tr>
+                          <th style={S.th}>Ticket</th>
+                          <th style={S.th}>Event</th>
+                          <th style={S.th}>Team Name</th>
+                          <th style={S.th}>Lead Participant</th>
+                          <th style={S.th}>Team Members</th>
+                          <th style={S.th}>College & Dept</th>
+                          <th style={S.th}>Fee</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {participantFilteredRegs.map((reg, i) => {
+                          const ticketCode = reg.ticket_code || reg.registrationId || reg.id || `#${i + 1}`;
+                          const name = reg.full_name || reg.fullName || 'Anonymous';
+                          const evt = eventsList.find(e => e.id === (reg.event_id || reg.eventId));
+                          const evtName = reg.eventName || evt?.name || reg.event_id || 'Event';
+                          const members = getTeamMembers(reg);
+                          const teamName = reg.team_name || reg.teamName || (members.length > 0 ? 'Team' : '-');
+                          const isTech = getEventCategory(reg) === 'technical';
+
+                          return (
+                            <tr key={i} style={S.tr}>
+                              <td style={S.td}><span style={S.idBadge}>{ticketCode}</span></td>
+                              <td style={S.td}>
+                                <div>
+                                  <span style={S.strongText}>{evtName}</span>
+                                  <div>
+                                    <span style={isTech ? S.badgeTech : S.badgeNonTech}>
+                                      {isTech ? 'Tech' : 'Non-Tech'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={S.td}>
+                                {teamName !== '-' ? (
+                                  <span style={{
+                                    background: isDark ? '#064e3b' : '#ecfdf5',
+                                    color: isDark ? '#6ee7b7' : '#047857',
+                                    padding: '0.25rem 0.65rem',
+                                    borderRadius: '8px',
+                                    fontWeight: '700',
+                                    fontSize: '0.85rem'
+                                  }}>
+                                    {teamName}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: isDark ? '#6b7280' : '#94a3b8', fontSize: '0.85rem' }}>Individual</span>
+                                )}
+                              </td>
+                              <td style={S.td}>
+                                <div>
+                                  <span style={S.strongText}>{name}</span>
+                                  <div style={S.tableSubText}>{reg.phone} • {reg.email}</div>
+                                </div>
+                              </td>
+                              <td style={S.td}>
+                                {members.length > 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ fontSize: '0.78rem', color: isDark ? '#93c5fd' : '#1d4ed8', fontWeight: '700' }}>
+                                      {members.length + 1} Members Total
+                                    </span>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                      <span style={{ background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#e2e8f0' : '#334155', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600' }}>
+                                        1. {name} (Lead)
+                                      </span>
+                                      {members.map((m, idx) => (
+                                        <span key={idx} style={{ background: isDark ? '#374151' : '#e2e8f0', color: isDark ? '#f9fafb' : '#0f172a', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600' }}>
+                                          {idx + 2}. {m}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span style={{ fontSize: '0.8rem', color: isDark ? '#6b7280' : '#94a3b8' }}>N/A (Individual)</span>
+                                )}
+                              </td>
+                              <td style={S.td}>
+                                <div>
+                                  {reg.college || 'CAHCET'}
+                                  <div style={S.tableSubText}>{reg.department} ({reg.year})</div>
+                                </div>
+                              </td>
+                              <td style={S.td}><span style={S.feeHighlight}>₹{getFee(reg)}</span></td>
+                            </tr>
+                          );
+                        })}
+                        {participantFilteredRegs.length === 0 && (
+                          <tr><td colSpan="7" style={S.emptyState}>No participant records match the selected event and search query.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ================= SENT DETAILS / DISPATCHED LISTS HISTORY (ADMIN ONLY) ================= */}
+              <div style={{ ...S.card, marginTop: '2rem' }}>
+                <div style={S.cardHeaderFlex}>
+                  <div>
+                    <h3 style={S.cardTitle}>
+                      Sent Details & Dispatched Participant Lists ({dispatchesList.length})
+                    </h3>
+                    <span style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      History of event participant lists dispatched to Event Coordinators. Admin can edit assignments or delete/revoke lists.
+                    </span>
+                  </div>
+                  <span style={S.idBadge}>
+                    Admin Control
+                  </span>
+                </div>
+
+                <div style={S.tableResponsive}>
+                  <table style={S.table}>
+                    <thead>
+                      <tr>
+                        <th style={S.th}>#</th>
+                        <th style={S.th}>Event Name</th>
+                        <th style={S.th}>Assigned Event Coordinator</th>
+                        <th style={S.th}>Participants Count</th>
+                        <th style={S.th}>Dispatched Date & Time</th>
+                        <th style={S.th}>Status</th>
+                        <th style={{ ...S.th, textAlign: 'right' }}>Admin Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dispatchesList.map((d, index) => {
+                        const evtRegs = registrationsList.filter(r => (r.event_id || r.eventId) === d.eventId);
+                        const formattedDate = new Date(d.sentAt || Date.now()).toLocaleString();
+
+                        return (
+                          <tr key={d.id || index} style={S.tr}>
+                            <td style={S.td}><span style={S.idBadge}>#{index + 1}</span></td>
+                            <td style={S.td}>
+                              <span style={S.strongText}>{d.eventName}</span>
+                              <div style={S.tableSubText}>ID: {d.eventId}</div>
+                            </td>
+                            <td style={S.td}>
+                              <span style={{
+                                background: isDark ? '#1e3a8a' : '#eff6ff',
+                                color: isDark ? '#93c5fd' : '#1d4ed8',
+                                border: isDark ? '1px solid #1e40af' : '1px solid #bfdbfe',
+                                padding: '0.25rem 0.65rem',
+                                borderRadius: '8px',
+                                fontWeight: '700',
+                                fontSize: '0.85rem'
+                              }}>
+                                {d.coordinatorName}
+                              </span>
+                            </td>
+                            <td style={S.td}>
+                              <span style={{ fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                                {evtRegs.length} Participants
+                              </span>
+                            </td>
+                            <td style={S.td}>
+                              <span style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                {formattedDate}
+                              </span>
+                            </td>
+                            <td style={S.td}>
+                              <span style={{ color: '#10b981', fontWeight: '600', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981' }}></span>
+                                Dispatched
+                              </span>
+                            </td>
+                            <td style={{ ...S.td, textAlign: 'right' }}>
+                              <button
+                                onClick={() => handleOpenEditDispatchModal(d)}
+                                style={S.actionBtnEdit}
+                                title="Edit / Re-assign Coordinator"
+                              >
+                                <FaEdit size={13} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDispatch(d.id, d.eventName, d.coordinatorName)}
+                                style={S.actionBtnDelete}
+                                title="Delete & Revoke List"
+                              >
+                                <FaTrash size={13} /> Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {dispatchesList.length === 0 && (
+                        <tr>
+                          <td colSpan="7" style={S.emptyState}>
+                            No dispatched participant lists found yet. Click "Send" on any Event Card above to dispatch a list.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* ==================== EDIT DISPATCH MODAL ==================== */}
+      {isEditDispatchModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: isDark ? '#111827' : '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '1.5rem 1.75rem', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                  Re-assign Dispatched List
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                  Update assigned Event Coordinator
+                </span>
+              </div>
+              <button
+                onClick={() => setIsEditDispatchModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', fontSize: '1.1rem' }}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDispatchEdit} style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={S.modalInputGroup}>
+                <label style={S.label}>Assigned Event Coordinator Name *</label>
+                {coordinators.length > 0 ? (
+                  <select
+                    value={editCoordNameInput}
+                    onChange={(e) => setEditCoordNameInput(e.target.value)}
+                    style={S.select}
+                  >
+                    {coordinators.map((c, i) => (
+                      <option key={c.id || i} value={c.name}>
+                        {c.name} {c.assignedEvents?.length ? `(${c.assignedEvents.join(', ')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={editCoordNameInput}
+                    onChange={(e) => setEditCoordNameInput(e.target.value)}
+                    style={S.input}
+                    required
+                  />
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditDispatchModalOpen(false)}
+                  style={{ ...S.filterBtn, flex: 1, justifyContent: 'center', padding: '0.75rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ ...S.primaryBtn, flex: 1, justifyContent: 'center', padding: '0.75rem' }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== SEND TO EVENT COORDINATOR MODAL ==================== */}
+      {isSendModalOpen && sendTargetEvent && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: isDark ? '#111827' : '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '1.5rem 1.75rem', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                  Send Participant List
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                  Event: <strong>{sendTargetEvent.name}</strong>
+                </span>
+              </div>
+              <button
+                onClick={() => setIsSendModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', fontSize: '1.1rem' }}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={S.modalInputGroup}>
+                <label style={S.label}>Select Event Coordinator Account / Name *</label>
+                {coordinators.length > 0 ? (
+                  <select
+                    value={selectedCoordName}
+                    onChange={(e) => setSelectedCoordName(e.target.value)}
+                    style={S.select}
+                  >
+                    {coordinators.map((c, i) => (
+                      <option key={c.id || i} value={c.name}>
+                        {c.name} {c.assignedEvents?.length ? `(${c.assignedEvents.join(', ')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Enter Event Coordinator Username / Name"
+                    value={selectedCoordName}
+                    onChange={(e) => setSelectedCoordName(e.target.value)}
+                    style={S.input}
+                    required
+                  />
+                )}
+              </div>
+
+              <div style={{ background: isDark ? '#1f2937' : '#f8fafc', padding: '1rem', borderRadius: '10px', border: isDark ? '1px solid #374151' : '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#475569', fontWeight: '600' }}>
+                  Summary to Dispatch:
+                </span>
+                <ul style={{ margin: '0.4rem 0 0 1.2rem', padding: 0, fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                  <li>Event: {sendTargetEvent.name} ({sendTargetEvent.category.toUpperCase()})</li>
+                  <li>Total Registered Participants: {registrationsList.filter(r => (r.event_id || r.eventId) === sendTargetEvent.id).length}</li>
+                  <li>Includes complete team member rosters & ticket codes.</li>
+                </ul>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsSendModalOpen(false)}
+                  style={{ ...S.filterBtn, flex: 1, justifyContent: 'center', padding: '0.75rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSendingList}
+                  onClick={handleConfirmSendList}
+                  style={{ ...S.primaryBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '0.75rem' }}
+                >
+                  <FaPaperPlane size={12} /> {isSendingList ? 'Sending...' : 'Confirm & Send List'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* MODAL: CREATE / EDIT EVENT                               */}

@@ -2,9 +2,19 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import AdminDashboard from './AdminDashboard.jsx';
+import RegistrationCoordinatorDashboard from './RegistrationCoordinatorDashboard.jsx';
 
 export default function Admin() {
+  const isCoordinatorRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/coordinators');
   const [token, setToken] = useState(localStorage.getItem('adminToken') || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('adminUser');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,8 +40,12 @@ export default function Admin() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          toast.success('Logged in successfully!');
+          toast.success(`Welcome back, ${data.user?.username || 'User'}!`);
           localStorage.setItem('adminToken', data.token);
+          if (data.user) {
+            localStorage.setItem('adminUser', JSON.stringify(data.user));
+            setUser(data.user);
+          }
           setToken(data.token);
         } else {
           toast.error(data.message || 'Login failed');
@@ -48,13 +62,20 @@ export default function Admin() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
     setToken(null);
+    setUser(null);
     toast.success('Logged out successfully');
   };
 
-  // If we have a token, show dashboard
+  // If we have a token, show dashboard according to user role
   if (token) {
-    return <AdminDashboard token={token} onLogout={handleLogout} />;
+    const loggedRole = String(user?.role || '').toLowerCase();
+    const isRegCoord = loggedRole.includes('registration') || loggedRole.includes('reg_coord') || loggedRole === 'registration coordinator';
+    if (isRegCoord) {
+      return <RegistrationCoordinatorDashboard token={token} user={user} onLogout={handleLogout} />;
+    }
+    return <AdminDashboard token={token} user={user} onLogout={handleLogout} />;
   }
 
   const styles = getLoginStyles(isDark);
@@ -79,8 +100,12 @@ export default function Admin() {
       </div>
 
       <div style={styles.loginBox}>
-        <h2 style={styles.title}>Admin Access</h2>
-        <p style={styles.subtitle}>Enter credentials to access the dashboard</p>
+        <h2 style={styles.title}>
+          {isCoordinatorRoute ? 'Coordinator Access Login' : 'Admin & Coordinator Portal'}
+        </h2>
+        <p style={styles.subtitle}>
+          {isCoordinatorRoute ? 'Enter coordinator credentials to access portal' : 'Enter credentials to access the dashboard'}
+        </p>
         
         <form onSubmit={handleLogin} style={styles.form}>
           <div style={styles.inputGroup}>
@@ -90,7 +115,7 @@ export default function Admin() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               style={styles.input}
-              placeholder="Enter admin username"
+              placeholder={isCoordinatorRoute ? "Enter coordinator username" : "Enter username"}
               required
             />
           </div>

@@ -139,10 +139,17 @@ CREATE TABLE IF NOT EXISTS public.users (
 -- 7. ROLES TABLE
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.roles (
-    id INT PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.roles ALTER COLUMN id TYPE BIGINT;
+
+-- ------------------------------------------------------------------------------
+-- 8. SUPABASE STORAGE BUCKET FOR UPLOADS
+-- ------------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
 
 -- ==============================================================================
 -- DISABLE ROW LEVEL SECURITY (RLS) FOR LIVE CLIENT READ/WRITE ACCESS

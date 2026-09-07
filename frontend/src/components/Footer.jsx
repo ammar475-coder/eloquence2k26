@@ -1,8 +1,29 @@
+import { useState, useRef } from 'react';
 import { FaBolt, FaGamepad, FaCompass } from 'react-icons/fa';
 import logoImg from '../assets/logo.png';
 import events from '../data/events.js';
 
 export default function Footer({ onNavigate }) {
+  const [clickCount, setClickCount] = useState(0);
+  const timerRef = useRef(null);
+
+  const handleTripleClick = () => {
+    setClickCount((prev) => {
+      const newCount = prev + 1;
+      if (newCount >= 3) {
+        clearTimeout(timerRef.current);
+        window.location.href = '/admin';
+        return 0;
+      }
+      return newCount;
+    });
+
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 1000);
+  };
+
   const handleNav = (page, extra = null) => {
     if (onNavigate) {
       onNavigate(page, extra);
@@ -146,7 +167,13 @@ export default function Footer({ onNavigate }) {
       </div>
 
       <div className="footer-bottom">
-        <p>© 2026 ELOQUENCE26 — C. Abdul Hakeem College of Engineering and Technology. All Rights Reserved.</p>
+        <p
+          onClick={handleTripleClick}
+          style={{ cursor: 'pointer', userSelect: 'none' }}
+          title="Triple click to open admin login"
+        >
+          © 2026 ELOQUENCE26 — C. Abdul Hakeem College of Engineering and Technology. All Rights Reserved.
+        </p>
       </div>
     </footer>
   );

@@ -6,21 +6,15 @@
     "role": "superadmin"
   },
   {
-    "id": 1788250574410,
-    "username": "musthafa",
-    "password": "musthafa",
-    "role": "admin"
-  },
-  {
     "id": 1788330069356,
     "username": "bada bai",
     "password": "admin",
     "role": "superadmin"
   },
   {
-    "id": 1788337851969,
+    "id": 1788444045593,
     "username": "shahid",
-    "password": "admin",
-    "role": "coordinator"
+    "password": "eloquenceadmin",
+    "role": "superadmin"
   }
 ]
