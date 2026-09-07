@@ -70,7 +70,7 @@ async function runSync() {
   console.log("==================================================");
   console.log("Target Database URL:", process.env.SUPABASE_URL);
 
-  const tables = ['events', 'registrations', 'registration_members', 'coordinators', 'sponsors', 'users', 'roles'];
+  const tables = ['events', 'registrations', 'registration_members', 'coordinators', 'sponsors', 'users', 'roles', 'dispatches', 'search_logs'];
   console.log("\n--- Checking Table Accessibility ---");
   for (const t of tables) {
     const { error } = await supabase.from(t).select('*').limit(1);
