@@ -57,7 +57,7 @@
       "< 7 slides limit",
       "₹100/head"
     ],
-    "image": "/uploads/sponsor-1788339322849-3038.png"
+    "image": "/uploads/sponsor-1788756248477-8913.jpg"
   },
   {
     "id": "tech-02",
@@ -116,7 +116,7 @@
       "Round 1: Written test",
       "Round 2: Coding & Debugging"
     ],
-    "image": "/uploads/sponsor-1788339402738-5693.png"
+    "image": "/uploads/sponsor-1788756268305-7754.png"
   },
   {
     "id": "tech-03",
@@ -178,7 +178,7 @@
       "3 Rounds (15 mins/round)",
       "Total 45 mins"
     ],
-    "image": "/uploads/sponsor-1788339470027-991.png"
+    "image": "/uploads/sponsor-1788756279686-4706.png"
   },
   {
     "id": "tech-04",
@@ -235,7 +235,7 @@
       "Round 1: Landing page",
       "Round 2: Overall website"
     ],
-    "image": "/uploads/sponsor-1788339605102-9063.jpg"
+    "image": "/uploads/sponsor-1788756289363-2616.jpg"
   },
   {
     "id": "tech-06",
@@ -294,7 +294,7 @@
       "Round 1: Login page",
       "Round 2: Dashboard"
     ],
-    "image": "/uploads/sponsor-1788340041603-2892.jpg"
+    "image": "/uploads/sponsor-1788756298048-7931.jpg"
   },
   {
     "id": "nontech-01",
@@ -351,7 +351,7 @@
       "30-60 sec reel length",
       "Background music allowed"
     ],
-    "image": "/uploads/sponsor-1788338665722-6958.png"
+    "image": "/uploads/sponsor-1788755960460-8312.png"
   },
   {
     "id": "nontech-02",
@@ -408,7 +408,7 @@
       "Fast buzzer mechanics",
       "Max 3 per squad"
     ],
-    "image": "/uploads/sponsor-1788339201200-2158.png"
+    "image": "/uploads/sponsor-1788756160837-6376.png"
   },
   {
     "id": "nontech-03",
@@ -465,7 +465,7 @@
       "Cryptic clue checkpoints",
       "Timed squad adventure"
     ],
-    "image": "/uploads/sponsor-1788339220006-9879.png"
+    "image": "/uploads/sponsor-1788756171045-2533.png"
   },
   {
     "id": "nontech-04",
@@ -522,7 +522,7 @@
       "Intricate traditional & modern patterns",
       "Bring cones"
     ],
-    "image": "/uploads/sponsor-1788339245676-8731.png"
+    "image": "/uploads/sponsor-1788756191018-5774.png"
   },
   {
     "id": "nontech-05",
@@ -579,7 +579,7 @@
       "4-Player squad match only",
       "Flat ₹200 per squad"
     ],
-    "image": "/uploads/sponsor-1788339256456-1704.png"
+    "image": "/uploads/sponsor-1788756206168-2196.png"
   },
   {
     "id": "nontech-06",
@@ -636,7 +636,7 @@
       "FIDE standard rules",
       "Digital clocks provided"
     ],
-    "image": "/uploads/sponsor-1788339277803-5831.jpg"
+    "image": "/uploads/sponsor-1788756222596-8300.png"
   },
   {
     "id": "nontech-07",
@@ -659,6 +659,7 @@
     "rules": [],
     "rounds": [],
     "guidelines": [],
-    "highlights": []
+    "highlights": [],
+    "image": ""
   }
 ]
