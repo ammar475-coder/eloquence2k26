@@ -64,7 +64,7 @@ const dbToSponsor = (s) => ({
   contactName: s.contact_name || s.contactName || '',
   contactEmail: s.contact_email || s.contactEmail || '',
   contactPhone: s.contact_phone || s.contactPhone || '',
-  category: s.category || 'Gold Sponsor',
+  category: s.category || 'Elite',
   displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
   isActive: s.is_active !== false && s.isActive !== false,
   createdAt: s.created_at || s.createdAt,

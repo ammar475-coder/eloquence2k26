@@ -69,11 +69,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
 
   const handleBackToEvents = () => {
     if (onNavigate) {
-      if (from === 'register') {
-        onNavigate('register', null, { categoryFilter });
-      } else {
-        onNavigate('events');
-      }
+      onNavigate('events');
     }
   };
 

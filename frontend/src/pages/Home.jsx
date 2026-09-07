@@ -22,7 +22,7 @@ export default function Home({ onNavigate, hasPlayedIntro = false, onIntroComple
 
   const handleRegisterNow = () => {
     if (onNavigate) {
-      onNavigate('register');
+      onNavigate('events');
     }
   };
 

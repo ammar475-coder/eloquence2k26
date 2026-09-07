@@ -3556,7 +3556,7 @@ img {
 
 .student-coordinator-slide-item {
   flex: 0 0 auto;
-  width: clamp(380px, 35vw, 480px);
+  width: clamp(430px, 40vw, 550px);
   min-height: 215px;
   display: flex;
   flex-direction: column;
@@ -3877,7 +3877,7 @@ img {
     padding: 4rem 0 3rem;
   }
   .student-coordinator-slide-item {
-    width: clamp(290px, 88vw, 370px);
+    width: clamp(310px, 90vw, 400px);
     min-height: 220px;
   }
   .student-coordinators-marquee-fade {
@@ -4017,7 +4017,7 @@ img {
 
 /* Tiered card sizes — Elite > Premium > Standard */
 .sponsor-card-elite {
-  width: clamp(230px, 24vw, 290px);
+  width: clamp(260px, 28vw, 340px);
   height: 230px;
 }
 
@@ -4055,9 +4055,8 @@ img {
 
 /* Scale inner content to match each tier's card size */
 .sponsor-card-elite .sponsor-mark {
-  width: 72px;
+  width: 100%;
   height: 72px;
-  font-size: 1.9rem;
 }
 
 .sponsor-card-elite .sponsor-name {
@@ -4065,9 +4064,8 @@ img {
 }
 
 .sponsor-card-standard .sponsor-mark {
-  width: 50px;
+  width: 100%;
   height: 50px;
-  font-size: 1.25rem;
 }
 
 .sponsor-card-standard .sponsor-name {
@@ -4084,12 +4082,6 @@ img {
   color: var(--gold);
   opacity: 0.85;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-}
-
-.sponsor-card-elite .sponsor-mark {
-  color: var(--gold);
-  border-color: rgba(255, 215, 0, 0.5);
-  background: rgba(255, 215, 0, 0.08);
 }
 
 .sponsor-card-elite .sponsor-name {
@@ -4117,12 +4109,6 @@ img {
   color: var(--platinum);
   opacity: 0.85;
   text-shadow: 0 0 10px rgba(230, 230, 230, 0.45);
-}
-
-.sponsor-card-premium .sponsor-mark {
-  color: var(--platinum);
-  border-color: rgba(230, 230, 230, 0.45);
-  background: rgba(230, 230, 230, 0.08);
 }
 
 .sponsor-card-premium .sponsor-name {
@@ -4185,18 +4171,20 @@ img {
 }
 
 .sponsor-mark {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.6rem;
-  color: var(--white);
-  width: 60px;
+  width: 100%;
   height: 60px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  border: 1px solid rgba(57, 255, 136, 0.3);
-  background: rgba(57, 255, 136, 0.06);
+  background: transparent;
+  border: none;
+}
+
+.sponsor-logo-img {
+  max-width: 80%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
 }
 
 .sponsor-name {

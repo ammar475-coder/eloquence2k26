@@ -12,7 +12,6 @@ function SponsorCard({ sponsor, tier }) {
     }
   };
 
-  const initials = sponsor.initials || (sponsor.name ? sponsor.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase() : 'SP');
   const tag = sponsor.tag || sponsor.category || 'PARTNER';
 
   return (
@@ -37,11 +36,9 @@ function SponsorCard({ sponsor, tier }) {
               <img 
                 src={sponsor.logo} 
                 alt={sponsor.name} 
-                style={{ width: '48px', height: '48px', objectFit: 'contain' }} 
+                className="sponsor-logo-img"
               />
-            ) : (
-              initials
-            )}
+            ) : null}
           </div>
           <h4 className="sponsor-name">{sponsor.name}</h4>
           <span className="sponsor-flip-hint">HOVER FOR DETAILS</span>
@@ -116,14 +113,14 @@ export default function Sponsors() {
         if (!isMounted) return;
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           const list = result.data;
-          const elite = list.filter((s) => s.category === 'Title Sponsor');
-          const premium = list.filter((s) => s.category === 'Gold Sponsor' || s.category === 'Silver Sponsor');
-          const standard = list.filter((s) => s.category === 'Bronze Sponsor' || s.category === 'Other');
+          const elite = list.filter((s) => s.category?.toLowerCase() === 'elite' || s.category === 'Title Sponsor');
+          const premium = list.filter((s) => s.category?.toLowerCase() === 'premium' || s.category === 'Gold Sponsor' || s.category === 'Silver Sponsor');
+          const standard = list.filter((s) => s.category?.toLowerCase() === 'standard' || s.category === 'Bronze Sponsor' || s.category === 'Other');
 
           setLiveTiers({
-            elite: elite.length > 0 ? elite : list.slice(0, 4),
-            premium: premium.length > 0 ? premium : list.slice(4, 9),
-            standard: standard.length > 0 ? standard : list.slice(9),
+            elite: elite,
+            premium: premium,
+            standard: standard,
           });
         }
       })

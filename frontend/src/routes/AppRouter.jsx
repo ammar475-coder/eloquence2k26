@@ -31,9 +31,12 @@ function parseHash(hash) {
       else if (g.includes('free') || g.includes('fire')) game = 'FREE FIRE';
     }
     const found = id ? events.find((e) => e.id === id || e.id.toLowerCase() === id?.toLowerCase()) : null;
+    if (!found) {
+      return { page: 'events', eventId: null, sectionId: null, from, categoryFilter, game: null };
+    }
     return {
       page: 'register',
-      eventId: found ? found.id : null,
+      eventId: found.id,
       sectionId: null,
       from,
       categoryFilter,
@@ -123,6 +126,15 @@ export default function AppRouter() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (page === 'register') {
       const finalEventId = eventId || null;
+      if (!finalEventId) {
+        setRoute({ page: 'events', eventId: null, sectionId: null, from: null, categoryFilter: null, game: null });
+        try {
+          window.history.pushState({ from: null }, '', '#/events');
+        } catch (e) {}
+        window.location.hash = '/events';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
       setRoute({ page: 'register', eventId: finalEventId, sectionId: null, from, categoryFilter, game });
 
       const queryParams = new URLSearchParams();
@@ -130,7 +142,7 @@ export default function AppRouter() {
       if (game) queryParams.set('game', game);
       const queryStr = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
-      const targetHash = finalEventId ? `/register/${finalEventId}${queryStr}` : `/register${queryStr}`;
+      const targetHash = `/register/${finalEventId}${queryStr}`;
       try {
         window.history.pushState({ from: null, categoryFilter, game }, '', `#${targetHash}`);
       } catch (e) {}

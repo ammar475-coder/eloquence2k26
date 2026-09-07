@@ -32,7 +32,7 @@ import { submitRegistration } from '../services/api.js';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'];
 
-export default function RegistrationPage({ eventId, initialGame, initialCategoryFilter = 'all', onNavigate }) {
+export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [eventsList, setEventsList] = useState(events);
   // Determine initially selected event
   const initialEvent = eventId ? (events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || null) : null;
@@ -90,31 +90,23 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
 
   const eventCoordinators = liveCoordinators;
 
-  // Stepper: 'select' | 'participant' | 'team' | 'review' | 'success'
-  const [step, setStep] = useState(initialEvent ? 'participant' : 'select');
-
-  // Filter in event selector step: 'all' | 'technical' | 'non-technical'
-  const [categoryFilter, setCategoryFilter] = useState(initialCategoryFilter || 'all');
-  const [searchFilter, setSearchFilter] = useState('');
-
-  useEffect(() => {
-    if (initialCategoryFilter) {
-      setCategoryFilter(initialCategoryFilter);
-    }
-  }, [initialCategoryFilter]);
+  // Stepper: 'participant' | 'team' | 'review' | 'success'
+  const [step, setStep] = useState('participant');
 
   useEffect(() => {
     if (!eventId) {
-      setSelectedEvent(null);
-      setStep('select');
+      if (onNavigate) {
+        onNavigate('events');
+      } else {
+        window.location.hash = '/events';
+      }
     } else {
       const found = eventsList.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
       if (found) {
         setSelectedEvent(found);
-        setStep('participant');
       }
     }
-  }, [eventId, eventsList]);
+  }, [eventId, eventsList, onNavigate]);
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
@@ -166,15 +158,18 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
         setSelectedEvent(ev);
         setStep('participant');
         initTeamMembersForEvent(ev);
+      } else {
+        if (onNavigate) onNavigate('events');
+        else window.location.hash = '/events';
       }
     } else {
-      setSelectedEvent(null);
-      setStep('select');
+      if (onNavigate) onNavigate('events');
+      else window.location.hash = '/events';
     }
     if (initialGame) {
       setSelectedGame(getValidGame(initialGame));
     }
-  }, [eventId, initialGame]);
+  }, [eventId, initialGame, onNavigate]);
 
   // Helper to pre-populate team members based on event requirements
   const initTeamMembersForEvent = (event) => {
@@ -283,22 +278,13 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
     });
   };
 
-  // Select event from Step 1
-  const handleSelectEvent = (event) => {
-    setSelectedEvent(event);
-    initTeamMembersForEvent(event);
-    setStep('participant');
-    window.location.hash = `/register/${event.id}`;
-    if (formRef.current) {
-      formRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   // Change Event action
   const handleChangeEvent = () => {
-    setStep('select');
-    window.location.hash = '/register';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (onNavigate) {
+      onNavigate('events');
+    } else {
+      window.location.hash = '/events';
+    }
   };
 
   // Validation
@@ -542,34 +528,16 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
   };
 
   const resetForNewRegistration = () => {
-    setSelectedEvent(null);
-    setFields({
-      ...initialFields,
-      college: fields.college, // Retain college & department for convenience
-      department: fields.department,
-      year: fields.year,
-    });
-    setErrors({});
-    setTicketData(null);
-    setStep('select');
-    window.location.hash = '/register';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (onNavigate) {
+      onNavigate('events');
+    } else {
+      window.location.hash = '/events';
+    }
   };
 
-  // Filter events for Step 1
-  const filteredEvents = eventsList.filter((e) => {
-    const matchCat = categoryFilter === 'all' || e.category === categoryFilter;
-    const matchSearch =
-      searchFilter.trim() === '' ||
-      e.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      (e.alias && e.alias.toLowerCase().includes(searchFilter.toLowerCase())) ||
-      (e.subtitle && e.subtitle.toLowerCase().includes(searchFilter.toLowerCase())) ||
-      (e.tag && e.tag.toLowerCase().includes(searchFilter.toLowerCase()));
-    return matchCat && matchSearch;
-  });
-
-  const techEvents = filteredEvents.filter((e) => e.category === 'technical');
-  const nonTechEvents = filteredEvents.filter((e) => e.category === 'non-technical');
+  if (!selectedEvent) {
+    return null;
+  }
 
   return (
     <div className="registration-page">
@@ -592,14 +560,8 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
         {/* Stepper Navigation */}
         {step !== 'success' && (
           <nav className="reg-stepper" aria-label="Registration Progress">
-            <div className={`reg-step-item ${step === 'select' ? 'active' : selectedEvent ? 'completed' : ''}`}>
-              <span className="reg-step-num">01</span>
-              <span className="reg-step-label">SELECT EVENT</span>
-            </div>
-            <div className="reg-step-sep">/</div>
-
             <div className={`reg-step-item ${step === 'participant' ? 'active' : ['team', 'review'].includes(step) ? 'completed' : ''}`}>
-              <span className="reg-step-num">02</span>
+              <span className="reg-step-num">01</span>
               <span className="reg-step-label">PARTICIPANT DETAILS</span>
             </div>
             <div className="reg-step-sep">/</div>
@@ -607,7 +569,7 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
             {selectedEvent?.isTeam && (
               <>
                 <div className={`reg-step-item ${step === 'team' ? 'active' : step === 'review' ? 'completed' : ''}`}>
-                  <span className="reg-step-num">03</span>
+                  <span className="reg-step-num">02</span>
                   <span className="reg-step-label">TEAM DETAILS</span>
                 </div>
                 <div className="reg-step-sep">/</div>
@@ -615,165 +577,10 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
             )}
 
             <div className={`reg-step-item ${step === 'review' ? 'active' : ''}`}>
-              <span className="reg-step-num">{selectedEvent?.isTeam ? '04' : '03'}</span>
+              <span className="reg-step-num">{selectedEvent?.isTeam ? '03' : '02'}</span>
               <span className="reg-step-label">REVIEW & CONFIRM</span>
             </div>
           </nav>
-        )}
-
-        {/* STEP 01: SELECT EVENT */}
-        {step === 'select' && (
-          <div className="reg-event-selector-view">
-            <div className="reg-selector-intro">
-              <h2 className="reg-section-title">CHOOSE YOUR ARENA</h2>
-              <p className="reg-section-sub">
-                Select an event to initiate symposium registration. All technical and non-technical showdowns are listed below.
-              </p>
-
-              {/* Filter Tabs */}
-              <div className="reg-filter-bar">
-                <button
-                  type="button"
-                  className={`reg-filter-btn ${categoryFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('all')}
-                >
-                  ALL SHOWDOWNS ({events.length})
-                </button>
-                <button
-                  type="button"
-                  className={`reg-filter-btn ${categoryFilter === 'technical' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('technical')}
-                >
-                  <FaBolt style={{ marginRight: '0.4rem' }} />
-                  TECHNICAL (6)
-                </button>
-                <button
-                  type="button"
-                  className={`reg-filter-btn ${categoryFilter === 'non-technical' ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter('non-technical')}
-                >
-                  <FaGamepad style={{ marginRight: '0.4rem' }} />
-                  NON-TECHNICAL (6)
-                </button>
-              </div>
-            </div>
-
-            {/* Technical Events Block */}
-            {(categoryFilter === 'all' || categoryFilter === 'technical') && techEvents.length > 0 && (
-              <div className="reg-category-group">
-                <div className="reg-category-heading">
-                  <span className="category-glow-bar" />
-                  <h3>// TECHNICAL EVENTS ({techEvents.length})</h3>
-                </div>
-                <div className="reg-events-grid">
-                  {techEvents.map((ev) => (
-                    <div key={ev.id} className="reg-event-card reg-event-tech">
-                      <div className="reg-event-card-top">
-                        <span className="reg-badge-tech">
-                          <FaBolt style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} />
-                          TECHNICAL
-                        </span>
-                        <span className="reg-event-num">#{ev.number}</span>
-                      </div>
-                      <h4 className="reg-event-title">{ev.name}</h4>
-                      {ev.alias && <span className="reg-event-alias">// {ev.alias}</span>}
-                      <p className="reg-event-desc">{ev.subtitle || ev.description}</p>
-                      <div className="reg-event-card-meta">
-                        <div className="meta-badge-item">
-                          <span className="meta-badge-label">FEE:</span>
-                          <span className="meta-badge-val font-accent">{ev.fee}</span>
-                        </div>
-                        <div className="meta-badge-item">
-                          <span className="meta-badge-label">FORMAT:</span>
-                          <span className="meta-badge-val">{ev.teamSize}</span>
-                        </div>
-                      </div>
-                      <div className="reg-event-card-actions">
-                        <button
-                          type="button"
-                          className="btn-card-rules"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onNavigate) onNavigate('event-rules', ev.id, { from: 'register', categoryFilter });
-                          }}
-                        >
-                          <FaBookOpen style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} /> VIEW RULES
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-card-select"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectEvent(ev);
-                          }}
-                        >
-                          SELECT EVENT <FaArrowRight style={{ marginLeft: '0.35rem', verticalAlign: '-1px' }} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Non-Technical Events Block */}
-            {(categoryFilter === 'all' || categoryFilter === 'non-technical') && nonTechEvents.length > 0 && (
-              <div className="reg-category-group">
-                <div className="reg-category-heading">
-                  <span className="category-glow-bar nontech" />
-                  <h3>// NON-TECHNICAL EVENTS ({nonTechEvents.length})</h3>
-                </div>
-                <div className="reg-events-grid">
-                  {nonTechEvents.map((ev) => (
-                    <div key={ev.id} className="reg-event-card reg-event-nontech">
-                      <div className="reg-event-card-top">
-                        <span className="reg-badge-nontech">
-                          <FaGamepad style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} />
-                          NON-TECHNICAL
-                        </span>
-                        <span className="reg-event-num">#{ev.number}</span>
-                      </div>
-                      <h4 className="reg-event-title">{ev.name}</h4>
-                      {ev.alias && <span className="reg-event-alias">// {ev.alias}</span>}
-                      <p className="reg-event-desc">{ev.subtitle || ev.description}</p>
-                      <div className="reg-event-card-meta">
-                        <div className="meta-badge-item">
-                          <span className="meta-badge-label">FEE:</span>
-                          <span className="meta-badge-val font-accent">{ev.fee}</span>
-                        </div>
-                        <div className="meta-badge-item">
-                          <span className="meta-badge-label">FORMAT:</span>
-                          <span className="meta-badge-val">{ev.teamSize}</span>
-                        </div>
-                      </div>
-                      <div className="reg-event-card-actions">
-                        <button
-                          type="button"
-                          className="btn-card-rules"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onNavigate) onNavigate('event-rules', ev.id, { from: 'register', categoryFilter });
-                          }}
-                        >
-                          <FaBookOpen style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} /> VIEW RULES
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-card-select"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectEvent(ev);
-                          }}
-                        >
-                          SELECT EVENT <FaArrowRight style={{ marginLeft: '0.35rem', verticalAlign: '-1px' }} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
         )}
 
         {/* STEP 02 & 03: FORM VIEWS (Participant & Team Details) */}
@@ -804,12 +611,12 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
                 </div>
               </div>
 
-              {/* STEP 02: PARTICIPANT DETAILS */}
+              {/* STEP 01: PARTICIPANT DETAILS */}
               {step === 'participant' && (
                 <form onSubmit={handleProceedToTeamOrReview} noValidate className="reg-card-panel">
                   <div className="panel-title-bar">
                     <div className="panel-title-left">
-                      <span className="panel-step-tag">STEP 02</span>
+                      <span className="panel-step-tag">STEP 01</span>
                       <h3 className="panel-title">PARTICIPANT DETAILS</h3>
                     </div>
                     <span className="panel-req-hint">* Required Fields</span>
@@ -1001,12 +808,12 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
                 </form>
               )}
 
-              {/* STEP 03: TEAM DETAILS (Only for team events) */}
+              {/* STEP 02: TEAM DETAILS (Only for team events) */}
               {step === 'team' && selectedEvent?.isTeam && (
                 <form onSubmit={handleProceedToReviewFromTeam} noValidate className="reg-card-panel">
                   <div className="panel-title-bar">
                     <div className="panel-title-left">
-                      <span className="panel-step-tag">STEP 03</span>
+                      <span className="panel-step-tag">STEP 02</span>
                       <h3 className="panel-title">SQUAD / TEAM CONFIGURATION</h3>
                     </div>
                     <span className="panel-req-hint">{selectedEvent.teamSize}</span>
@@ -1181,13 +988,13 @@ export default function RegistrationPage({ eventId, initialGame, initialCategory
           </div>
         )}
 
-        {/* STEP 04: REVIEW & CONFIRM */}
+        {/* STEP 03 / 02: REVIEW & CONFIRM */}
         {step === 'review' && selectedEvent && (
           <div className="reg-review-view">
             <div className="review-panel-card">
               <div className="panel-title-bar">
                 <div className="panel-title-left">
-                  <span className="panel-step-tag">STEP {selectedEvent.isTeam ? '04' : '03'}</span>
+                  <span className="panel-step-tag">STEP {selectedEvent.isTeam ? '03' : '02'}</span>
                   <h3 className="panel-title">REVIEW REGISTRATION</h3>
                 </div>
                 <span className="review-check-pill">

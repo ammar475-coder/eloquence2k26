@@ -15,7 +15,7 @@ const sponsors = {
     {
       id: 'elite-01',
       name: 'APEX DYNAMICS',
-      tag: 'TITLE SPONSOR',
+      tag: 'ELITE',
       initials: 'AD',
       description: 'A product engineering firm backing next-gen student innovation across South India.',
       website: 'https://example.com/apex-dynamics',
@@ -23,7 +23,7 @@ const sponsors = {
     {
       id: 'elite-02',
       name: 'NOVA SYSTEMS',
-      tag: 'POWERED BY',
+      tag: 'ELITE',
       initials: 'NS',
       description: 'Cloud infrastructure partner providing compute credits and mentorship to every team.',
       website: 'https://example.com/nova-systems',
@@ -31,7 +31,7 @@ const sponsors = {
     {
       id: 'elite-03',
       name: 'ORION LABS',
-      tag: 'TITLE SPONSOR',
+      tag: 'ELITE',
       initials: 'OL',
       description: 'R&D lab focused on AI and robotics, sponsoring the flagship hackathon track.',
       website: 'https://example.com/orion-labs',
@@ -39,7 +39,7 @@ const sponsors = {
     {
       id: 'elite-04',
       name: 'VERTEX CAPITAL',
-      tag: 'PRESENTING PARTNER',
+      tag: 'ELITE',
       initials: 'VC',
       description: 'Early-stage venture fund supporting campus founders and student startups.',
       website: 'https://example.com/vertex-capital',
@@ -49,7 +49,7 @@ const sponsors = {
     {
       id: 'premium-01',
       name: 'PULSE ELECTRONICS',
-      tag: 'GOLD PARTNER',
+      tag: 'PREMIUM',
       initials: 'PE',
       description: 'Consumer electronics brand fueling the gadget zone and tech expo.',
       website: 'https://example.com/pulse-electronics',
@@ -57,7 +57,7 @@ const sponsors = {
     {
       id: 'premium-02',
       name: 'STRATUS CLOUD',
-      tag: 'GOLD PARTNER',
+      tag: 'PREMIUM',
       initials: 'SC',
       description: 'Cloud hosting partner keeping every registration and live stream online.',
       website: 'https://example.com/stratus-cloud',
@@ -65,7 +65,7 @@ const sponsors = {
     {
       id: 'premium-03',
       name: 'IGNITE FOODS',
-      tag: 'HOSPITALITY PARTNER',
+      tag: 'PREMIUM',
       initials: 'IF',
       description: 'Campus catering partner serving the food court all three days.',
       website: 'https://example.com/ignite-foods',
@@ -73,7 +73,7 @@ const sponsors = {
     {
       id: 'premium-04',
       name: 'BYTEWORKS',
-      tag: 'GOLD PARTNER',
+      tag: 'PREMIUM',
       initials: 'BW',
       description: 'Software consultancy running the coding and debugging arenas.',
       website: 'https://example.com/byteworks',
@@ -81,7 +81,7 @@ const sponsors = {
     {
       id: 'premium-05',
       name: 'LUMEN MEDIA',
-      tag: 'MEDIA PARTNER',
+      tag: 'PREMIUM',
       initials: 'LM',
       description: 'Broadcast and media partner covering the event across social platforms.',
       website: 'https://example.com/lumen-media',
@@ -91,7 +91,7 @@ const sponsors = {
     {
       id: 'standard-01',
       name: 'CRAFT PRINTS',
-      tag: 'PRINT PARTNER',
+      tag: 'STANDARD',
       initials: 'CP',
       description: 'Local print shop behind the banners, badges and merchandise.',
       website: 'https://example.com/craft-prints',
@@ -99,7 +99,7 @@ const sponsors = {
     {
       id: 'standard-02',
       name: 'ZENTRA FITNESS',
-      tag: 'ASSOCIATE SPONSOR',
+      tag: 'STANDARD',
       initials: 'ZF',
       description: 'Campus gym partner supporting the sports and e-sports side events.',
       website: 'https://example.com/zentra-fitness',
@@ -107,7 +107,7 @@ const sponsors = {
     {
       id: 'standard-03',
       name: 'BREWHOUSE CAFE',
-      tag: 'REFRESHMENT PARTNER',
+      tag: 'STANDARD',
       initials: 'BC',
       description: 'Coffee and snacks partner keeping participants fueled between events.',
       website: 'https://example.com/brewhouse-cafe',
@@ -115,7 +115,7 @@ const sponsors = {
     {
       id: 'standard-04',
       name: 'SWIFT TRAVELS',
-      tag: 'TRAVEL PARTNER',
+      tag: 'STANDARD',
       initials: 'ST',
       description: 'Local travel operator arranging pickups for outstation teams.',
       website: 'https://example.com/swift-travels',
@@ -123,15 +123,15 @@ const sponsors = {
     {
       id: 'standard-05',
       name: 'GRIDLINE STUDIOS',
-      tag: 'ASSOCIATE SPONSOR',
+      tag: 'STANDARD',
       initials: 'GS',
-      description: 'Design studio that helped shape this year\u2019s event branding.',
+      description: 'Design studio that helped shape this year’s event branding.',
       website: 'https://example.com/gridline-studios',
     },
     {
       id: 'standard-06',
       name: 'HORIZON BOOKS',
-      tag: 'ASSOCIATE SPONSOR',
+      tag: 'STANDARD',
       initials: 'HB',
       description: 'Campus bookstore sponsoring the quiz and literary events.',
       website: 'https://example.com/horizon-books',

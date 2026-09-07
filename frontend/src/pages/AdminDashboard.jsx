@@ -422,7 +422,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [sponsorContactName, setSponsorContactName] = useState('');
   const [sponsorContactEmail, setSponsorContactEmail] = useState('');
   const [sponsorContactPhone, setSponsorContactPhone] = useState('');
-  const [sponsorCategory, setSponsorCategory] = useState('Gold Sponsor');
+  const [sponsorCategory, setSponsorCategory] = useState('Elite');
   const [sponsorDisplayOrder, setSponsorDisplayOrder] = useState('1');
   const [sponsorIsActive, setSponsorIsActive] = useState(true);
 
@@ -932,7 +932,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setSponsorContactName('');
     setSponsorContactEmail('');
     setSponsorContactPhone('');
-    setSponsorCategory('Gold Sponsor');
+    setSponsorCategory('Elite');
     setSponsorDisplayOrder(String(sponsors.length + 1));
     setSponsorIsActive(true);
     setEditingSponsorId(null);
@@ -955,7 +955,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setSponsorContactName(sponsor.contactName || '');
     setSponsorContactEmail(sponsor.contactEmail || '');
     setSponsorContactPhone(sponsor.contactPhone || '');
-    setSponsorCategory(sponsor.category || 'Gold Sponsor');
+    setSponsorCategory(sponsor.category || 'Elite');
     setSponsorDisplayOrder(String(sponsor.displayOrder !== undefined ? sponsor.displayOrder : 1));
     setSponsorIsActive(sponsor.isActive !== false);
     setEditingSponsorId(sponsor.id);
@@ -2012,11 +2012,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     style={{ ...S.select, width: 'auto', padding: '0.65rem 1rem' }}
                   >
                     <option value="all">All Levels</option>
-                    <option value="Title Sponsor">Title Sponsor</option>
-                    <option value="Gold Sponsor">Gold Sponsor</option>
-                    <option value="Silver Sponsor">Silver Sponsor</option>
-                    <option value="Bronze Sponsor">Bronze Sponsor</option>
-                    <option value="Other">Other</option>
+                    <option value="Elite">Elite</option>
+                    <option value="Premium">Premium</option>
+                    <option value="Standard">Standard</option>
                   </select>
                 </div>
                 <button onClick={handleOpenCreateSponsorForm} style={S.createBtn}>
@@ -2094,15 +2092,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               fontSize: '0.75rem',
                               fontWeight: '700',
                               background: 
-                                sponsor.category === 'Title Sponsor' ? (isDark ? '#78350f' : '#fef3c7') :
-                                sponsor.category === 'Gold Sponsor' ? (isDark ? '#713f12' : '#fef9c3') :
-                                sponsor.category === 'Silver Sponsor' ? (isDark ? '#1e293b' : '#f1f5f9') :
-                                sponsor.category === 'Bronze Sponsor' ? (isDark ? '#7c2d12' : '#ffedd5') : (isDark ? '#1f2937' : '#f3f4f6'),
+                                sponsor.category === 'Elite' || sponsor.category === 'Title Sponsor' ? (isDark ? '#78350f' : '#fef3c7') :
+                                sponsor.category === 'Premium' || sponsor.category === 'Gold Sponsor' || sponsor.category === 'Silver Sponsor' ? (isDark ? '#1e293b' : '#f1f5f9') :
+                                (isDark ? '#064e3b' : '#ecfdf5'),
                               color: 
-                                sponsor.category === 'Title Sponsor' ? (isDark ? '#fde68a' : '#92400e') :
-                                sponsor.category === 'Gold Sponsor' ? (isDark ? '#fef08a' : '#854d0e') :
-                                sponsor.category === 'Silver Sponsor' ? (isDark ? '#cbd5e1' : '#334155') :
-                                sponsor.category === 'Bronze Sponsor' ? (isDark ? '#fdba74' : '#9a3412') : (isDark ? '#d1d5db' : '#374151'),
+                                sponsor.category === 'Elite' || sponsor.category === 'Title Sponsor' ? (isDark ? '#fde68a' : '#92400e') :
+                                sponsor.category === 'Premium' || sponsor.category === 'Gold Sponsor' || sponsor.category === 'Silver Sponsor' ? (isDark ? '#cbd5e1' : '#334155') :
+                                (isDark ? '#a7f3d0' : '#065f46'),
                               border: '1px solid rgba(0,0,0,0.06)'
                             }}>
                               {sponsor.category}
@@ -3450,11 +3446,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       style={S.select}
                       required
                     >
-                      <option value="Title Sponsor">Title Sponsor</option>
-                      <option value="Gold Sponsor">Gold Sponsor</option>
-                      <option value="Silver Sponsor">Silver Sponsor</option>
-                      <option value="Bronze Sponsor">Bronze Sponsor</option>
-                      <option value="Other">Other</option>
+                      <option value="Elite">Elite</option>
+                      <option value="Premium">Premium</option>
+                      <option value="Standard">Standard</option>
                     </select>
                   </div>
 
