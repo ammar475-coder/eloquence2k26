@@ -821,6 +821,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     reader.onload = () => {
       const base64 = reader.result;
       setEventImagePreview(base64);
+      setEventImage(base64);
 
       setIsUploadingEventImage(true);
       const loadingToast = toast.loading('Uploading event picture...');
@@ -978,6 +979,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     reader.onload = () => {
       const base64 = reader.result;
       setLogoPreview(base64);
+      setSponsorLogo(base64);
 
       // Upload automatically to backend
       setIsUploadingLogo(true);

@@ -33,7 +33,7 @@ function SponsorCard({ sponsor, tier }) {
         <div className="sponsor-face sponsor-front">
           <span className="sponsor-tag">{tag}</span>
           <div className="sponsor-mark">
-            {sponsor.logo ? (
+            {sponsor.logo && sponsor.logo.trim() && !sponsor.logo.trim().startsWith('/uploads/') ? (
               <img 
                 src={sponsor.logo} 
                 alt={sponsor.name} 
