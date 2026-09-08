@@ -147,7 +147,40 @@ CREATE TABLE IF NOT EXISTS public.roles (
 ALTER TABLE public.roles ALTER COLUMN id TYPE BIGINT;
 
 -- ------------------------------------------------------------------------------
--- 8. SUPABASE STORAGE BUCKET FOR UPLOADS
+-- 8. DISPATCHES TABLE (Participant List Dispatch History)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.dispatches (
+    id TEXT PRIMARY KEY,
+    event_id TEXT REFERENCES public.events(id) ON DELETE SET NULL,
+    event_name TEXT NOT NULL,
+    coordinator_name TEXT NOT NULL,
+    dispatched_by TEXT DEFAULT 'Admin',
+    sent_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------------------------
+-- 9. SEARCH LOGS TABLE (Search Queries & History Logs)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.search_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    search_query TEXT NOT NULL,
+    category TEXT DEFAULT 'general',
+    results_count INT DEFAULT 0,
+    user_role TEXT DEFAULT 'admin',
+    searched_at TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Full-Text Search Indexes for High-Performance Searching
+CREATE INDEX IF NOT EXISTS idx_registrations_search ON public.registrations USING gin(to_tsvector('english', coalesce(full_name, '') || ' ' || coalesce(email, '') || ' ' || coalesce(phone, '') || ' ' || coalesce(team_name, '') || ' ' || coalesce(ticket_code, '')));
+CREATE INDEX IF NOT EXISTS idx_events_search ON public.events USING gin(to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(venue, '')));
+CREATE INDEX IF NOT EXISTS idx_sponsors_search ON public.sponsors USING gin(to_tsvector('english', coalesce(name, '') || ' ' || coalesce(company_name, '')));
+CREATE INDEX IF NOT EXISTS idx_search_logs_query ON public.search_logs(search_query);
+
+-- ------------------------------------------------------------------------------
+-- 10. SUPABASE STORAGE BUCKET FOR UPLOADS
 -- ------------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
 
@@ -161,6 +194,8 @@ ALTER TABLE public.coordinators DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sponsors DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.roles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.dispatches DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.search_logs DISABLE ROW LEVEL SECURITY;
 
 -- Grant permissions to public/anon/authenticated roles
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;

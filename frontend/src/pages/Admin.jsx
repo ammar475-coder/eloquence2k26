@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import AdminDashboard from './AdminDashboard.jsx';
 import RegistrationCoordinatorDashboard from './RegistrationCoordinatorDashboard.jsx';
+import { getApiUrl } from '../config/api';
 
 export default function Admin() {
   const isCoordinatorRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/coordinators');
@@ -32,7 +33,7 @@ export default function Admin() {
     e.preventDefault();
     setIsLoading(true);
 
-    fetch('/api/admin/login', {
+    fetch(getApiUrl('/api/admin/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })

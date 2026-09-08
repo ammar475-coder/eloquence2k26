@@ -13,6 +13,7 @@ import {
 import { motion } from 'framer-motion';
 import events from '../data/events.js';
 import rulesData from '../data/rules.js';
+import { getApiUrl } from '../config/api';
 import coordinatorsData from '../data/coordinator.js';
 
 export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
@@ -28,7 +29,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     : (coordinatorsData[event.id]?.coordinators || []);
 
   useEffect(() => {
-    fetch('/api/events')
+    fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {

@@ -79,7 +79,13 @@ export default function Navbar({ currentPage = 'home', onNavigate }) {
         </button>
       </nav>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Backdrop & Drawer Menu */}
+      {menuOpen && (
+        <div 
+          className="nav-mobile-backdrop"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
       <div className={`nav-mobile-dropdown ${menuOpen ? 'open' : ''}`}>
         <a
           className={currentPage === 'home' ? 'active' : ''}

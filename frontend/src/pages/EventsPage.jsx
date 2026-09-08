@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes } from 'react-icons/fa';
 import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
+import { getApiUrl } from '../config/api';
 
 function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, duration = 1800 }) {
   const [displayVal, setDisplayVal] = useState(0);
@@ -49,7 +50,7 @@ export default function EventsPage({ onNavigate }) {
 
   // Fetch live event data from backend API with static fallback
   useEffect(() => {
-    fetch('/api/events')
+    fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {

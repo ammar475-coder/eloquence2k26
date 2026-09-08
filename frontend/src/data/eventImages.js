@@ -32,9 +32,16 @@ export const defaultEventImages = {
  */
 export function getEventBanner(eventOrId) {
   if (!eventOrId) return null;
-  if (typeof eventOrId === 'object' && eventOrId.image && eventOrId.image.trim()) {
-    return eventOrId.image.trim();
+  const rawImage = typeof eventOrId === 'object' ? eventOrId.image : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http')) ? eventOrId : null);
+  
+  if (rawImage && rawImage.trim()) {
+    const img = rawImage.trim();
+    // Do not return legacy local disk uploads paths
+    if (!img.startsWith('/uploads/')) {
+      return img;
+    }
   }
+
   const id = typeof eventOrId === 'object' ? eventOrId.id : eventOrId;
   const normalizedId = String(id || '').toLowerCase().trim();
   return defaultEventImages[normalizedId] || null;

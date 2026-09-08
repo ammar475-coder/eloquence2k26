@@ -271,6 +271,16 @@ img {
   transform: translateY(-6px) rotate(-45deg);
 }
 
+.nav-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 999;
+  pointer-events: auto;
+}
+
 .nav-mobile-dropdown {
   position: absolute;
   top: calc(100% + 10px);
@@ -289,6 +299,7 @@ img {
   align-items: center;
   opacity: 0;
   pointer-events: none;
+  z-index: 1005;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 25px rgba(0, 168, 59, 0.15);
 }
@@ -8218,3 +8229,228 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL & DASHBOARD MOBILE RESPONSIVE ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Responsive tables & horizontal overflow */
+.table-responsive-wrapper,
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom modern scrollbar for touch tables */
+.table-responsive-wrapper::-webkit-scrollbar,
+.admin-table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.table-responsive-wrapper::-webkit-scrollbar-thumb,
+.admin-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+}
+
+/* Mobile Screen Breakpoints */
+@media (max-width: 992px) {
+  .admin-layout-container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .admin-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    position: static !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    z-index: 50 !important;
+  }
+
+  .admin-sidebar-header {
+    padding: 0.85rem 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .admin-mobile-menu-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: inherit !important;
+    cursor: pointer !important;
+  }
+
+  .admin-sidebar-nav {
+    display: none !important;
+    flex-direction: column !important;
+    gap: 0.35rem !important;
+    padding: 0.75rem 1rem 1rem !important;
+    max-height: none !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .admin-sidebar-nav.open {
+    display: flex !important;
+    animation: fadeInSlide 0.2s ease-out forwards;
+  }
+
+  @keyframes fadeInSlide {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .admin-sidebar-nav button,
+  .admin-sidebar-nav a {
+    width: 100% !important;
+    padding: 0.7rem 1rem !important;
+    font-size: 0.88rem !important;
+    border-radius: 8px !important;
+    border: none !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+  }
+
+  .admin-sidebar-footer {
+    display: none !important;
+  }
+
+  .admin-mobile-logout {
+    display: flex !important;
+  }
+
+  .admin-main-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .admin-top-header {
+    padding: 1rem 1.25rem !important;
+    min-height: auto !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.75rem !important;
+    position: static !important;
+  }
+
+  .admin-top-header > div:first-child {
+    width: 100%;
+  }
+
+  .admin-content-wrapper {
+    padding: 1rem !important;
+    overflow-y: visible !important;
+    height: auto !important;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 0.85rem !important;
+  }
+
+  .admin-modal-backdrop {
+    padding: 0.5rem !important;
+    align-items: center !important;
+  }
+
+  .admin-modal-card {
+    max-height: 90vh !important;
+    width: 96% !important;
+    border-radius: 12px !important;
+  }
+}
+
+.admin-mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .admin-top-header {
+    padding: 0.85rem 1rem !important;
+  }
+
+  .admin-page-title {
+    font-size: 1.2rem !important;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-form-row-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-action-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  /* Public website navbar & header mobile responsive */
+  .navbar-fixed-wrapper {
+    top: 0.5rem !important;
+    padding: 0 0.5rem !important;
+  }
+
+  .navbar-pill {
+    width: 100% !important;
+    padding: 0.4rem 0.75rem !important;
+  }
+
+  .nav-pill-logo-text {
+    font-size: 0.85rem !important;
+  }
+
+  .nav-mobile-dropdown {
+    width: calc(100vw - 1.5rem) !important;
+    max-width: 340px !important;
+  }
+
+  /* Public website cards & sections adjustments */
+  .section-heading {
+    font-size: 1.5rem !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .section-sub {
+    font-size: 0.85rem !important;
+    margin-bottom: 1.75rem !important;
+    padding: 0 0.5rem;
+  }
+
+  .event-card-container {
+    margin: 0 auto;
+    width: 100% !important;
+    max-width: 360px;
+  }
+
+  .student-coords-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+

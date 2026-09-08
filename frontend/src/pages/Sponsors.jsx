@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaGlobe, FaMapMarkerAlt, FaPhoneAlt, FaUser } from 'react-icons/fa';
 import sponsors from '../data/sponsors.js';
+import { getApiUrl } from '../config/api';
 
 function SponsorCard({ sponsor, tier }) {
   const [flipped, setFlipped] = useState(false);
@@ -45,7 +46,7 @@ function SponsorCard({ sponsor, tier }) {
         <div className="sponsor-face sponsor-front">
           <span className="sponsor-tag">{tag}</span>
           <div className="sponsor-mark">
-            {sponsor.logo ? (
+            {sponsor.logo && sponsor.logo.trim() && !sponsor.logo.trim().startsWith('/uploads/') ? (
               <img 
                 src={sponsor.logo} 
                 alt={sponsor.name} 
@@ -214,7 +215,7 @@ export default function Sponsors() {
 
   useEffect(() => {
     let isMounted = true;
-    fetch('/api/sponsors')
+    fetch(getApiUrl('/api/sponsors'))
       .then((res) => res.json())
       .then((result) => {
         if (!isMounted) return;

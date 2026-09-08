@@ -18,12 +18,15 @@ import {
   FaPaperPlane,
   FaThLarge,
   FaTable,
-  FaTimes
+  FaTimes,
+  FaBars
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
+import { getApiUrl } from '../config/api';
 
 export default function RegistrationCoordinatorDashboard({ token, user, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('coord_theme') || 'light');
   const isDark = theme === 'dark';
 
@@ -74,7 +77,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   }, [token]);
 
   const fetchEvents = () => {
-    fetch('/api/events')
+    fetch(getApiUrl('/api/events'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
@@ -86,7 +89,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
   const fetchRegistrations = () => {
     setLoading(true);
-    fetch('/api/registrations')
+    fetch(getApiUrl('/api/registrations'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.registrations)) {
@@ -100,7 +103,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   };
 
   const fetchCoordinators = () => {
-    fetch('/api/coordinators')
+    fetch(getApiUrl('/api/coordinators'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data)) {
@@ -219,7 +222,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     setIsSendingList(true);
     const toastId = toast.loading(`Dispatching list for "${sendTargetEvent.name}"...`);
 
-    fetch('/api/send-participant-list', {
+    fetch(getApiUrl('/api/send-participant-list'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -280,7 +283,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     setIsRegisteringOnSite(true);
     const toastId = toast.loading('Processing on-site registration...');
 
-    fetch('/api/register', {
+    fetch(getApiUrl('/api/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -456,37 +459,47 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   }
 
   return (
-    <div style={S.container}>
+    <div style={S.container} className="admin-layout-container">
       {/* ==================== SIDEBAR ==================== */}
-      <aside style={S.sidebar}>
-        <div style={S.sidebarHeader}>
-          <div style={S.logoCircle}>
-            <FaUserCheck size={20} />
+      <aside style={S.sidebar} className={`admin-sidebar ${mobileSidebarOpen ? 'admin-sidebar-open' : ''}`}>
+        <div style={S.sidebarHeader} className="admin-sidebar-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={S.logoCircle}>
+              <FaUserCheck size={20} />
+            </div>
+            <div>
+              <h2 style={S.sidebarTitle}>Registration Portal</h2>
+              <span style={S.sidebarSubtitle}>Eloquence 2026 Coordinator</span>
+            </div>
           </div>
-          <div>
-            <h2 style={S.sidebarTitle}>Registration Portal</h2>
-            <span style={S.sidebarSubtitle}>Eloquence 2026 Coordinator</span>
-          </div>
+          <button 
+            type="button"
+            className="admin-mobile-menu-btn"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileSidebarOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+          </button>
         </div>
 
-        <nav style={S.navMenu}>
+        <nav style={S.navMenu} className={`admin-sidebar-nav ${mobileSidebarOpen ? 'open' : ''}`}>
           <button 
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
           >
             <FaChartBar style={S.navIcon} /> Dashboard
           </button>
 
           <button 
             style={activeTab === 'registration' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('registration')}
+            onClick={() => { setActiveTab('registration'); setMobileSidebarOpen(false); }}
           >
             <FaUserCheck style={S.navIcon} /> Registration
           </button>
 
           <button 
             style={activeTab === 'register-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('register-list')}
+            onClick={() => { setActiveTab('register-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -499,7 +512,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
           <button 
             style={activeTab === 'online-register-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('online-register-list')}
+            onClick={() => { setActiveTab('online-register-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -512,7 +525,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
           <button 
             style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('participant-list')}
+            onClick={() => { setActiveTab('participant-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -524,7 +537,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
           </button>
         </nav>
 
-        <div style={S.sidebarFooter}>
+        <div style={S.sidebarFooter} className="admin-sidebar-footer">
           <button onClick={onLogout} style={S.logoutBtn}>
             <FaSignOutAlt style={S.navIcon} /> Log Out
           </button>
@@ -532,10 +545,10 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
       </aside>
 
       {/* ==================== MAIN CONTENT ==================== */}
-      <main style={S.mainContent}>
-        <header style={S.topHeader}>
+      <main style={S.mainContent} className="admin-main-content">
+        <header style={S.topHeader} className="admin-top-header">
           <div>
-            <h1 style={S.pageTitle}>
+            <h1 style={S.pageTitle} className="admin-page-title">
               {activeTab === 'dashboard' && 'Registration Dashboard & Analytics'}
               {activeTab === 'registration' && 'On-Site Desk Registration'}
               {activeTab === 'register-list' && 'Complete Registrations List'}
@@ -550,7 +563,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
               {activeTab === 'participant-list' && 'Filter participants by event, view team names, and inspect all team member details.'}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               onClick={toggleTheme}
               style={S.themeToggleBtn}
@@ -560,8 +573,8 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                 color: '#ffffff',
@@ -569,7 +582,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
-                fontSize: '1.25rem',
+                fontSize: '1.15rem',
                 border: '2px solid #ffffff',
                 boxShadow: '0 3px 10px rgba(37, 99, 235, 0.35)',
                 userSelect: 'none',
@@ -578,23 +591,44 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                 {(user?.username || 'Coordinator').charAt(0).toUpperCase()}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.88rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
                   {user?.username || 'Coordinator'}
                 </span>
-                <span style={{ fontSize: '0.72rem', color: isDark ? '#6ee7b7' : '#059669', fontWeight: '700', marginTop: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: isDark ? '#6ee7b7' : '#059669', fontWeight: '700', marginTop: '1px' }}>
                   Registration Coordinator
                 </span>
               </div>
             </div>
+            <button 
+              onClick={onLogout}
+              className="admin-mobile-logout"
+              style={{
+                display: 'none',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.45rem 0.75rem',
+                background: isDark ? '#451a1a' : '#fef2f2',
+                color: '#ef4444',
+                border: isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Log Out"
+            >
+              <FaSignOutAlt />
+              <span>Log Out</span>
+            </button>
           </div>
         </header>
 
-        <div style={S.contentWrapper}>
+        <div style={S.contentWrapper} className="admin-content-wrapper">
           {/* ==================== 1. DASHBOARD TAB ==================== */}
           {activeTab === 'dashboard' && (
             <div style={S.viewContainer}>
               {/* Analytics Breakdown Grid (Interactive / Touch-Friendly Cards) */}
-              <div style={S.statsGrid}>
+              <div style={S.statsGrid} className="admin-stats-grid">
                 {/* Total Card */}
                 <div 
                   style={statFilter === 'all' ? { ...S.statCard, ...S.statCardActive } : S.statCard}

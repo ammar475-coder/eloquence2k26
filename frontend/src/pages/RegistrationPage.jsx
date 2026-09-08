@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { getApiUrl } from '../config/api';
 import {
   FaBolt,
   FaGamepad,
@@ -39,7 +40,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [selectedEvent, setSelectedEvent] = useState(initialEvent);
 
   useEffect(() => {
-    fetch('/api/events')
+    fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
@@ -69,7 +70,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     let isMounted = true;
     const staticFallback = coordinatorsData[selectedEvent.id]?.coordinators || [];
 
-    fetch(`/api/coordinators/event/${encodeURIComponent(selectedEvent.id)}`)
+    fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(selectedEvent.id)}`))
       .then((res) => res.json())
       .then((result) => {
         if (!isMounted) return;
@@ -433,7 +434,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     } finally {
       setIsSubmitting(false);
     }
-    fetch('/api/register', {
+    fetch(getApiUrl('/api/register'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

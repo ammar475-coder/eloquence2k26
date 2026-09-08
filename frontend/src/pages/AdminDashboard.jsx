@@ -37,6 +37,7 @@ import {
   FaPaperPlane,
   FaThLarge,
   FaTable,
+  FaBars,
   FaIdCard,
   FaClipboardList,
   FaPrint,
@@ -51,6 +52,7 @@ import {
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
+import { getApiUrl } from '../config/api';
 
 const EXISTING_POSTER_PRESETS = [
   { id: 'tech-01', label: 'Slide Craft (PPT)', img: defaultEventImages['tech-01'] },
@@ -78,6 +80,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   });
 
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,8 +101,31 @@ export default function AdminDashboard({ token, user, onLogout }) {
     }
   }, [activeTab, isAdminOrSuper, isRegCoordinator]);
 
-  // ==================== REGISTRATIONS & EVENTS STATE ====================
+  // ==================== EVENTS STATE ====================
   const [eventsList, setEventsList] = useState(defaultEvents);
+  const [eventFilter, setEventFilter] = useState('all');
+  const [eventSearch, setEventSearch] = useState('');
+  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+
+  // Event Edit Form Fields
+  const [eventName, setEventName] = useState('');
+  const [eventAlias, setEventAlias] = useState('');
+  const [eventSubtitle, setEventSubtitle] = useState('');
+  const [eventCategory, setEventCategory] = useState('technical');
+  const [eventVenue, setEventVenue] = useState('');
+  const [eventTiming, setEventTiming] = useState('');
+  const [eventFee, setEventFee] = useState('');
+  const [eventTeamSize, setEventTeamSize] = useState('');
+  const [eventTag, setEventTag] = useState('');
+  const [eventDesc, setEventDesc] = useState('');
+  const [eventImage, setEventImage] = useState('');
+  const [eventImagePreview, setEventImagePreview] = useState('');
+  const [isUploadingEventImage, setIsUploadingEventImage] = useState(false);
+
+  const eventFileInputRef = useRef(null);
+
+  // ==================== REGISTRATIONS STATE ====================
   const [registrationsList, setRegistrationsList] = useState([]);
   const [regModeFilter, setRegModeFilter] = useState('all'); // 'all' | 'online' | 'offline'
   const [regCategoryFilter, setRegCategoryFilter] = useState('all'); // 'all' | 'technical' | 'non-technical'
@@ -140,9 +166,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const getEventCategory = (r) => {
-    const evt = eventsList.find(e => e.id === (r.event_id || r.eventId));
-    if (evt) return evt.category;
-    const id = (r.event_id || r.eventId || '').toLowerCase();
+    if (!r) return 'non-technical';
+    const evtId = r.event_id || r.eventId;
+    if (eventsList && Array.isArray(eventsList)) {
+      const evt = eventsList.find(e => e.id === evtId);
+      if (evt && evt.category) return evt.category;
+    }
+    const id = String(evtId || '').toLowerCase();
     return id.startsWith('tech') ? 'technical' : 'non-technical';
   };
 
@@ -546,7 +576,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setIsSendingList(true);
     const toastId = toast.loading(`Dispatching list for "${sendTargetEvent.name}"...`);
 
-    fetch('/api/send-participant-list', {
+    fetch(getApiUrl('/api/send-participant-list'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -579,7 +609,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isEditDispatchModalOpen, setIsEditDispatchModalOpen] = useState(false);
 
   const fetchDispatches = () => {
-    fetch('/api/dispatches')
+    fetch(getApiUrl('/api/dispatches'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data)) {
@@ -593,7 +623,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete and revoke the dispatched list for "${eventName}" sent to ${coordinatorName}?`)) return;
 
     const toastId = toast.loading(`Revoking dispatched list for ${eventName}...`);
-    fetch(`/api/dispatches/${id}`, { method: 'DELETE' })
+    fetch(getApiUrl(`/api/dispatches/${id}`), { method: 'DELETE' })
       .then(res => res.json())
       .then(result => {
         if (result.success) {
@@ -620,7 +650,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!editingDispatchId || !editCoordNameInput.trim()) return toast.error('Please enter a coordinator name');
 
     const toastId = toast.loading('Updating dispatched list...');
-    fetch(`/api/dispatches/${editingDispatchId}`, {
+    fetch(getApiUrl(`/api/dispatches/${editingDispatchId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ coordinatorName: editCoordNameInput.trim() })
@@ -668,28 +698,6 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [editingRoleId, setEditingRoleId] = useState(null);
   const [roleNameInput, setRoleNameInput] = useState('');
 
-  // ==================== EVENTS STATE ====================
-  const [eventFilter, setEventFilter] = useState('all');
-  const [eventSearch, setEventSearch] = useState('');
-  const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-
-  // Event Edit Form Fields
-  const [eventName, setEventName] = useState('');
-  const [eventAlias, setEventAlias] = useState('');
-  const [eventSubtitle, setEventSubtitle] = useState('');
-  const [eventCategory, setEventCategory] = useState('technical');
-  const [eventVenue, setEventVenue] = useState('');
-  const [eventTiming, setEventTiming] = useState('');
-  const [eventFee, setEventFee] = useState('');
-  const [eventTeamSize, setEventTeamSize] = useState('');
-  const [eventTag, setEventTag] = useState('');
-  const [eventDesc, setEventDesc] = useState('');
-  const [eventImage, setEventImage] = useState('');
-  const [eventImagePreview, setEventImagePreview] = useState('');
-  const [isUploadingEventImage, setIsUploadingEventImage] = useState(false);
-
-  const eventFileInputRef = useRef(null);
 
   // ==================== SPONSORS STATE ====================
   const [sponsors, setSponsors] = useState([]);
@@ -736,7 +744,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [coordIsActive, setCoordIsActive] = useState(true);
 
   const fetchRegistrations = () => {
-    fetch('/api/registrations')
+    fetch(getApiUrl('/api/registrations'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.registrations)) {
@@ -821,7 +829,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setIsRegisteringOnSite(true);
     const toastId = toast.loading('Processing on-site registration...');
 
-    fetch('/api/register', {
+    fetch(getApiUrl('/api/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -851,7 +859,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchDashboardData = () => {
-    fetch('/api/admin/dashboard', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/dashboard'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success) setData(result.data);
@@ -862,7 +870,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchUsers = () => {
-    fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/users'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => { 
         if (result.success) setUsers(result.data); 
@@ -871,7 +879,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchRoles = () => {
-    fetch('/api/admin/roles', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/roles'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => { 
         if (result.success) {
@@ -885,7 +893,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchEvents = () => {
-    fetch('/api/admin/events', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/events'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
@@ -899,7 +907,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchSponsors = () => {
-    fetch('/api/admin/sponsors', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/sponsors'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success) setSponsors(result.data);
@@ -908,7 +916,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchCoordinators = () => {
-    fetch('/api/admin/coordinators', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/coordinators'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success) setCoordinators(result.data);
@@ -945,7 +953,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingUserId ? 'Updating user...' : 'Creating user...');
     const method = editingUserId ? 'PUT' : 'POST';
-    const url = editingUserId ? `/api/admin/users/${editingUserId}` : '/api/admin/users';
+    const url = editingUserId ? getApiUrl(`/api/admin/users/${editingUserId}`) : getApiUrl('/api/admin/users');
 
     fetch(url, {
       method,
@@ -973,7 +981,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete user "${targetUsername}"?`)) return;
     const loadingToast = toast.loading('Deleting user...');
 
-    fetch(`/api/admin/users/${id}`, {
+    fetch(getApiUrl(`/api/admin/users/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1014,7 +1022,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingRoleId ? 'Updating role...' : 'Creating role...');
     const method = editingRoleId ? 'PUT' : 'POST';
-    const url = editingRoleId ? `/api/admin/roles/${editingRoleId}` : '/api/admin/roles';
+    const url = editingRoleId ? getApiUrl(`/api/admin/roles/${editingRoleId}`) : getApiUrl('/api/admin/roles');
 
     fetch(url, {
       method,
@@ -1043,7 +1051,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete role "${roleName}"?`)) return;
     const loadingToast = toast.loading('Deleting role...');
 
-    fetch(`/api/admin/roles/${id}`, {
+    fetch(getApiUrl(`/api/admin/roles/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1117,11 +1125,12 @@ export default function AdminDashboard({ token, user, onLogout }) {
     reader.onload = () => {
       const base64 = reader.result;
       setEventImagePreview(base64);
+      setEventImage(base64);
 
       setIsUploadingEventImage(true);
       const loadingToast = toast.loading('Uploading event picture...');
 
-      fetch('/api/admin/upload', {
+      fetch(getApiUrl('/api/admin/upload'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1157,7 +1166,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     }
 
     const loadingToast = toast.loading(editingEvent ? 'Saving event changes...' : 'Creating new event...');
-    const url = editingEvent ? `/api/admin/events/${editingEvent.id}` : '/api/admin/events';
+    const url = editingEvent ? getApiUrl(`/api/admin/events/${editingEvent.id}`) : getApiUrl('/api/admin/events');
     const method = editingEvent ? 'PUT' : 'POST';
 
     const payload = {
@@ -1201,7 +1210,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       return;
     }
     const loadingToast = toast.loading(`Deleting event ${name}...`);
-    fetch(`/api/admin/events/${eventId}`, {
+    fetch(getApiUrl(`/api/admin/events/${eventId}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1276,12 +1285,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
     reader.onload = () => {
       const base64 = reader.result;
       setLogoPreview(base64);
+      setSponsorLogo(base64);
 
       // Upload automatically to backend
       setIsUploadingLogo(true);
       const loadingToast = toast.loading('Uploading logo asset...');
 
-      fetch('/api/admin/upload', {
+      fetch(getApiUrl('/api/admin/upload'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1336,7 +1346,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingSponsorId ? 'Updating sponsor...' : 'Creating sponsor...');
     const method = editingSponsorId ? 'PUT' : 'POST';
-    const url = editingSponsorId ? `/api/admin/sponsors/${editingSponsorId}` : '/api/admin/sponsors';
+    const url = editingSponsorId ? getApiUrl(`/api/admin/sponsors/${editingSponsorId}`) : getApiUrl('/api/admin/sponsors');
 
     fetch(url, {
       method,
@@ -1362,7 +1372,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const handleToggleSponsor = (sponsor) => {
     const loadingToast = toast.loading(`Toggling status for ${sponsor.name}...`);
-    fetch(`/api/admin/sponsors/${sponsor.id}/toggle`, {
+    fetch(getApiUrl(`/api/admin/sponsors/${sponsor.id}/toggle`), {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1383,7 +1393,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete sponsor "${name}"? This action cannot be undone.`)) return;
     const loadingToast = toast.loading('Deleting sponsor...');
 
-    fetch(`/api/admin/sponsors/${id}`, {
+    fetch(getApiUrl(`/api/admin/sponsors/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1473,7 +1483,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingCoordId ? 'Updating coordinator...' : 'Creating coordinator...');
     const method = editingCoordId ? 'PUT' : 'POST';
-    const url = editingCoordId ? `/api/admin/coordinators/${editingCoordId}` : '/api/admin/coordinators';
+    const url = editingCoordId ? getApiUrl(`/api/admin/coordinators/${editingCoordId}`) : getApiUrl('/api/admin/coordinators');
 
     fetch(url, {
       method,
@@ -1499,7 +1509,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const handleToggleCoord = (coord) => {
     const loadingToast = toast.loading(`Toggling status for ${coord.name}...`);
-    fetch(`/api/admin/coordinators/${coord.id}/toggle`, {
+    fetch(getApiUrl(`/api/admin/coordinators/${coord.id}/toggle`), {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1520,7 +1530,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete coordinator "${name}"?`)) return;
     const loadingToast = toast.loading('Deleting coordinator...');
 
-    fetch(`/api/admin/coordinators/${id}`, {
+    fetch(getApiUrl(`/api/admin/coordinators/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1727,34 +1737,46 @@ export default function AdminDashboard({ token, user, onLogout }) {
   }
 
   return (
-    <div style={S.container}>
+    <div style={S.container} className="admin-layout-container">
       {/* ======================================================== */}
       {/* SIDEBAR                                                  */}
       {/* ======================================================== */}
-      <aside style={S.sidebar}>
-        <div style={S.sidebarHeader}>
-          <div style={S.logoCircle}>
-            <FaUserShield size={22} />
+      <aside style={S.sidebar} className={`admin-sidebar ${mobileSidebarOpen ? 'admin-sidebar-open' : ''}`}>
+        <div style={S.sidebarHeader} className="admin-sidebar-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={S.logoCircle}>
+              <FaUserShield size={22} />
+            </div>
+            <div>
+              <h2 style={S.sidebarTitle}>Admin Panel</h2>
+              <span style={S.sidebarSubtitle}>Eloquence 2026</span>
+            </div>
           </div>
-          <div>
-            <h2 style={S.sidebarTitle}>Admin Panel</h2>
-            <span style={S.sidebarSubtitle}>Eloquence 2026</span>
-          </div>
+          <button
+            type="button"
+            className="admin-mobile-menu-btn"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileSidebarOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+          </button>
         </div>
         
-        <nav style={S.navMenu}>
+        <nav style={S.navMenu} className={`admin-sidebar-nav ${mobileSidebarOpen ? 'open' : ''}`}>
           {/* Dashboard Tab */}
           <button 
+            type="button"
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
           >
             <FaChartBar style={S.navIcon} /> Dashboard
           </button>
 
           {/* Events Tab */}
           <button 
+            type="button"
             style={activeTab === 'events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('events')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('events'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1786,7 +1808,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={S.submenu}>
                   <button 
                     style={activeTab === 'manage-users' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                    onClick={() => setActiveTab('manage-users')}
+                    onClick={() => { setActiveTab('manage-users'); setMobileSidebarOpen(false); }}
                   >
                     <FaUserCheck style={S.subnavIcon} />
                     <span>Manage Users</span>
@@ -1795,7 +1817,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
                   <button 
                     style={activeTab === 'manage-roles' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                    onClick={() => setActiveTab('manage-roles')}
+                    onClick={() => { setActiveTab('manage-roles'); setMobileSidebarOpen(false); }}
                   >
                     <FaShieldAlt style={S.subnavIcon} />
                     <span>Manage Roles</span>
@@ -1808,8 +1830,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
           {/* Sponsors Tab */}
           <button 
+            type="button"
             style={activeTab === 'manage-sponsors' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('manage-sponsors')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('manage-sponsors'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1822,8 +1845,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
           {/* Student Coordinators Tab */}
           <button 
+            type="button"
             style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('manage-coordinators')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('manage-coordinators'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1850,8 +1874,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
           {/* Participant List Tab */}
           <button 
+            type="button"
             style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('participant-list')}
+            onClick={(e) => { e.preventDefault(); setActiveTab('participant-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1863,7 +1888,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           </button>
         </nav>
 
-        <div style={S.sidebarFooter}>
+        <div style={S.sidebarFooter} className="admin-sidebar-footer">
           <button onClick={onLogout} style={S.logoutBtn}>
             <FaSignOutAlt style={S.navIcon} /> Log Out
           </button>
@@ -1873,10 +1898,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
       {/* ======================================================== */}
       {/* MAIN CONTENT                                             */}
       {/* ======================================================== */}
-      <main style={S.mainContent}>
-        <header style={S.topHeader}>
+      <main style={S.mainContent} className="admin-main-content">
+        <header style={S.topHeader} className="admin-top-header">
           <div>
-            <h1 style={S.pageTitle}>
+            <h1 style={S.pageTitle} className="admin-page-title">
               {activeTab === 'dashboard' && 'Overview Dashboard'}
               {activeTab === 'events' && 'Events Management'}
               {activeTab === 'manage-users' && 'User Management'}
@@ -1897,7 +1922,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'participant-list' && 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.'}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               onClick={toggleTheme}
               style={S.themeToggleBtn}
@@ -1908,8 +1933,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                 color: '#ffffff',
@@ -1917,7 +1942,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
-                fontSize: '1.25rem',
+                fontSize: '1.15rem',
                 border: '2px solid #ffffff',
                 boxShadow: '0 3px 10px rgba(37, 99, 235, 0.35)',
                 userSelect: 'none',
@@ -1926,24 +1951,45 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {(user?.username || 'Admin').charAt(0).toUpperCase()}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.88rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
                   {user?.username || 'Admin'}
                 </span>
-                <span style={{ fontSize: '0.72rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '700', marginTop: '2px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.7rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '700', marginTop: '1px', textTransform: 'uppercase' }}>
                   {user?.role || 'Admin'}
                 </span>
               </div>
             </div>
+            <button
+              onClick={onLogout}
+              className="admin-mobile-logout"
+              style={{
+                display: 'none',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.45rem 0.75rem',
+                background: isDark ? '#451a1a' : '#fef2f2',
+                color: '#ef4444',
+                border: isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Log Out"
+            >
+              <FaSignOutAlt />
+              <span>Log Out</span>
+            </button>
           </div>
         </header>
 
-        <div style={S.contentWrapper}>
+        <div style={S.contentWrapper} className="admin-content-wrapper">
           {/* ======================================================== */}
           {/* 1. DASHBOARD VIEW                                        */}
           {/* ======================================================== */}
           {activeTab === 'dashboard' && (
             <div style={S.dashboardView}>
-              <div style={S.statsGrid}>
+              <div style={S.statsGrid} className="admin-stats-grid">
                 {/* Total Registrations Card */}
                 <div 
                   style={{ ...S.statCard, cursor: 'pointer', transition: 'all 0.2s ease' }}
@@ -2143,19 +2189,22 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </div>
                   <div style={S.filterGroup}>
                     <button
-                      onClick={() => setEventFilter('all')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setEventFilter('all'); }}
                       style={eventFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       All ({eventsList.length})
                     </button>
                     <button
-                      onClick={() => setEventFilter('technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setEventFilter('technical'); }}
                       style={eventFilter === 'technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaBolt size={11} /> Technical ({eventsList.filter(e => e.category === 'technical').length})
                     </button>
                     <button
-                      onClick={() => setEventFilter('non-technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setEventFilter('non-technical'); }}
                       style={eventFilter === 'non-technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaGamepad size={12} /> Non-Tech ({eventsList.filter(e => e.category === 'non-technical').length})
@@ -3190,13 +3239,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => setViewMode('cards')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setViewMode('cards'); }}
                       style={viewMode === 'cards' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaThLarge size={12} /> Event Cards View
                     </button>
                     <button
-                      onClick={() => setViewMode('table')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setViewMode('table'); }}
                       style={viewMode === 'table' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaTable size={12} /> Detailed Table View
@@ -3205,19 +3256,22 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
-                      onClick={() => setPartCategoryFilter('all')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setPartCategoryFilter('all'); }}
                       style={partCategoryFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       All ({eventsList.length})
                     </button>
                     <button
-                      onClick={() => setPartCategoryFilter('technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setPartCategoryFilter('technical'); }}
                       style={partCategoryFilter === 'technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaBolt size={11} /> Tech ({eventsList.filter(e => e.category === 'technical').length})
                     </button>
                     <button
-                      onClick={() => setPartCategoryFilter('non-technical')}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setPartCategoryFilter('non-technical'); }}
                       style={partCategoryFilter === 'non-technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
                     >
                       <FaGamepad size={11} /> Non-Tech ({eventsList.filter(e => e.category === 'non-technical').length})
@@ -4331,7 +4385,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {/* Contact Information */}
                 <div style={{ background: isDark ? '#1a2234' : '#f8fafc', padding: '1rem', borderRadius: '10px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: '700', color: isDark ? '#cbd5e1' : '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Contact Person (Internal Admin Record)
+                    Contact Person (Internal Admin Record - Optional)
                   </span>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginTop: '0.6rem' }}>
                     <div>
