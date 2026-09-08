@@ -3510,7 +3510,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {/* Contact Information */}
                 <div style={{ background: isDark ? '#1a2234' : '#f8fafc', padding: '1rem', borderRadius: '10px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: '700', color: isDark ? '#cbd5e1' : '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Contact Person (Internal Admin Record)
+                    Contact Person (Internal Admin Record - Optional)
                   </span>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', marginTop: '0.6rem' }}>
                     <div>
