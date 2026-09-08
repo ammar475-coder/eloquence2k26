@@ -61,4 +61,7 @@ router.put('/admin/coordinators/:id', adminController.verifyToken, adminControll
 router.patch('/admin/coordinators/:id/toggle', adminController.verifyToken, adminController.toggleCoordinatorStatus);
 router.delete('/admin/coordinators/:id', adminController.verifyToken, adminController.deleteCoordinator);
 
+// ── Admin Registration Management ──────────────────────────────────────────
+router.delete('/admin/registrations/:id', adminController.verifyToken, adminController.deleteRegistration);
+
 module.exports = router;

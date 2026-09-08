@@ -17,38 +17,64 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // ==================== DATA MAPPER HELPERS ====================
-const dbToSponsor = (s) => ({
-  id: s.id,
-  name: s.name,
-  companyName: s.company_name || s.companyName || '',
-  logo: s.logo || '',
-  description: s.description || '',
-  website: s.website || '',
-  contactName: s.contact_name || s.contactName || '',
-  contactEmail: s.contact_email || s.contactEmail || '',
-  contactPhone: s.contact_phone || s.contactPhone || '',
-  category: s.category || 'Elite',
-  displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
-  isActive: s.is_active !== false && s.isActive !== false,
-  createdAt: s.created_at || s.createdAt,
-  updatedAt: s.updated_at || s.updatedAt
-});
+const dbToSponsor = (s) => {
+  let website = s.website || '';
+  let locationUrl = s.location_url || s.locationUrl || '';
 
-const sponsorToDb = (s) => ({
-  id: s.id,
-  name: s.name,
-  company_name: s.companyName || s.company_name || '',
-  logo: s.logo || '',
-  description: s.description || '',
-  website: s.website || '',
-  contact_name: s.contactName || s.contact_name || '',
-  contact_email: s.contactEmail || s.contact_email || '',
-  contact_phone: s.contactPhone || s.contact_phone || '',
-  category: s.category || 'Elite',
-  display_order: Number(s.displayOrder ?? s.display_order ?? 999),
-  is_active: s.isActive !== false && s.is_active !== false,
-  updated_at: new Date().toISOString()
-});
+  if (website.includes('::loc::')) {
+    const parts = website.split('::loc::');
+    website = parts[0] || '';
+    locationUrl = parts[1] || '';
+  } else if (!locationUrl && (/maps|goo\.gl/i.test(website) || /google\.com\/maps/i.test(website))) {
+    locationUrl = website;
+    website = '';
+  }
+
+  return {
+    id: s.id,
+    name: s.name,
+    companyName: s.company_name || s.companyName || '',
+    logo: s.logo || '',
+    description: s.description || '',
+    website,
+    locationUrl,
+    contactName: s.contact_name || s.contactName || '',
+    contactEmail: s.contact_email || s.contactEmail || '',
+    contactPhone: s.contact_phone || s.contactPhone || '',
+    category: s.category || 'Elite',
+    displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
+    isActive: s.is_active !== false && s.isActive !== false,
+    createdAt: s.created_at || s.createdAt,
+    updatedAt: s.updated_at || s.updatedAt
+  };
+};
+
+const sponsorToDb = (s) => {
+  const website = s.website || '';
+  const locationUrl = s.locationUrl || s.location_url || '';
+  let dbWebsite = website;
+  if (website && locationUrl) {
+    dbWebsite = `${website}::loc::${locationUrl}`;
+  } else if (!website && locationUrl) {
+    dbWebsite = locationUrl;
+  }
+
+  return {
+    id: s.id,
+    name: s.name,
+    company_name: s.companyName || s.company_name || '',
+    logo: s.logo || '',
+    description: s.description || '',
+    website: dbWebsite,
+    contact_name: s.contactName || s.contact_name || '',
+    contact_email: s.contactEmail || s.contact_email || '',
+    contact_phone: s.contactPhone || s.contact_phone || '',
+    category: s.category || 'Elite',
+    display_order: Number(s.displayOrder ?? s.display_order ?? 999),
+    is_active: s.isActive !== false && s.is_active !== false,
+    updated_at: new Date().toISOString()
+  };
+};
 
 const dbToCoordinator = (c) => ({
   id: c.id,
@@ -207,6 +233,16 @@ const getRegistrationsData = () => {
   }
 };
 
+const saveRegistrationsData = (registrations) => {
+  try {
+    fs.writeFileSync(registrationsFilePath, JSON.stringify(registrations, null, 2), 'utf8');
+    return true;
+  } catch (err) {
+    console.error('Error writing registrations.json:', err);
+    return false;
+  }
+};
+
 // ==================== AUTH & TOKEN ====================
 exports.login = async (req, res) => {
   const { username, password } = req.body;
@@ -280,18 +316,29 @@ exports.getDashboardData = async (req, res) => {
       console.warn('Dashboard live metrics query error fallback:', dbErr.message);
     }
 
-    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount) || 0), 0);
+    const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
+    const onlineRegs = registrations.filter(isOnlineRecord);
+    const offlineRegs = registrations.filter(r => !isOnlineRecord(r));
+
+    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
+    const onlineRevenue = onlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
+    const offlineRevenue = offlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
 
     const recentRegistrations = [...registrations]
       .reverse()
-      .slice(0, 5)
+      .slice(0, 8)
       .map(r => ({
         id: r.ticket_code || r.registrationId || r.id,
         name: r.full_name || r.fullName || 'Anonymous',
         event: r.event_id || r.eventName || 'General Registration',
-        date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : 'Recent'
+        mode: isOnlineRecord(r) ? 'Online' : 'Offline Desk',
+        paymentMethod: r.payment_method || r.paymentMethod || (isOnlineRecord(r) ? 'ONLINE' : 'ON_SITE_DESK'),
+        fee: Number(r.total_fee || r.totalAmount || r.total_amount) || 0,
+        phone: r.phone || '',
+        college: r.college || '',
+        date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : (r.createdAtFormatted || 'Recent')
       }));
 
     res.json({
@@ -300,6 +347,10 @@ exports.getDashboardData = async (req, res) => {
         stats: {
           totalRegistrations: registrations.length,
           revenue: totalRevenue,
+          onlineRegistrations: onlineRegs.length,
+          onlineRevenue: onlineRevenue,
+          offlineRegistrations: offlineRegs.length,
+          offlineRevenue: offlineRevenue,
           eventsActive: events.length || 12,
           totalSponsors: sponsors.length,
           activeSponsors: activeSponsors.length,
@@ -839,6 +890,7 @@ exports.createSponsor = async (req, res) => {
     logo,
     description,
     website,
+    locationUrl,
     contactName,
     contactEmail,
     contactPhone,
@@ -864,6 +916,7 @@ exports.createSponsor = async (req, res) => {
     logo: logo ? logo.trim() : '',
     description: description ? description.trim() : '',
     website: website ? website.trim() : '',
+    locationUrl: locationUrl ? locationUrl.trim() : '',
     contactName: contactName ? contactName.trim() : '',
     contactEmail: contactEmail ? contactEmail.trim().toLowerCase() : '',
     contactPhone: contactPhone ? contactPhone.trim() : '',
@@ -896,6 +949,7 @@ exports.updateSponsor = async (req, res) => {
     logo,
     description,
     website,
+    locationUrl,
     contactName,
     contactEmail,
     contactPhone,
@@ -918,6 +972,7 @@ exports.updateSponsor = async (req, res) => {
     logo: logo !== undefined ? logo.trim() : (sponsors[index]?.logo || ''),
     description: description !== undefined ? description.trim() : (sponsors[index]?.description || ''),
     website: website !== undefined ? website.trim() : (sponsors[index]?.website || ''),
+    locationUrl: locationUrl !== undefined ? locationUrl.trim() : (sponsors[index]?.locationUrl || ''),
     contactName: contactName !== undefined ? contactName.trim() : (sponsors[index]?.contactName || ''),
     contactEmail: contactEmail !== undefined ? contactEmail.trim().toLowerCase() : (sponsors[index]?.contactEmail || ''),
     contactPhone: contactPhone !== undefined ? contactPhone.trim() : (sponsors[index]?.contactPhone || ''),
@@ -1275,4 +1330,37 @@ exports.deleteCoordinator = async (req, res) => {
   }
 
   res.json({ success: true, message: 'Coordinator deleted successfully from live database' });
+};
+
+// ==================== REGISTRATION MANAGEMENT ====================
+exports.deleteRegistration = async (req, res) => {
+  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  const { id } = req.params;
+  try {
+    // Delete from Supabase if present
+    try {
+      await supabase.from('registration_members').delete().eq('registration_id', id);
+      await supabase.from('registrations').delete().or(`id.eq.${id},ticket_code.eq.${id}`);
+    } catch (e) {
+      console.warn('Supabase deleteRegistration fallback:', e.message);
+    }
+
+    // Delete from local file
+    let registrations = getRegistrationsData();
+    const initialLen = registrations.length;
+    registrations = registrations.filter(r => (
+      r.id !== id && 
+      r.registrationId !== id && 
+      r.ticket_code !== id
+    ));
+    if (registrations.length !== initialLen) {
+      saveRegistrationsData(registrations);
+    }
+    return res.json({ success: true, message: 'Registration deleted successfully' });
+  } catch (err) {
+    console.error('Error in deleteRegistration:', err);
+    return res.status(500).json({ success: false, message: 'Failed to delete registration' });
+  }
 };

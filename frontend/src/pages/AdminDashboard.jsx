@@ -36,7 +36,18 @@ import {
   FaFilePdf,
   FaPaperPlane,
   FaThLarge,
-  FaTable
+  FaTable,
+  FaIdCard,
+  FaClipboardList,
+  FaPrint,
+  FaSearch,
+  FaCashRegister,
+  FaDownload,
+  FaArrowRight,
+  FaSyncAlt,
+  FaCheckCircle,
+  FaInfoCircle,
+  FaUserPlus
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
@@ -87,24 +98,25 @@ export default function AdminDashboard({ token, user, onLogout }) {
     }
   }, [activeTab, isAdminOrSuper, isRegCoordinator]);
 
-  // ==================== REGISTRATIONS STATE ====================
+  // ==================== REGISTRATIONS & EVENTS STATE ====================
+  const [eventsList, setEventsList] = useState(defaultEvents);
   const [registrationsList, setRegistrationsList] = useState([]);
-  const [regSearch, setRegSearch] = useState('');
-  const [regCategoryFilter, setRegCategoryFilter] = useState('all');
-  const [onlineRegSearch, setOnlineRegSearch] = useState('');
-  const [onlineRegCategoryFilter, setOnlineRegCategoryFilter] = useState('all');
+  const [regModeFilter, setRegModeFilter] = useState('all'); // 'all' | 'online' | 'offline'
+  const [regCategoryFilter, setRegCategoryFilter] = useState('all'); // 'all' | 'technical' | 'non-technical'
+  const [regEventFilter, setRegEventFilter] = useState('all');
+  const [regSearchQuery, setRegSearchQuery] = useState('');
+  const [selectedRegDetails, setSelectedRegDetails] = useState(null);
+  const [isRegDetailsModalOpen, setIsRegDetailsModalOpen] = useState(false);
+  const [isOnSiteRegisterModalOpen, setIsOnSiteRegisterModalOpen] = useState(false);
+  const [isDeletingRegId, setIsDeletingRegId] = useState(null);
 
-  // ==================== PARTICIPANT LIST STATE & HELPERS ====================
-  const [partEventFilter, setPartEventFilter] = useState('all');
-  const [partCategoryFilter, setPartCategoryFilter] = useState('all');
-  const [partSearch, setPartSearch] = useState('');
-  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+  // Registration Analytics & Event Helpers
+  const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
 
-  // Send Modal States
-  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
-  const [sendTargetEvent, setSendTargetEvent] = useState(null);
-  const [selectedCoordName, setSelectedCoordName] = useState('');
-  const [isSendingList, setIsSendingList] = useState(false);
+  const getEventName = (r) => {
+    const evt = eventsList.find(e => e.id === (r.event_id || r.eventId));
+    return evt ? evt.name : (r.eventName || r.event_id || r.eventId || 'General Registration');
+  };
 
   const getTeamMembers = (r) => {
     if (Array.isArray(r.registration_members) && r.registration_members.length > 0) {
@@ -135,6 +147,282 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const getFee = (r) => Number(r.total_fee || r.totalAmount || r.total_amount || 0);
+
+  const onlineRegs = registrationsList.filter(isOnlineRecord);
+  const offlineRegs = registrationsList.filter(r => !isOnlineRecord(r));
+  const techRegs = registrationsList.filter(r => getEventCategory(r) === 'technical');
+  const nonTechRegs = registrationsList.filter(r => getEventCategory(r) === 'non-technical');
+
+  const totalRevenue = registrationsList.reduce((sum, r) => sum + getFee(r), 0);
+  const onlineRevenue = onlineRegs.reduce((sum, r) => sum + getFee(r), 0);
+  const offlineRevenue = offlineRegs.reduce((sum, r) => sum + getFee(r), 0);
+  const techRevenue = techRegs.reduce((sum, r) => sum + getFee(r), 0);
+  const nonTechRevenue = nonTechRegs.reduce((sum, r) => sum + getFee(r), 0);
+
+  // Filtered registrations for the dedicated Registrations tab
+  const filteredRegistrations = registrationsList.filter(r => {
+    if (regModeFilter === 'online' && !isOnlineRecord(r)) return false;
+    if (regModeFilter === 'offline' && isOnlineRecord(r)) return false;
+    if (regCategoryFilter !== 'all' && getEventCategory(r) !== regCategoryFilter) return false;
+    if (regEventFilter !== 'all' && (r.event_id || r.eventId) !== regEventFilter) return false;
+
+    const q = regSearchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const name = (r.full_name || r.fullName || '').toLowerCase();
+    const ticket = (r.ticket_code || r.registrationId || r.id || '').toString().toLowerCase();
+    const phone = (r.phone || '').toLowerCase();
+    const email = (r.email || '').toLowerCase();
+    const college = (r.college || '').toLowerCase();
+    const dept = (r.department || '').toLowerCase();
+    const evtName = getEventName(r).toLowerCase();
+    const teamName = (r.team_name || r.teamName || '').toLowerCase();
+    const members = getTeamMembers(r).join(' ').toLowerCase();
+
+    return (
+      name.includes(q) ||
+      ticket.includes(q) ||
+      phone.includes(q) ||
+      email.includes(q) ||
+      college.includes(q) ||
+      dept.includes(q) ||
+      evtName.includes(q) ||
+      teamName.includes(q) ||
+      members.includes(q)
+    );
+  });
+
+  // CSV Export Handler
+  const handleExportCSV = () => {
+    if (filteredRegistrations.length === 0) {
+      return toast.error('No registrations found to export');
+    }
+
+    const headers = [
+      'Ticket Code / ID',
+      'Mode',
+      'Participant Name',
+      'Email',
+      'Phone',
+      'WhatsApp',
+      'College',
+      'Department',
+      'Year',
+      'Event ID',
+      'Event Name',
+      'Category',
+      'Team Name',
+      'Team Members',
+      'Total Amount (INR)',
+      'Payment Method',
+      'Payment Status',
+      'Registration Date'
+    ];
+
+    const rows = filteredRegistrations.map(r => {
+      const isOnline = isOnlineRecord(r);
+      const members = getTeamMembers(r).join('; ');
+      const dateStr = r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : (r.createdAtFormatted || 'N/A');
+      return [
+        `"${(r.ticket_code || r.registrationId || r.id || '').toString().replace(/"/g, '""')}"`,
+        isOnline ? 'Online' : 'Offline Desk',
+        `"${(r.full_name || r.fullName || '').replace(/"/g, '""')}"`,
+        `"${(r.email || '').replace(/"/g, '""')}"`,
+        `"${(r.phone || '').replace(/"/g, '""')}"`,
+        `"${(r.whatsapp || '').replace(/"/g, '""')}"`,
+        `"${(r.college || '').replace(/"/g, '""')}"`,
+        `"${(r.department || '').replace(/"/g, '""')}"`,
+        `"${(r.year || '').replace(/"/g, '""')}"`,
+        `"${(r.event_id || r.eventId || '').replace(/"/g, '""')}"`,
+        `"${getEventName(r).replace(/"/g, '""')}"`,
+        getEventCategory(r),
+        `"${(r.team_name || r.teamName || '').replace(/"/g, '""')}"`,
+        `"${members.replace(/"/g, '""')}"`,
+        getFee(r),
+        r.payment_method || r.paymentMethod || (isOnline ? 'ONLINE' : 'ON_SITE_DESK'),
+        r.payment_status || r.paymentStatus || 'CONFIRMED',
+        `"${dateStr}"`
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `eloquence2026_registrations_${regModeFilter}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${filteredRegistrations.length} registrations to CSV`);
+  };
+
+  // Print Registration Ticket / Receipt
+  const handlePrintTicket = (reg) => {
+    if (!reg) return;
+    const isOnline = isOnlineRecord(reg);
+    const members = getTeamMembers(reg);
+    const win = window.open('', '_blank');
+    if (!win) return toast.error('Please allow popups to print ticket');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Eloquence 2026 - Ticket #${reg.ticket_code || reg.registrationId || reg.id}</title>
+        <style>
+          * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+          body { padding: 40px; background: #f8fafc; color: #0f172a; margin: 0; }
+          .ticket-card { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 2px solid #2563eb; box-shadow: 0 10px 25px rgba(0,0,0,0.08); overflow: hidden; }
+          .header { background: #2563eb; color: #ffffff; padding: 24px 30px; display: flex; justify-content: space-between; align-items: center; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+          .header p { margin: 4px 0 0 0; opacity: 0.9; font-size: 13px; }
+          .badge-mode { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; background: ${isOnline ? '#eff6ff' : '#ecfdf5'}; color: ${isOnline ? '#1d4ed8' : '#047857'}; }
+          .body { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+          .ticket-code { background: #f1f5f9; padding: 12px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+          .code-val { font-size: 18px; font-weight: 800; color: #2563eb; letter-spacing: 0.5px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          .info-box { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+          .label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+          .val { font-size: 14px; font-weight: 600; color: #0f172a; }
+          .footer { padding: 16px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
+          @media print {
+            body { padding: 0; background: #ffffff; }
+            .ticket-card { box-shadow: none; border-color: #000; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ticket-card">
+          <div class="header">
+            <div>
+              <h1>ELOQUENCE 2026</h1>
+              <p>National Level Technical Symposium • C. Abdul Hakeem College of Engg & Tech</p>
+            </div>
+            <span class="badge-mode">${isOnline ? 'Online Registration' : 'Offline Desk Entry'}</span>
+          </div>
+          <div class="body">
+            <div class="ticket-code">
+              <div>
+                <div class="label">Ticket Reference / Code</div>
+                <div class="code-val">#${reg.ticket_code || reg.registrationId || reg.id}</div>
+              </div>
+              <div style="text-align: right;">
+                <div class="label">Status</div>
+                <div style="color: #10b981; font-weight: 700; font-size: 14px;">CONFIRMED</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="info-box">
+                <div class="label">Participant Name</div>
+                <div class="val">${reg.full_name || reg.fullName}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Contact Phone</div>
+                <div class="val">${reg.phone || 'N/A'}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">College Name</div>
+                <div class="val">${reg.college || 'N/A'}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Department & Year</div>
+                <div class="val">${reg.department || ''} • ${reg.year || ''}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Event Enrolled</div>
+                <div class="val" style="color: #2563eb;">${getEventName(reg)}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Category</div>
+                <div class="val" style="text-transform: capitalize;">${getEventCategory(reg)} Event</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Total Fee Paid</div>
+                <div class="val" style="color: #10b981; font-size: 16px;">₹${getFee(reg)}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Payment Mode</div>
+                <div class="val">${isOnline ? 'Online Web Portal' : 'On-Site Registration Desk'}</div>
+              </div>
+            </div>
+
+            ${members.length > 0 ? `
+              <div class="info-box" style="margin-top: 4px;">
+                <div class="label">Team Details: ${reg.team_name || reg.teamName || 'Team'} (${members.length + 1} Members)</div>
+                <div class="val" style="font-size: 13px; line-height: 1.6;">
+                  1. ${reg.full_name || reg.fullName} (Lead)<br/>
+                  ${members.map((m, idx) => `${idx + 2}. ${m}`).join('<br/>')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          <div class="footer">
+            Present this ticket at the registration desk on event day. Validated by Eloquence Admin Desk.
+          </div>
+        </div>
+        <script>
+          window.onload = () => { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+    win.document.write(html);
+    win.document.close();
+  };
+
+  // Delete Registration Handler
+  const handleDeleteRegistration = (reg) => {
+    const id = reg.id || reg.registrationId || reg.ticket_code;
+    const name = reg.full_name || reg.fullName || 'this participant';
+    if (!window.confirm(`Are you sure you want to permanently delete the registration for "${name}" (#${id})?`)) {
+      return;
+    }
+
+    setIsDeletingRegId(id);
+    const toastId = toast.loading('Deleting registration...');
+
+    fetch(`/api/admin/registrations/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          toast.success('Registration deleted successfully', { id: toastId });
+          setRegistrationsList(prev => prev.filter(r => (r.id !== id && r.registrationId !== id && r.ticket_code !== id)));
+          if (selectedRegDetails && (selectedRegDetails.id === id || selectedRegDetails.registrationId === id || selectedRegDetails.ticket_code === id)) {
+            setIsRegDetailsModalOpen(false);
+            setSelectedRegDetails(null);
+          }
+          fetchDashboardData();
+        } else {
+          toast.error(data.message || 'Failed to delete registration', { id: toastId });
+        }
+      })
+      .catch(err => {
+        console.error('Delete registration error:', err);
+        toast.error('Network error deleting registration', { id: toastId });
+      })
+      .finally(() => {
+        setIsDeletingRegId(null);
+      });
+  };
+
+  // ==================== PARTICIPANT LIST STATE & HELPERS ====================
+  const [partEventFilter, setPartEventFilter] = useState('all');
+  const [partCategoryFilter, setPartCategoryFilter] = useState('all');
+  const [partSearch, setPartSearch] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
+
+  // Send Modal States
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [sendTargetEvent, setSendTargetEvent] = useState(null);
+  const [selectedCoordName, setSelectedCoordName] = useState('');
+  const [isSendingList, setIsSendingList] = useState(false);
+
+
 
   const participantFilteredRegs = registrationsList.filter(r => {
     if (partEventFilter !== 'all' && (r.event_id || r.eventId) !== partEventFilter) return false;
@@ -381,7 +669,6 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [roleNameInput, setRoleNameInput] = useState('');
 
   // ==================== EVENTS STATE ====================
-  const [eventsList, setEventsList] = useState(defaultEvents);
   const [eventFilter, setEventFilter] = useState('all');
   const [eventSearch, setEventSearch] = useState('');
   const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
@@ -419,6 +706,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [logoPreview, setLogoPreview] = useState('');
   const [sponsorDesc, setSponsorDesc] = useState('');
   const [sponsorWebsite, setSponsorWebsite] = useState('');
+  const [sponsorLocationUrl, setSponsorLocationUrl] = useState('');
   const [sponsorContactName, setSponsorContactName] = useState('');
   const [sponsorContactEmail, setSponsorContactEmail] = useState('');
   const [sponsorContactPhone, setSponsorContactPhone] = useState('');
@@ -480,11 +768,18 @@ export default function AdminDashboard({ token, user, onLogout }) {
         if (isEventEditModalOpen) resetEventEditModal();
         if (isSponsorFormVisible) resetSponsorForm();
         if (isCoordFormVisible) resetCoordForm();
+        if (isRegDetailsModalOpen) {
+          setIsRegDetailsModalOpen(false);
+          setSelectedRegDetails(null);
+        }
+        if (isOnSiteRegisterModalOpen) {
+          setIsOnSiteRegisterModalOpen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isUserFormVisible, isRoleFormVisible, isEventEditModalOpen, isSponsorFormVisible, isCoordFormVisible]);
+  }, [isUserFormVisible, isRoleFormVisible, isEventEditModalOpen, isSponsorFormVisible, isCoordFormVisible, isRegDetailsModalOpen, isOnSiteRegisterModalOpen]);
 
   const handleAuthError = () => {
     toast.error('Session expired or unauthorized');
@@ -541,6 +836,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           setOnSitePhone('');
           setOnSiteTeamName('');
           setOnSiteTeamMembers(['']);
+          setIsOnSiteRegisterModalOpen(false);
           fetchRegistrations();
           fetchDashboardData();
         } else {
@@ -929,6 +1225,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setLogoPreview('');
     setSponsorDesc('');
     setSponsorWebsite('');
+    setSponsorLocationUrl('');
     setSponsorContactName('');
     setSponsorContactEmail('');
     setSponsorContactPhone('');
@@ -952,6 +1249,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setLogoPreview(sponsor.logo || '');
     setSponsorDesc(sponsor.description || '');
     setSponsorWebsite(sponsor.website || '');
+    setSponsorLocationUrl(sponsor.locationUrl || sponsor.location_url || '');
     setSponsorContactName(sponsor.contactName || '');
     setSponsorContactEmail(sponsor.contactEmail || '');
     setSponsorContactPhone(sponsor.contactPhone || '');
@@ -1027,6 +1325,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       logo: sponsorLogo.trim(),
       description: sponsorDesc.trim(),
       website: sponsorWebsite.trim(),
+      locationUrl: sponsorLocationUrl.trim(),
       contactName: sponsorContactName.trim(),
       contactEmail: sponsorContactEmail.trim(),
       contactPhone: sponsorContactPhone.trim(),
@@ -1368,6 +1667,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     badgeTech: { display: 'inline-flex', alignItems: 'center', background: isDark ? '#1e3a8a' : '#eff6ff', color: isDark ? '#93c5fd' : '#1d4ed8', border: isDark ? '1px solid #1e40af' : '1px solid #bfdbfe', padding: '0.25rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
     badgeNonTech: { display: 'inline-flex', alignItems: 'center', background: isDark ? '#831843' : '#fdf2f8', color: isDark ? '#fbcfe8' : '#be185d', border: isDark ? '1px solid #9d174d' : '1px solid #fbcfe8', padding: '0.25rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+    badgeOnline: { display: 'inline-flex', alignItems: 'center', gap: '5px', background: isDark ? '#1e3a8a' : '#eff6ff', color: isDark ? '#93c5fd' : '#1d4ed8', border: isDark ? '1px solid #1e40af' : '1px solid #bfdbfe', padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+    badgeOffline: { display: 'inline-flex', alignItems: 'center', gap: '5px', background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', border: isDark ? '1px solid #047857' : '1px solid #a7f3d0', padding: '0.25rem 0.65rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' },
+    badgePaid: { display: 'inline-flex', alignItems: 'center', background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#a7f3d0' : '#047857', border: isDark ? '1px solid #047857' : '1px solid #a7f3d0', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700' },
+    badgePending: { display: 'inline-flex', alignItems: 'center', background: isDark ? '#78350f' : '#fef3c7', color: isDark ? '#fde68a' : '#92400e', border: isDark ? '1px solid #92400e' : '1px solid #fde68a', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '700' },
+    actionBtnView: { background: isDark ? '#1e293b' : '#eff6ff', border: isDark ? '1px solid #3b82f6' : '1px solid #bfdbfe', color: isDark ? '#93c5fd' : '#1d4ed8', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '600', padding: '0.4rem 0.7rem', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '5px', transition: 'all 0.15s' },
     
     roleBadge: { display: 'inline-block', padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.72rem', fontWeight: '700', letterSpacing: '0.03em' },
     roleBadgeSuper: { background: isDark ? '#78350f' : '#fef3c7', color: isDark ? '#fde68a' : '#92400e', border: isDark ? '1px solid #92400e' : '1px solid #fde68a' },
@@ -1398,6 +1702,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     modalIconBox: { width: '42px', height: '42px', borderRadius: '10px', background: isDark ? '#1e3a8a' : '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     modalIconBoxRole: { width: '42px', height: '42px', borderRadius: '10px', background: isDark ? '#064e3b' : '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     modalIconBoxEvent: { width: '42px', height: '42px', borderRadius: '10px', background: isDark ? '#312e81' : '#e0e7ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    modalIconBoxReg: { width: '42px', height: '42px', borderRadius: '10px', background: isDark ? '#1e3a8a' : '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     modalTitle: { margin: 0, fontSize: '1.15rem', fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a' },
     modalSubtitle: { margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b' },
     modalCloseBtn: { background: isDark ? '#1f2937' : '#f8fafc', border: isDark ? '1px solid #374151' : '1px solid #e2e8f0', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.15s' },
@@ -1529,6 +1834,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
+          {/* Registrations Tab */}
+          <button 
+            style={activeTab === 'registrations' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={() => setActiveTab('registrations')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaIdCard style={S.navIcon} />
+                <span>Registrations</span>
+              </div>
+              <span style={S.badgeCount}>{registrationsList.length}</span>
+            </div>
+          </button>
+
           {/* Participant List Tab */}
           <button 
             style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
@@ -1564,6 +1883,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-roles' && 'Role Management'}
               {activeTab === 'manage-sponsors' && 'Sponsor Management'}
               {activeTab === 'manage-coordinators' && 'Student Coordinator Management'}
+              {activeTab === 'registrations' && 'Participant Registrations & Verification'}
               {activeTab === 'participant-list' && 'Event-Wise Participant & Team List'}
             </h1>
             <p style={S.pageSubtitle}>
@@ -1573,6 +1893,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-roles' && 'Configure custom access roles, permissions, and security hierarchy.'}
               {activeTab === 'manage-sponsors' && 'Manage event partners, categories, logos, contact info, and public visibility.'}
               {activeTab === 'manage-coordinators' && 'Assign student leads and coordinators dynamically to symposium events.'}
+              {activeTab === 'registrations' && 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.'}
               {activeTab === 'participant-list' && 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.'}
             </p>
           </div>
@@ -1623,18 +1944,65 @@ export default function AdminDashboard({ token, user, onLogout }) {
           {activeTab === 'dashboard' && (
             <div style={S.dashboardView}>
               <div style={S.statsGrid}>
-                <div style={S.statCard}>
+                {/* Total Registrations Card */}
+                <div 
+                  style={{ ...S.statCard, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  onClick={() => { setRegModeFilter('all'); setActiveTab('registrations'); }}
+                  title="Click to view all registrations"
+                >
                   <div style={S.statLabel}>Total Registrations</div>
-                  <div style={S.statValue}>{data?.stats?.totalRegistrations || 0}</div>
+                  <div style={S.statValue}>{registrationsList.length || data?.stats?.totalRegistrations || 0}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#10b981', fontWeight: '700' }}>
+                    ₹{totalRevenue || data?.stats?.revenue || 0} Total Revenue
+                  </div>
                 </div>
-                <div style={S.statCard}>
-                  <div style={S.statLabel}>Total Revenue Collected</div>
-                  <div style={S.statValue}>₹{data?.stats?.revenue || 0}</div>
+
+                {/* Online Registrations Card */}
+                <div 
+                  style={{ ...S.statCard, cursor: 'pointer', borderLeft: isDark ? '4px solid #3b82f6' : '4px solid #2563eb', transition: 'all 0.2s ease' }}
+                  onClick={() => { setRegModeFilter('online'); setActiveTab('registrations'); }}
+                  title="Click to view online registrations"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={S.statLabel}>Online Registrations</div>
+                    <FaGlobe size={14} style={{ color: '#3b82f6' }} />
+                  </div>
+                  <div style={{ ...S.statValue, color: isDark ? '#93c5fd' : '#1d4ed8' }}>
+                    {onlineRegs.length || data?.stats?.onlineRegistrations || 0}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: isDark ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>
+                    ₹{onlineRevenue || data?.stats?.onlineRevenue || 0} Online Collection
+                  </div>
                 </div>
+
+                {/* Offline On-Site Desk Registrations Card */}
+                <div 
+                  style={{ ...S.statCard, cursor: 'pointer', borderLeft: isDark ? '4px solid #10b981' : '4px solid #059669', transition: 'all 0.2s ease' }}
+                  onClick={() => { setRegModeFilter('offline'); setActiveTab('registrations'); }}
+                  title="Click to view offline desk registrations"
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={S.statLabel}>Offline Desk Registrations</div>
+                    <FaCashRegister size={14} style={{ color: '#10b981' }} />
+                  </div>
+                  <div style={{ ...S.statValue, color: isDark ? '#6ee7b7' : '#047857' }}>
+                    {offlineRegs.length || data?.stats?.offlineRegistrations || 0}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: isDark ? '#34d399' : '#059669', fontWeight: '700' }}>
+                    ₹{offlineRevenue || data?.stats?.offlineRevenue || 0} Desk Collection
+                  </div>
+                </div>
+
+                {/* Active Events */}
                 <div style={S.statCard}>
                   <div style={S.statLabel}>Active Events</div>
                   <div style={S.statValue}>{eventsList.length}</div>
+                  <div style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                    6 Tech • 6 Non-Tech
+                  </div>
                 </div>
+
+                {/* Sponsors */}
                 <div style={S.statCard}>
                   <div style={S.statLabel}>Sponsors</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
@@ -1643,7 +2011,12 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       ({data?.stats?.activeSponsors || sponsors.filter(s => s.isActive !== false).length} Active)
                     </span>
                   </div>
+                  <div style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                    Symposium Partners
+                  </div>
                 </div>
+
+                {/* Student Coordinators */}
                 <div style={S.statCard}>
                   <div style={S.statLabel}>Student Coordinators</div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
@@ -1652,13 +2025,36 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       ({data?.stats?.activeCoordinators || coordinators.filter(c => c.isActive !== false).length} Active)
                     </span>
                   </div>
+                  <div style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                    Assigned Across Events
+                  </div>
                 </div>
               </div>
 
               <div style={S.card}>
-                <h3 style={{ ...S.cardTitle, padding: '1.25rem 1.75rem', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', background: isDark ? '#1a2234' : '#f8fafc' }}>
-                  Recent Registrations
-                </h3>
+                <div style={{ ...S.cardHeaderFlex, padding: '1.25rem 1.75rem' }}>
+                  <h3 style={S.cardTitle}>Recent Registrations</h3>
+                  <button 
+                    onClick={() => { setRegModeFilter('all'); setActiveTab('registrations'); }}
+                    style={{ 
+                      background: isDark ? '#1e293b' : '#eff6ff', 
+                      border: isDark ? '1px solid #374151' : '1px solid #bfdbfe', 
+                      color: isDark ? '#93c5fd' : '#2563eb', 
+                      padding: '0.45rem 0.9rem', 
+                      borderRadius: '8px', 
+                      fontWeight: '700', 
+                      fontSize: '0.85rem', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>View All Registrations ({registrationsList.length})</span>
+                    <FaArrowRight size={11} />
+                  </button>
+                </div>
                 <div style={S.tableResponsive}>
                   <table style={S.table}>
                     <thead>
@@ -1666,20 +2062,61 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <th style={S.th}>ID</th>
                         <th style={S.th}>Participant Name</th>
                         <th style={S.th}>Event Enrolled</th>
+                        <th style={S.th}>Registration Mode</th>
+                        <th style={S.th}>Amount</th>
                         <th style={S.th}>Date</th>
+                        <th style={S.th}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data?.recentRegistrations?.map(reg => (
-                        <tr key={reg.id} style={S.tr}>
-                          <td style={S.td}><span style={S.idBadge}>#{reg.id}</span></td>
-                          <td style={S.td}><span style={S.strongText}>{reg.name}</span></td>
-                          <td style={S.td}>{reg.event}</td>
-                          <td style={S.td}>{reg.date}</td>
-                        </tr>
-                      ))}
-                      {!data?.recentRegistrations?.length && (
-                        <tr><td colSpan="4" style={S.emptyState}>No recent registrations found.</td></tr>
+                      {(registrationsList.length > 0 ? [...registrationsList].reverse().slice(0, 6) : (data?.recentRegistrations || [])).map((reg) => {
+                        const isOnline = isOnlineRecord(reg);
+                        const ticketId = reg.ticket_code || reg.registrationId || reg.id;
+                        const pName = reg.full_name || reg.fullName || reg.name || 'Anonymous';
+                        const evtName = getEventName(reg) || reg.event || 'General';
+                        const feeAmt = getFee(reg) || reg.fee || 0;
+                        const dateText = reg.created_at ? new Date(reg.created_at).toLocaleDateString('en-IN') : (reg.createdAtFormatted || reg.date || 'Recent');
+
+                        return (
+                          <tr key={ticketId} style={S.tr}>
+                            <td style={S.td}><span style={S.idBadge}>#{ticketId}</span></td>
+                            <td style={S.td}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={S.strongText}>{pName}</span>
+                                {reg.college && <span style={S.tableSubText}>{reg.college}</span>}
+                              </div>
+                            </td>
+                            <td style={S.td}>
+                              <span style={{ fontWeight: '600', color: isDark ? '#e2e8f0' : '#1e293b' }}>{evtName}</span>
+                            </td>
+                            <td style={S.td}>
+                              <span style={isOnline ? S.badgeOnline : S.badgeOffline}>
+                                {isOnline ? <FaGlobe size={10} /> : <FaCashRegister size={10} />}
+                                {isOnline ? 'Online' : 'Offline Desk'}
+                              </span>
+                            </td>
+                            <td style={S.td}>
+                              <span style={{ fontWeight: '700', color: '#10b981' }}>₹{feeAmt}</span>
+                            </td>
+                            <td style={S.td}>{dateText}</td>
+                            <td style={S.td}>
+                              <button
+                                onClick={() => {
+                                  setSelectedRegDetails(reg);
+                                  setIsRegDetailsModalOpen(true);
+                                }}
+                                style={S.actionBtnView}
+                                title="View full registration details"
+                              >
+                                <FaInfoCircle size={11} />
+                                <span>Details</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {!registrationsList.length && !data?.recentRegistrations?.length && (
+                        <tr><td colSpan="7" style={S.emptyState}>No recent registrations found.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -2081,6 +2518,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                     <FaGlobe size={10} /> {sponsor.website.replace(/^https?:\/\//, '')}
                                   </a>
                                 )}
+                                {sponsor.locationUrl && (
+                                  <a 
+                                    href={sponsor.locationUrl} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    style={{ fontSize: '0.75rem', color: '#10b981', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+                                  >
+                                    <FaMapMarkerAlt size={10} /> Location Map
+                                  </a>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -2343,6 +2790,388 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       ))}
                       {!filteredCoordinators.length && (
                         <tr><td colSpan="6" style={S.emptyState}>No coordinators found.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* PARTICIPANT REGISTRATIONS VIEW                            */}
+          {/* ======================================================== */}
+          {activeTab === 'registrations' && (
+            <div style={S.viewContainer}>
+              {/* Header Filter & Action Controls Card */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: isDark ? '#111827' : '#ffffff', padding: '1.25rem 1.5rem', borderRadius: '16px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  {/* Mode Filter Tabs: All | Online | Offline Desk */}
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setRegModeFilter('all')}
+                      style={regModeFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaClipboardList size={12} />
+                      <span>All Registrations ({registrationsList.length})</span>
+                    </button>
+                    <button
+                      onClick={() => setRegModeFilter('online')}
+                      style={regModeFilter === 'online' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaGlobe size={12} />
+                      <span>Online ({onlineRegs.length})</span>
+                    </button>
+                    <button
+                      onClick={() => setRegModeFilter('offline')}
+                      style={regModeFilter === 'offline' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                    >
+                      <FaCashRegister size={12} />
+                      <span>Offline Desk ({offlineRegs.length})</span>
+                    </button>
+                  </div>
+
+                  {/* Category Filter Pills & Actions */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        onClick={() => setRegCategoryFilter('all')}
+                        style={regCategoryFilter === 'all' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => setRegCategoryFilter('technical')}
+                        style={regCategoryFilter === 'technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                      >
+                        <FaBolt size={10} />
+                        <span>Tech ({techRegs.length})</span>
+                      </button>
+                      <button
+                        onClick={() => setRegCategoryFilter('non-technical')}
+                        style={regCategoryFilter === 'non-technical' ? { ...S.filterBtn, ...S.filterBtnActive } : S.filterBtn}
+                      >
+                        <FaGamepad size={10} />
+                        <span>Non-Tech ({nonTechRegs.length})</span>
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={handleExportCSV}
+                      style={{ ...S.filterBtn, background: isDark ? '#1e293b' : '#f0fdf4', color: '#16a34a', borderColor: '#86efac' }}
+                      title="Export filtered registrations to CSV"
+                    >
+                      <FaDownload size={11} />
+                      <span>Export CSV</span>
+                    </button>
+
+                    <button
+                      onClick={() => setIsOnSiteRegisterModalOpen(true)}
+                      style={{ ...S.createBtn, padding: '0.55rem 1.1rem', fontSize: '0.86rem' }}
+                      title="Register walk-in participant at on-site desk"
+                    >
+                      <FaUserPlus style={{ marginRight: '6px' }} />
+                      <span>On-Site Desk Entry</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        fetchRegistrations();
+                        fetchDashboardData();
+                        toast.success('Registrations refreshed');
+                      }}
+                      style={{ ...S.filterBtn, padding: '0.55rem 0.75rem' }}
+                      title="Refresh registration data"
+                    >
+                      <FaSyncAlt size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Dropdown Filters & Search Box */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', alignItems: 'center' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Filter by Event</label>
+                    <select
+                      value={regEventFilter}
+                      onChange={(e) => setRegEventFilter(e.target.value)}
+                      style={S.select}
+                    >
+                      <option value="all">-- All Symposium Events ({eventsList.length}) --</option>
+                      {eventsList.map(evt => (
+                        <option key={evt.id} value={evt.id}>
+                          [{evt.category.toUpperCase()}] {evt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ ...S.modalInputGroup, gridColumn: 'span 2' }}>
+                    <label style={S.label}>Live Search Participant / Ticket</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <FaSearch style={{ position: 'absolute', left: '14px', color: isDark ? '#6b7280' : '#94a3b8' }} />
+                      <input
+                        type="text"
+                        placeholder="Search participant name, ticket code (#ELQ...), phone, email, college, team..."
+                        value={regSearchQuery}
+                        onChange={(e) => setRegSearchQuery(e.target.value)}
+                        style={{ ...S.searchInput, paddingLeft: '2.5rem' }}
+                      />
+                      {regSearchQuery && (
+                        <button
+                          onClick={() => setRegSearchQuery('')}
+                          style={{ position: 'absolute', right: '12px', background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI Summary Cards for Registration Metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                <div style={S.statCard}>
+                  <div style={S.statLabel}>Active Filtered Results</div>
+                  <div style={S.statValue}>{filteredRegistrations.length}</div>
+                  <div style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                    of {registrationsList.length} total participants
+                  </div>
+                </div>
+
+                <div style={{ ...S.statCard, borderLeft: isDark ? '4px solid #3b82f6' : '4px solid #2563eb' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={S.statLabel}>Online Portal</div>
+                    <FaGlobe size={13} style={{ color: '#3b82f6' }} />
+                  </div>
+                  <div style={{ ...S.statValue, color: isDark ? '#93c5fd' : '#1d4ed8' }}>
+                    {onlineRegs.length}
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: isDark ? '#60a5fa' : '#2563eb', fontWeight: '700' }}>
+                    ₹{onlineRevenue} Revenue
+                  </div>
+                </div>
+
+                <div style={{ ...S.statCard, borderLeft: isDark ? '4px solid #10b981' : '4px solid #059669' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={S.statLabel}>Offline Desk</div>
+                    <FaCashRegister size={13} style={{ color: '#10b981' }} />
+                  </div>
+                  <div style={{ ...S.statValue, color: isDark ? '#6ee7b7' : '#047857' }}>
+                    {offlineRegs.length}
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: isDark ? '#34d399' : '#059669', fontWeight: '700' }}>
+                    ₹{offlineRevenue} Revenue
+                  </div>
+                </div>
+
+                <div style={S.statCard}>
+                  <div style={S.statLabel}>Category Breakdown</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '600' }}>⚡ Technical:</span>
+                      <span style={{ fontWeight: '700' }}>{techRegs.length} (₹{techRevenue})</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: isDark ? '#f472b6' : '#db2777', fontWeight: '600' }}>🎮 Non-Technical:</span>
+                      <span style={{ fontWeight: '700' }}>{nonTechRegs.length} (₹{nonTechRevenue})</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comprehensive Registrations Data Table */}
+              <div style={S.card}>
+                <div style={S.cardHeaderFlex}>
+                  <div>
+                    <h3 style={S.cardTitle}>
+                      {regModeFilter === 'all' && 'All Participant Registrations'}
+                      {regModeFilter === 'online' && 'Online Web Portal Registrations'}
+                      {regModeFilter === 'offline' && 'Offline On-Site Desk Registrations'}
+                    </h3>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      Showing {filteredRegistrations.length} registration records matching filters
+                    </p>
+                  </div>
+                  <span style={S.badgeCount}>{filteredRegistrations.length} Records</span>
+                </div>
+
+                <div style={S.tableResponsive}>
+                  <table style={S.table}>
+                    <thead>
+                      <tr>
+                        <th style={S.th}>Ticket / ID</th>
+                        <th style={S.th}>Participant & College</th>
+                        <th style={S.th}>Contact Info</th>
+                        <th style={S.th}>Event Enrolled</th>
+                        <th style={S.th}>Mode</th>
+                        <th style={S.th}>Fee & Status</th>
+                        <th style={S.th}>Date & Time</th>
+                        <th style={{ ...S.th, textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredRegistrations.map((reg) => {
+                        const isOnline = isOnlineRecord(reg);
+                        const ticketId = reg.ticket_code || reg.registrationId || reg.id;
+                        const pName = reg.full_name || reg.fullName || 'Anonymous';
+                        const evtName = getEventName(reg);
+                        const category = getEventCategory(reg);
+                        const isTech = category === 'technical';
+                        const feeAmt = getFee(reg);
+                        const members = getTeamMembers(reg);
+                        const isTeam = Boolean(members.length > 0 || reg.team_name || reg.teamName || reg.isTeam || reg.is_team);
+                        const dateText = reg.created_at 
+                          ? new Date(reg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                          : (reg.createdAtFormatted || 'N/A');
+
+                        return (
+                          <tr key={ticketId} style={S.tr}>
+                            {/* Ticket Code */}
+                            <td style={S.td}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ ...S.idBadge, cursor: 'pointer', fontFamily: 'monospace', fontWeight: '700' }}
+                                  title="Click to copy ticket code"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(ticketId);
+                                    toast.success(`Copied ticket #${ticketId}`);
+                                  }}
+                                >
+                                  #{ticketId}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Participant & College */}
+                            <td style={S.td}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={S.strongText}>{pName}</span>
+                                <span style={S.tableSubText}>{reg.college || 'College not specified'}</span>
+                                <span style={{ fontSize: '0.72rem', color: isDark ? '#6b7280' : '#94a3b8' }}>
+                                  {reg.department ? `${reg.department} • ` : ''}{reg.year || ''}
+                                </span>
+                                {isTeam && (
+                                  <span style={{ fontSize: '0.72rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '600', marginTop: '2px' }}>
+                                    Team: {reg.team_name || reg.teamName || 'Team Event'} ({members.length + 1} members)
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Contact Info */}
+                            <td style={S.td}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '0.85rem', color: isDark ? '#e2e8f0' : '#0f172a', fontWeight: '500' }}>
+                                  {reg.phone || 'No phone'}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                  {reg.email || 'No email'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Event Enrolled */}
+                            <td style={S.td}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                <span style={{ fontWeight: '600', color: isDark ? '#f1f5f9' : '#1e293b' }}>
+                                  {evtName}
+                                </span>
+                                <span style={isTech ? S.badgeTech : S.badgeNonTech}>
+                                  {isTech ? <FaBolt size={9} style={{ marginRight: '4px' }} /> : <FaGamepad size={9} style={{ marginRight: '4px' }} />}
+                                  {isTech ? 'Tech' : 'Non-Tech'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Registration Mode */}
+                            <td style={S.td}>
+                              <span style={isOnline ? S.badgeOnline : S.badgeOffline}>
+                                {isOnline ? <FaGlobe size={11} /> : <FaCashRegister size={11} />}
+                                <span>{isOnline ? 'Online' : 'Offline Desk'}</span>
+                              </span>
+                            </td>
+
+                            {/* Fee & Payment Status */}
+                            <td style={S.td}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                                <span style={{ fontWeight: '700', color: '#10b981', fontSize: '0.95rem' }}>
+                                  ₹{feeAmt}
+                                </span>
+                                <span style={S.badgePaid}>
+                                  <FaCheck size={8} style={{ marginRight: '3px' }} />
+                                  <span>{reg.payment_status || reg.paymentStatus || 'CONFIRMED'}</span>
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Date */}
+                            <td style={S.td}>
+                              <span style={{ fontSize: '0.85rem', color: isDark ? '#cbd5e1' : '#475569' }}>
+                                {dateText}
+                              </span>
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ ...S.td, textAlign: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedRegDetails(reg);
+                                    setIsRegDetailsModalOpen(true);
+                                  }}
+                                  style={S.actionBtnView}
+                                  title="View complete participant details"
+                                >
+                                  <FaInfoCircle size={11} />
+                                  <span>Details</span>
+                                </button>
+                                <button
+                                  onClick={() => handlePrintTicket(reg)}
+                                  style={{ ...S.actionBtnView, background: isDark ? '#1e293b' : '#f8fafc', color: isDark ? '#cbd5e1' : '#475569', borderColor: isDark ? '#374151' : '#cbd5e1' }}
+                                  title="Print Ticket / Receipt"
+                                >
+                                  <FaPrint size={11} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRegistration(reg)}
+                                  disabled={isDeletingRegId === ticketId}
+                                  style={S.actionBtnDelete}
+                                  title="Delete Registration"
+                                >
+                                  <FaTrash size={11} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {!filteredRegistrations.length && (
+                        <tr>
+                          <td colSpan="8" style={S.emptyState}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                              <FaIdCard size={36} style={{ opacity: 0.4 }} />
+                              <span style={{ fontSize: '1rem', fontWeight: '600' }}>No participant registrations found.</span>
+                              <span style={{ fontSize: '0.85rem', color: isDark ? '#6b7280' : '#94a3b8' }}>
+                                Try adjusting your search query, mode filter, or event selection.
+                              </span>
+                              {(regSearchQuery || regModeFilter !== 'all' || regCategoryFilter !== 'all' || regEventFilter !== 'all') && (
+                                <button
+                                  onClick={() => {
+                                    setRegSearchQuery('');
+                                    setRegModeFilter('all');
+                                    setRegCategoryFilter('all');
+                                    setRegEventFilter('all');
+                                  }}
+                                  style={{ ...S.filterBtn, marginTop: '0.5rem' }}
+                                >
+                                  Reset All Filters
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
                       )}
                     </tbody>
                   </table>
@@ -3465,15 +4294,27 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </div>
                 </div>
 
-                <div style={S.modalInputGroup}>
-                  <label style={S.label}>Website URL</label>
-                  <input 
-                    type="url" 
-                    value={sponsorWebsite} 
-                    onChange={(e) => setSponsorWebsite(e.target.value)} 
-                    placeholder="https://example.com/partner"
-                    style={S.input}
-                  />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.2rem' }}>
+                  <div>
+                    <label style={S.label}>Website URL</label>
+                    <input 
+                      type="url" 
+                      value={sponsorWebsite} 
+                      onChange={(e) => setSponsorWebsite(e.target.value)} 
+                      placeholder="https://example.com/partner"
+                      style={S.input}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.label}>Location / Map URL</label>
+                    <input 
+                      type="url" 
+                      value={sponsorLocationUrl} 
+                      onChange={(e) => setSponsorLocationUrl(e.target.value)} 
+                      placeholder="https://maps.google.com/?q=..."
+                      style={S.input}
+                    />
+                  </div>
                 </div>
 
                 <div style={S.modalInputGroup}>
@@ -3786,6 +4627,439 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <button type="button" onClick={resetCoordForm} style={S.cancelBtn}>Cancel</button>
                 <button type="submit" style={S.primaryBtn}>
                   {editingCoordId ? 'Save Changes' : 'Add Coordinator'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ======================================================== */}
+      {/* PARTICIPANT REGISTRATION DETAILS MODAL                    */}
+      {/* ======================================================== */}
+      {isRegDetailsModalOpen && selectedRegDetails && (
+        <div style={S.modalBackdrop} onClick={() => { setIsRegDetailsModalOpen(false); setSelectedRegDetails(null); }}>
+          <div style={{ ...S.modalCard, maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={S.modalHeader}>
+              <div style={S.modalHeaderLeft}>
+                <div style={S.modalIconBoxReg}><FaIdCard size={20} /></div>
+                <div>
+                  <h3 style={S.modalTitle}>Participant Registration Details</h3>
+                  <p style={S.modalSubtitle}>
+                    Ticket Code: #{selectedRegDetails.ticket_code || selectedRegDetails.registrationId || selectedRegDetails.id}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setIsRegDetailsModalOpen(false); setSelectedRegDetails(null); }} 
+                style={S.modalCloseBtn}
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ ...S.modalFormBody, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Ticket Overview Banner */}
+              <div style={{ 
+                background: isDark ? '#1a2333' : '#f0fdf4', 
+                border: isDark ? '1px solid #2563eb' : '1px solid #bbf7d0', 
+                borderRadius: '12px', 
+                padding: '1.2rem',
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                flexWrap: 'wrap', 
+                gap: '1rem' 
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#93c5fd' : '#15803d', letterSpacing: '0.05em' }}>
+                    Registration Reference
+                  </div>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '800', fontFamily: 'monospace', color: isDark ? '#f8fafc' : '#14532d', marginTop: '2px' }}>
+                    #{selectedRegDetails.ticket_code || selectedRegDetails.registrationId || selectedRegDetails.id}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={isOnlineRecord(selectedRegDetails) ? S.badgeOnline : S.badgeOffline}>
+                    {isOnlineRecord(selectedRegDetails) ? <FaGlobe size={11} /> : <FaCashRegister size={11} />}
+                    <span>{isOnlineRecord(selectedRegDetails) ? 'Online Registration' : 'Offline Desk Entry'}</span>
+                  </span>
+                  <span style={S.badgePaid}>
+                    <FaCheck size={9} style={{ marginRight: '4px' }} />
+                    <span>{selectedRegDetails.payment_status || selectedRegDetails.paymentStatus || 'CONFIRMED'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Personal & Academic Details Section */}
+              <div>
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Participant & Academic Profile
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', background: isDark ? '#161e2e' : '#f8fafc', padding: '1.2rem', borderRadius: '12px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                  <div>
+                    <div style={S.label}>Full Name</div>
+                    <div style={{ fontWeight: '700', fontSize: '1rem', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '3px' }}>
+                      {selectedRegDetails.full_name || selectedRegDetails.fullName || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Contact Phone</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.95rem', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '3px' }}>
+                      <a href={`tel:${selectedRegDetails.phone}`} style={{ color: isDark ? '#93c5fd' : '#2563eb', textDecoration: 'none' }}>
+                        {selectedRegDetails.phone || 'N/A'}
+                      </a>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Email Address</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#334155', marginTop: '3px', wordBreak: 'break-all' }}>
+                      <a href={`mailto:${selectedRegDetails.email}`} style={{ color: isDark ? '#93c5fd' : '#2563eb', textDecoration: 'none' }}>
+                        {selectedRegDetails.email || 'N/A'}
+                      </a>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>WhatsApp Number</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#334155', marginTop: '3px' }}>
+                      {selectedRegDetails.whatsapp || selectedRegDetails.phone || 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <div style={S.label}>College / Institution</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.95rem', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '3px' }}>
+                      {selectedRegDetails.college || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Department</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#334155', marginTop: '3px' }}>
+                      {selectedRegDetails.department || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Academic Year</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#334155', marginTop: '3px' }}>
+                      {selectedRegDetails.year || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event & Registration Details */}
+              <div>
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Event & Registration Info
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', background: isDark ? '#161e2e' : '#f8fafc', padding: '1.2rem', borderRadius: '12px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                  <div>
+                    <div style={S.label}>Enrolled Event</div>
+                    <div style={{ fontWeight: '700', fontSize: '1rem', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '3px' }}>
+                      {getEventName(selectedRegDetails)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Category</div>
+                    <div style={{ marginTop: '4px' }}>
+                      <span style={getEventCategory(selectedRegDetails) === 'technical' ? S.badgeTech : S.badgeNonTech}>
+                        {getEventCategory(selectedRegDetails) === 'technical' ? <FaBolt size={10} style={{ marginRight: '4px' }} /> : <FaGamepad size={10} style={{ marginRight: '4px' }} />}
+                        {getEventCategory(selectedRegDetails) === 'technical' ? 'Technical Event' : 'Non-Technical Event'}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Total Fee Paid</div>
+                    <div style={{ fontWeight: '800', fontSize: '1.15rem', color: '#10b981', marginTop: '3px' }}>
+                      ₹{getFee(selectedRegDetails)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Payment Method</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#334155', marginTop: '3px' }}>
+                      {isOnlineRecord(selectedRegDetails) ? 'Online Website Portal (Gateway/UPI)' : 'On-Site Registration Desk (Cash/Manual)'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Registered At</div>
+                    <div style={{ fontWeight: '500', fontSize: '0.88rem', color: isDark ? '#cbd5e1' : '#475569', marginTop: '3px' }}>
+                      {selectedRegDetails.created_at 
+                        ? new Date(selectedRegDetails.created_at).toLocaleString('en-IN') 
+                        : (selectedRegDetails.createdAtFormatted || 'N/A')}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Event ID</div>
+                    <div style={{ fontWeight: '600', fontSize: '0.88rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '3px' }}>
+                      {selectedRegDetails.event_id || selectedRegDetails.eventId || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Team Details (if team event) */}
+              {(getTeamMembers(selectedRegDetails).length > 0 || selectedRegDetails.team_name || selectedRegDetails.teamName) && (
+                <div>
+                  <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Team Details: {selectedRegDetails.team_name || selectedRegDetails.teamName || 'Team'}
+                  </h4>
+                  <div style={{ background: isDark ? '#161e2e' : '#f8fafc', padding: '1.2rem', borderRadius: '12px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.88rem' }}>1.</span>
+                        <span style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.9rem' }}>
+                          {selectedRegDetails.full_name || selectedRegDetails.fullName}
+                        </span>
+                        <span style={{ fontSize: '0.72rem', background: isDark ? '#1e3a8a' : '#dbeafe', color: isDark ? '#93c5fd' : '#1e40af', padding: '0.15rem 0.45rem', borderRadius: '4px', fontWeight: '700' }}>
+                          Team Lead
+                        </span>
+                      </div>
+                      {getTeamMembers(selectedRegDetails).map((member, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.88rem' }}>{idx + 2}.</span>
+                          <span style={{ fontWeight: '500', color: isDark ? '#e2e8f0' : '#334155', fontSize: '0.9rem' }}>{member}</span>
+                          <span style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>(Member)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ ...S.modalFooter, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handlePrintTicket(selectedRegDetails)}
+                  style={{ ...S.filterBtn, background: '#2563eb', color: '#ffffff', borderColor: '#2563eb' }}
+                >
+                  <FaPrint size={12} />
+                  <span>Print Ticket</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRegistration(selectedRegDetails)}
+                  disabled={isDeletingRegId === (selectedRegDetails.id || selectedRegDetails.registrationId || selectedRegDetails.ticket_code)}
+                  style={S.actionBtnDelete}
+                >
+                  <FaTrash size={12} style={{ marginRight: '4px' }} />
+                  <span>Delete</span>
+                </button>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => { setIsRegDetailsModalOpen(false); setSelectedRegDetails(null); }} 
+                style={S.cancelBtn}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* ON-SITE DESK REGISTRATION MODAL                          */}
+      {/* ======================================================== */}
+      {isOnSiteRegisterModalOpen && (
+        <div style={S.modalBackdrop} onClick={() => setIsOnSiteRegisterModalOpen(false)}>
+          <div style={{ ...S.modalCard, maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={S.modalHeader}>
+              <div style={S.modalHeaderLeft}>
+                <div style={{ ...S.modalIconBox, background: isDark ? '#064e3b' : '#ecfdf5', color: '#059669' }}>
+                  <FaUserPlus size={20} />
+                </div>
+                <div>
+                  <h3 style={S.modalTitle}>On-Site Desk Walk-in Registration</h3>
+                  <p style={S.modalSubtitle}>Record an instant in-person registration at the symposium desk</p>
+                </div>
+              </div>
+              <button onClick={() => setIsOnSiteRegisterModalOpen(false)} style={S.modalCloseBtn}>✕</button>
+            </div>
+
+            <form onSubmit={handleOnSiteRegisterSubmit} style={S.modalForm}>
+              <div style={S.modalFormBody}>
+                {/* Event Select */}
+                <div style={S.modalInputGroup}>
+                  <label style={S.label}>Select Symposium Event *</label>
+                  <select
+                    value={onSiteEventId}
+                    onChange={(e) => setOnSiteEventId(e.target.value)}
+                    style={S.select}
+                    required
+                  >
+                    <option value="">-- Choose Event --</option>
+                    {eventsList.map(evt => (
+                      <option key={evt.id} value={evt.id}>
+                        [{evt.category.toUpperCase()}] {evt.name} • ₹{evt.feePerHead || 50}/head {evt.isTeam ? `(Team max ${evt.maxTeam || 4})` : '(Solo)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Participant Personal Details */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Participant Full Name *</label>
+                    <input
+                      type="text"
+                      value={onSiteFullName}
+                      onChange={(e) => setOnSiteFullName(e.target.value)}
+                      placeholder="e.g. Rahul Sharma"
+                      style={S.input}
+                      required
+                    />
+                  </div>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>10-Digit Mobile Phone *</label>
+                    <input
+                      type="tel"
+                      value={onSitePhone}
+                      onChange={(e) => setOnSitePhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      maxLength={10}
+                      style={S.input}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Email Address *</label>
+                    <input
+                      type="email"
+                      value={onSiteEmail}
+                      onChange={(e) => setOnSiteEmail(e.target.value)}
+                      placeholder="e.g. rahul@example.com"
+                      style={S.input}
+                      required
+                    />
+                  </div>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Academic Year</label>
+                    <select
+                      value={onSiteYear}
+                      onChange={(e) => setOnSiteYear(e.target.value)}
+                      style={S.select}
+                    >
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                      <option value="3rd Year">3rd Year</option>
+                      <option value="4th Year">4th Year</option>
+                      <option value="PG">PG / Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1rem' }}>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>College / Institution *</label>
+                    <input
+                      type="text"
+                      value={onSiteCollege}
+                      onChange={(e) => setOnSiteCollege(e.target.value)}
+                      placeholder="Enter college name"
+                      style={S.input}
+                      required
+                    />
+                  </div>
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Department</label>
+                    <input
+                      type="text"
+                      value={onSiteDept}
+                      onChange={(e) => setOnSiteDept(e.target.value)}
+                      placeholder="e.g. CSE / IT / ECE"
+                      style={S.input}
+                    />
+                  </div>
+                </div>
+
+                {/* Team Details if selected event is team */}
+                {(() => {
+                  const selEvt = eventsList.find(e => e.id === onSiteEventId);
+                  if (!selEvt || !selEvt.isTeam) return null;
+                  return (
+                    <div style={{ background: isDark ? '#161e2e' : '#f8fafc', padding: '1rem', borderRadius: '10px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={S.modalInputGroup}>
+                        <label style={S.label}>Team Name</label>
+                        <input
+                          type="text"
+                          value={onSiteTeamName}
+                          onChange={(e) => setOnSiteTeamName(e.target.value)}
+                          placeholder="e.g. Code Warriors"
+                          style={S.input}
+                        />
+                      </div>
+
+                      <div style={S.modalInputGroup}>
+                        <label style={S.label}>Team Members (Lead is {onSiteFullName || 'entered above'})</label>
+                        {onSiteTeamMembers.map((member, idx) => (
+                          <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                            <input
+                              type="text"
+                              value={member}
+                              onChange={(e) => {
+                                const copy = [...onSiteTeamMembers];
+                                copy[idx] = e.target.value;
+                                setOnSiteTeamMembers(copy);
+                              }}
+                              placeholder={`Member ${idx + 2} Full Name`}
+                              style={S.input}
+                            />
+                            {onSiteTeamMembers.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => setOnSiteTeamMembers(prev => prev.filter((_, i) => i !== idx))}
+                                style={{ ...S.cancelBtn, padding: '0.5rem 0.8rem', color: '#ef4444' }}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {onSiteTeamMembers.length < (selEvt.maxTeam ? selEvt.maxTeam - 1 : 3) && (
+                          <button
+                            type="button"
+                            onClick={() => setOnSiteTeamMembers(prev => [...prev, ''])}
+                            style={{ ...S.filterBtn, alignSelf: 'flex-start', marginTop: '4px' }}
+                          >
+                            + Add Another Member
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Calculation breakdown */}
+                {onSiteEventId && (() => {
+                  const selEvt = eventsList.find(e => e.id === onSiteEventId);
+                  if (!selEvt) return null;
+                  const validMembers = onSiteTeamMembers.filter(m => m.trim().length > 0);
+                  const memberCount = 1 + validMembers.length;
+                  const feePerHead = selEvt.feePerHead || 50;
+                  const totalFee = selEvt.isTeam && selEvt.feeType === 'fixed' ? feePerHead : (feePerHead * memberCount);
+
+                  return (
+                    <div style={{ background: isDark ? '#1a2333' : '#eff6ff', padding: '0.85rem 1.2rem', borderRadius: '10px', border: isDark ? '1px solid #1e3a8a' : '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '600', color: isDark ? '#93c5fd' : '#1d4ed8' }}>
+                        Desk Entry Fee ({memberCount} participant{memberCount > 1 ? 's' : ''}):
+                      </span>
+                      <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#10b981' }}>
+                        ₹{totalFee}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div style={S.modalFooter}>
+                <button type="button" onClick={() => setIsOnSiteRegisterModalOpen(false)} style={S.cancelBtn}>Cancel</button>
+                <button type="submit" disabled={isRegisteringOnSite} style={{ ...S.primaryBtn, background: '#059669' }}>
+                  {isRegisteringOnSite ? 'Recording...' : 'Record On-Site Registration'}
                 </button>
               </div>
             </form>

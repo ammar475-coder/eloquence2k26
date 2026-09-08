@@ -62,10 +62,10 @@
     "assignedEvents": [
       "tech-02"
     ],
-    "isActive": true,
+    "isActive": false,
     "displayOrder": 4,
     "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
+    "updatedAt": "2026-09-08T04:43:44.724Z"
   },
   {
     "id": "coord-tech-03-a",

@@ -1,26 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
-import { FaMapMarkerAlt } from 'react-icons/fa';
+import { FaGlobe, FaMapMarkerAlt, FaPhoneAlt, FaUser } from 'react-icons/fa';
 import sponsors from '../data/sponsors.js';
 
 function SponsorCard({ sponsor, tier }) {
   const [flipped, setFlipped] = useState(false);
 
-  const handleVisit = (e) => {
-    e.stopPropagation();
-    if (sponsor.website) {
-      window.open(sponsor.website, '_blank', 'noopener,noreferrer');
+  const handleCardClick = (e) => {
+    // If the click is inside a link or button, don't toggle flip
+    if (e.target.closest('a') || e.target.closest('button')) {
+      return;
     }
+    setFlipped((f) => !f);
   };
 
   const tag = sponsor.tag || sponsor.category || 'PARTNER';
+  const hasContact = Boolean(sponsor.contactName || sponsor.contactPhone);
+  const cleanPhone = sponsor.contactPhone ? String(sponsor.contactPhone).replace(/[^0-9+]/g, '') : '';
+
+  const rawLocation = sponsor.locationUrl || sponsor.location_url || (sponsor.website && /maps|goo\.gl/i.test(sponsor.website) ? sponsor.website : '');
+  const locationLink = rawLocation
+    ? (rawLocation.startsWith('http') ? rawLocation : `https://${rawLocation}`)
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sponsor.name + ' ' + (sponsor.companyName || 'Vellore'))}`;
+
+  const rawWebsite = sponsor.website && (!rawLocation || sponsor.website !== rawLocation) && !/maps|goo\.gl/i.test(sponsor.website) ? sponsor.website : '';
+  const websiteLink = rawWebsite ? (rawWebsite.startsWith('http') ? rawWebsite : `https://${rawWebsite}`) : '';
+  const hasDetails = Boolean(sponsor.contactName || sponsor.contactPhone || locationLink);
+  const hasActions = Boolean(cleanPhone || locationLink || websiteLink);
 
   return (
     <div
       className={`sponsor-card sponsor-card-${tier}`}
-      onClick={() => setFlipped((f) => !f)}
+      onClick={handleCardClick}
       role="button"
       tabIndex={0}
-      aria-label={`${sponsor.name} — hover or tap to view details`}
+      aria-label={`${sponsor.name} — click or tap to view contact details`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -38,22 +51,116 @@ function SponsorCard({ sponsor, tier }) {
                 alt={sponsor.name} 
                 className="sponsor-logo-img"
               />
-            ) : null}
+            ) : (
+              <div className="sponsor-initials-badge">
+                <span className="sponsor-initials-text">
+                  {sponsor.initials || (sponsor.name ? sponsor.name.slice(0, 2).toUpperCase() : 'SP')}
+                </span>
+              </div>
+            )}
           </div>
           <h4 className="sponsor-name">{sponsor.name}</h4>
-          <span className="sponsor-flip-hint">HOVER FOR DETAILS</span>
+          <span className="sponsor-flip-hint">CLICK FOR DETAILS</span>
         </div>
         <div className="sponsor-face sponsor-back">
-          <h4 className="sponsor-back-name">{sponsor.name}</h4>
-          <p className="sponsor-desc">
-            {sponsor.description || sponsor.companyName || 'Proud partner supporting ELOQUENCE 2026.'}
-          </p>
-          {sponsor.website && (
-            <button className="sponsor-location-btn" onClick={handleVisit}>
-              <FaMapMarkerAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-              LOCATION
-            </button>
+          <div className="sponsor-back-header">
+            <span className="sponsor-back-tier-tag">{tag}</span>
+            <h4 className="sponsor-back-name">{sponsor.name}</h4>
+            {(sponsor.description || sponsor.companyName) && (
+              <p className="sponsor-desc">
+                {sponsor.description || sponsor.companyName}
+              </p>
+            )}
+          </div>
+
+          {hasDetails && (
+            <div className="sponsor-contact-box">
+              {sponsor.contactName && (
+                <div className="sponsor-contact-row">
+                  <span className="sponsor-contact-label">
+                    <FaUser className="sponsor-contact-icon" /> CONTACT
+                  </span>
+                  <span className="sponsor-contact-val">{sponsor.contactName}</span>
+                </div>
+              )}
+              {sponsor.contactPhone && (
+                <div className="sponsor-contact-row">
+                  <span className="sponsor-contact-label">
+                    <FaPhoneAlt className="sponsor-contact-icon" /> MOBILE
+                  </span>
+                  <a
+                    href={`tel:${cleanPhone}`}
+                    className="sponsor-contact-phone-link"
+                    onClick={(e) => e.stopPropagation()}
+                    title={`Call ${sponsor.contactName || sponsor.name} (${sponsor.contactPhone})`}
+                  >
+                    {sponsor.contactPhone}
+                  </a>
+                </div>
+              )}
+              {locationLink && (
+                <div className="sponsor-contact-row">
+                  <span className="sponsor-contact-label">
+                    <FaMapMarkerAlt className="sponsor-contact-icon" /> LOCATION
+                  </span>
+                  <a
+                    href={locationLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="sponsor-contact-location-link"
+                    onClick={(e) => e.stopPropagation()}
+                    title={`Open ${sponsor.name} in Google Maps`}
+                  >
+                    View on Map ↗
+                  </a>
+                </div>
+              )}
+            </div>
           )}
+
+          {hasActions && (
+            <div className="sponsor-back-actions">
+              {cleanPhone && (
+                <a
+                  href={`tel:${cleanPhone}`}
+                  className="sponsor-action-icon-btn sponsor-icon-call"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Call ${sponsor.contactName || sponsor.name} (${sponsor.contactPhone})`}
+                  aria-label={`Call ${sponsor.contactName || sponsor.name}`}
+                >
+                  <FaPhoneAlt />
+                </a>
+              )}
+              {locationLink && (
+                <a
+                  href={locationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sponsor-action-icon-btn sponsor-icon-location"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`View ${sponsor.name} on Map`}
+                  aria-label={`Location of ${sponsor.name}`}
+                >
+                  <FaMapMarkerAlt />
+                </a>
+              )}
+              {websiteLink && (
+                <a
+                  href={websiteLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sponsor-action-icon-btn sponsor-icon-website"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Visit ${sponsor.name} Website`}
+                  aria-label={`Website of ${sponsor.name}`}
+                >
+                  <FaGlobe />
+                </a>
+              )}
+            </div>
+          )}
+
+          <span className="sponsor-flip-hint sponsor-flip-back-hint">CLICK TO FLIP BACK</span>
         </div>
       </div>
     </div>

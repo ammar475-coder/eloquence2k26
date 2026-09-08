@@ -54,22 +54,37 @@ function readCoordinators() {
   }
 }
 
-const dbToSponsor = (s) => ({
-  id: s.id,
-  name: s.name,
-  companyName: s.company_name || s.companyName || '',
-  logo: s.logo || '',
-  description: s.description || '',
-  website: s.website || '',
-  contactName: s.contact_name || s.contactName || '',
-  contactEmail: s.contact_email || s.contactEmail || '',
-  contactPhone: s.contact_phone || s.contactPhone || '',
-  category: s.category || 'Elite',
-  displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
-  isActive: s.is_active !== false && s.isActive !== false,
-  createdAt: s.created_at || s.createdAt,
-  updatedAt: s.updated_at || s.updatedAt
-});
+const dbToSponsor = (s) => {
+  let website = s.website || '';
+  let locationUrl = s.location_url || s.locationUrl || '';
+
+  if (website.includes('::loc::')) {
+    const parts = website.split('::loc::');
+    website = parts[0] || '';
+    locationUrl = parts[1] || '';
+  } else if (!locationUrl && (/maps|goo\.gl/i.test(website) || /google\.com\/maps/i.test(website))) {
+    locationUrl = website;
+    website = '';
+  }
+
+  return {
+    id: s.id,
+    name: s.name,
+    companyName: s.company_name || s.companyName || '',
+    logo: s.logo || '',
+    description: s.description || '',
+    website,
+    locationUrl,
+    contactName: s.contact_name || s.contactName || '',
+    contactEmail: s.contact_email || s.contactEmail || '',
+    contactPhone: s.contact_phone || s.contactPhone || '',
+    category: s.category || 'Elite',
+    displayOrder: Number(s.display_order ?? s.displayOrder ?? 999),
+    isActive: s.is_active !== false && s.isActive !== false,
+    createdAt: s.created_at || s.createdAt,
+    updatedAt: s.updated_at || s.updatedAt
+  };
+};
 
 const dbToCoordinator = (c) => ({
   id: c.id,
