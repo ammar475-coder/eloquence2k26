@@ -7,10 +7,12 @@
     "tier": "cyan",
     "desc": "Architecting the official Eloquence 2026 digital platform, registration engine, and interactive cyber experience.",
     "names": [
-      "MOHAMMED AYAZ.A",
+      "SYED MUSTHAFA S",
+      "MOHAMMED AYAZ A",
       "SHAWOOR SAQIB SK",
-      "SHAHID AHMED VS",
-      "FAAZIL AMMAR"
+      "FAAZIL AMMAR",
+      { "name": "SHAHID AHAMED VS", "glow": "blue" },
+      "MOHAMMED SAAD V"
     ]
   },
   {

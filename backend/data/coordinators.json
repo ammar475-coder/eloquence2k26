@@ -136,40 +136,6 @@
     "updatedAt": "2026-09-01T00:00:00.000Z"
   },
   {
-    "id": "coord-tech-05-a",
-    "name": "Imran B.",
-    "phone": "6369954082",
-    "whatsapp": "6369954082",
-    "email": "imran@cahcet.edu.in",
-    "department": "CSE",
-    "year": "3rd Year",
-    "role": "Lead Coordinator",
-    "assignedEvents": [
-      "tech-05"
-    ],
-    "isActive": true,
-    "displayOrder": 9,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
-  },
-  {
-    "id": "coord-tech-05-b",
-    "name": "Preethi R.",
-    "phone": "9344114553",
-    "whatsapp": "9344114553",
-    "email": "preethi@cahcet.edu.in",
-    "department": "CSE",
-    "year": "3rd Year",
-    "role": "Lead Coordinator",
-    "assignedEvents": [
-      "tech-05"
-    ],
-    "isActive": true,
-    "displayOrder": 10,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
-  },
-  {
     "id": "coord-tech-06-a",
     "name": "Mohammed Azhan U.",
     "phone": "8428487798",
@@ -324,7 +290,7 @@
   },
   {
     "id": "coord-nontech-05-b",
-    "name": "Vijaya Kumar M.",
+    "name": "Vijay Kumar M.",
     "phone": "6382960769",
     "whatsapp": "6382960769",
     "email": "vijayakumar@cahcet.edu.in",
@@ -334,10 +300,9 @@
     "assignedEvents": [
       "nontech-05"
     ],
-    "isActive": true,
     "displayOrder": 20,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
+    "isActive": true,
+    "updatedAt": "2026-09-07T05:08:42.790Z"
   },
   {
     "id": "coord-nontech-06-a",
