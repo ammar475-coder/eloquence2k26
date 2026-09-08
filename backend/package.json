@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "node -e \"const fs=require('fs'),cp=require('child_process'); if(!fs.existsSync('../frontend/dist')){ cp.execSync('npm --prefix ../frontend install && npm --prefix ../frontend run build', {stdio:'inherit'}); }\"",
     "start": "node index.js",
     "dev": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
