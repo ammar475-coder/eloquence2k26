@@ -7877,3 +7877,199 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL & DASHBOARD MOBILE RESPONSIVE ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Responsive tables & horizontal overflow */
+.table-responsive-wrapper,
+.admin-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom modern scrollbar for touch tables */
+.table-responsive-wrapper::-webkit-scrollbar,
+.admin-table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.table-responsive-wrapper::-webkit-scrollbar-thumb,
+.admin-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 4px;
+}
+
+/* Mobile Screen Breakpoints */
+@media (max-width: 992px) {
+  .admin-layout-container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .admin-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    position: static !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    z-index: 50 !important;
+  }
+
+  .admin-sidebar-header {
+    padding: 1rem 1.25rem !important;
+    justify-content: space-between !important;
+  }
+
+  .admin-sidebar-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    gap: 0.5rem !important;
+    padding: 0.6rem 1rem !important;
+    max-height: none !important;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .admin-sidebar-nav::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+  }
+
+  .admin-sidebar-nav button,
+  .admin-sidebar-nav a {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    padding: 0.5rem 0.85rem !important;
+    font-size: 0.82rem !important;
+    white-space: nowrap !important;
+    border-radius: 9999px !important;
+    border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  }
+
+  .admin-sidebar-footer {
+    display: none !important;
+  }
+
+  .admin-mobile-logout {
+    display: flex !important;
+  }
+
+  .admin-main-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .admin-top-header {
+    padding: 1rem 1.25rem !important;
+    min-height: auto !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.75rem !important;
+    position: static !important;
+  }
+
+  .admin-top-header > div:first-child {
+    width: 100%;
+  }
+
+  .admin-content-wrapper {
+    padding: 1rem !important;
+    overflow-y: visible !important;
+    height: auto !important;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 0.85rem !important;
+  }
+
+  .admin-modal-backdrop {
+    padding: 0.5rem !important;
+    align-items: center !important;
+  }
+
+  .admin-modal-card {
+    max-height: 90vh !important;
+    width: 96% !important;
+    border-radius: 12px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-top-header {
+    padding: 0.85rem 1rem !important;
+  }
+
+  .admin-page-title {
+    font-size: 1.2rem !important;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-form-row-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-action-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  /* Public website navbar & header mobile responsive */
+  .navbar-fixed-wrapper {
+    top: 0.5rem !important;
+    padding: 0 0.5rem !important;
+  }
+
+  .navbar-pill {
+    width: 100% !important;
+    padding: 0.4rem 0.75rem !important;
+  }
+
+  .nav-pill-logo-text {
+    font-size: 0.85rem !important;
+  }
+
+  .nav-mobile-dropdown {
+    width: calc(100vw - 1.5rem) !important;
+    max-width: 340px !important;
+  }
+
+  /* Public website cards & sections adjustments */
+  .section-heading {
+    font-size: 1.5rem !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .section-sub {
+    font-size: 0.85rem !important;
+    margin-bottom: 1.75rem !important;
+    padding: 0 0.5rem;
+  }
+
+  .event-card-container {
+    margin: 0 auto;
+    width: 100% !important;
+    max-width: 360px;
+  }
+
+  .student-coords-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+

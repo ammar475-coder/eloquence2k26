@@ -457,9 +457,9 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   }
 
   return (
-    <div style={S.container}>
+    <div style={S.container} className="admin-layout-container">
       {/* ==================== SIDEBAR ==================== */}
-      <aside style={S.sidebar}>
+      <aside style={S.sidebar} className="admin-sidebar">
         <div style={S.sidebarHeader}>
           <div style={S.logoCircle}>
             <FaUserCheck size={20} />
@@ -470,7 +470,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
           </div>
         </div>
 
-        <nav style={S.navMenu}>
+        <nav style={S.navMenu} className="admin-sidebar-nav">
           <button 
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
             onClick={() => setActiveTab('dashboard')}
@@ -533,10 +533,10 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
       </aside>
 
       {/* ==================== MAIN CONTENT ==================== */}
-      <main style={S.mainContent}>
-        <header style={S.topHeader}>
+      <main style={S.mainContent} className="admin-main-content">
+        <header style={S.topHeader} className="admin-top-header">
           <div>
-            <h1 style={S.pageTitle}>
+            <h1 style={S.pageTitle} className="admin-page-title">
               {activeTab === 'dashboard' && 'Registration Dashboard & Analytics'}
               {activeTab === 'registration' && 'On-Site Desk Registration'}
               {activeTab === 'register-list' && 'Complete Registrations List'}
@@ -551,7 +551,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
               {activeTab === 'participant-list' && 'Filter participants by event, view team names, and inspect all team member details.'}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               onClick={toggleTheme}
               style={S.themeToggleBtn}
@@ -561,8 +561,8 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                 color: '#ffffff',
@@ -570,7 +570,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
-                fontSize: '1.25rem',
+                fontSize: '1.15rem',
                 border: '2px solid #ffffff',
                 boxShadow: '0 3px 10px rgba(37, 99, 235, 0.35)',
                 userSelect: 'none',
@@ -579,23 +579,44 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                 {(user?.username || 'Coordinator').charAt(0).toUpperCase()}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.88rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
                   {user?.username || 'Coordinator'}
                 </span>
-                <span style={{ fontSize: '0.72rem', color: isDark ? '#6ee7b7' : '#059669', fontWeight: '700', marginTop: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: isDark ? '#6ee7b7' : '#059669', fontWeight: '700', marginTop: '1px' }}>
                   Registration Coordinator
                 </span>
               </div>
             </div>
+            <button 
+              onClick={onLogout}
+              className="admin-mobile-logout"
+              style={{
+                display: 'none',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.45rem 0.75rem',
+                background: isDark ? '#451a1a' : '#fef2f2',
+                color: '#ef4444',
+                border: isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Log Out"
+            >
+              <FaSignOutAlt />
+              <span>Log Out</span>
+            </button>
           </div>
         </header>
 
-        <div style={S.contentWrapper}>
+        <div style={S.contentWrapper} className="admin-content-wrapper">
           {/* ==================== 1. DASHBOARD TAB ==================== */}
           {activeTab === 'dashboard' && (
             <div style={S.viewContainer}>
               {/* Analytics Breakdown Grid (Interactive / Touch-Friendly Cards) */}
-              <div style={S.statsGrid}>
+              <div style={S.statsGrid} className="admin-stats-grid">
                 {/* Total Card */}
                 <div 
                   style={statFilter === 'all' ? { ...S.statCard, ...S.statCardActive } : S.statCard}

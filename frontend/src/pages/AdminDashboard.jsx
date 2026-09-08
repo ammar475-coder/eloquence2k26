@@ -1429,11 +1429,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
   }
 
   return (
-    <div style={S.container}>
+    <div style={S.container} className="admin-layout-container">
       {/* ======================================================== */}
       {/* SIDEBAR                                                  */}
       {/* ======================================================== */}
-      <aside style={S.sidebar}>
+      <aside style={S.sidebar} className="admin-sidebar">
         <div style={S.sidebarHeader}>
           <div style={S.logoCircle}>
             <FaUserShield size={22} />
@@ -1444,7 +1444,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           </div>
         </div>
         
-        <nav style={S.navMenu}>
+        <nav style={S.navMenu} className="admin-sidebar-nav">
           {/* Dashboard Tab */}
           <button 
             type="button"
@@ -1566,10 +1566,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
       {/* ======================================================== */}
       {/* MAIN CONTENT                                             */}
       {/* ======================================================== */}
-      <main style={S.mainContent}>
-        <header style={S.topHeader}>
+      <main style={S.mainContent} className="admin-main-content">
+        <header style={S.topHeader} className="admin-top-header">
           <div>
-            <h1 style={S.pageTitle}>
+            <h1 style={S.pageTitle} className="admin-page-title">
               {activeTab === 'dashboard' && 'Overview Dashboard'}
               {activeTab === 'events' && 'Events Management'}
               {activeTab === 'manage-users' && 'User Management'}
@@ -1588,7 +1588,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'participant-list' && 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.'}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               onClick={toggleTheme}
               style={S.themeToggleBtn}
@@ -1599,8 +1599,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
-                width: '42px',
-                height: '42px',
+                width: '40px',
+                height: '40px',
                 borderRadius: '50%',
                 background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
                 color: '#ffffff',
@@ -1608,7 +1608,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '800',
-                fontSize: '1.25rem',
+                fontSize: '1.15rem',
                 border: '2px solid #ffffff',
                 boxShadow: '0 3px 10px rgba(37, 99, 235, 0.35)',
                 userSelect: 'none',
@@ -1617,24 +1617,45 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {(user?.username || 'Admin').charAt(0).toUpperCase()}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.88rem', color: isDark ? '#f8fafc' : '#0f172a', lineHeight: '1.2' }}>
                   {user?.username || 'Admin'}
                 </span>
-                <span style={{ fontSize: '0.72rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '700', marginTop: '2px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '0.7rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '700', marginTop: '1px', textTransform: 'uppercase' }}>
                   {user?.role || 'Admin'}
                 </span>
               </div>
             </div>
+            <button 
+              onClick={onLogout}
+              className="admin-mobile-logout"
+              style={{
+                display: 'none',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0.45rem 0.75rem',
+                background: isDark ? '#451a1a' : '#fef2f2',
+                color: '#ef4444',
+                border: isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Log Out"
+            >
+              <FaSignOutAlt />
+              <span>Log Out</span>
+            </button>
           </div>
         </header>
 
-        <div style={S.contentWrapper}>
+        <div style={S.contentWrapper} className="admin-content-wrapper">
           {/* ======================================================== */}
           {/* 1. DASHBOARD VIEW                                        */}
           {/* ======================================================== */}
           {activeTab === 'dashboard' && (
             <div style={S.dashboardView}>
-              <div style={S.statsGrid}>
+              <div style={S.statsGrid} className="admin-stats-grid">
                 <div style={S.statCard}>
                   <div style={S.statLabel}>Total Registrations</div>
                   <div style={S.statValue}>{data?.stats?.totalRegistrations || 0}</div>
