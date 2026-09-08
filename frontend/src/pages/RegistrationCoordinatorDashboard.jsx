@@ -18,13 +18,15 @@ import {
   FaPaperPlane,
   FaThLarge,
   FaTable,
-  FaTimes
+  FaTimes,
+  FaBars
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getApiUrl } from '../config/api';
 
 export default function RegistrationCoordinatorDashboard({ token, user, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('coord_theme') || 'light');
   const isDark = theme === 'dark';
 
@@ -459,18 +461,28 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   return (
     <div style={S.container} className="admin-layout-container">
       {/* ==================== SIDEBAR ==================== */}
-      <aside style={S.sidebar} className="admin-sidebar">
-        <div style={S.sidebarHeader}>
-          <div style={S.logoCircle}>
-            <FaUserCheck size={20} />
+      <aside style={S.sidebar} className={`admin-sidebar ${mobileSidebarOpen ? 'admin-sidebar-open' : ''}`}>
+        <div style={S.sidebarHeader} className="admin-sidebar-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={S.logoCircle}>
+              <FaUserCheck size={20} />
+            </div>
+            <div>
+              <h2 style={S.sidebarTitle}>Registration Portal</h2>
+              <span style={S.sidebarSubtitle}>Eloquence 2026 Coordinator</span>
+            </div>
           </div>
-          <div>
-            <h2 style={S.sidebarTitle}>Registration Portal</h2>
-            <span style={S.sidebarSubtitle}>Eloquence 2026 Coordinator</span>
-          </div>
+          <button 
+            type="button"
+            className="admin-mobile-menu-btn"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileSidebarOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+          </button>
         </div>
 
-        <nav style={S.navMenu} className="admin-sidebar-nav">
+        <nav style={S.navMenu} className={`admin-sidebar-nav ${mobileSidebarOpen ? 'open' : ''}`}>
           <button 
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
             onClick={() => setActiveTab('dashboard')}

@@ -36,7 +36,8 @@ import {
   FaFilePdf,
   FaPaperPlane,
   FaThLarge,
-  FaTable
+  FaTable,
+  FaBars
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
@@ -68,6 +69,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   });
 
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -1433,18 +1435,28 @@ export default function AdminDashboard({ token, user, onLogout }) {
       {/* ======================================================== */}
       {/* SIDEBAR                                                  */}
       {/* ======================================================== */}
-      <aside style={S.sidebar} className="admin-sidebar">
-        <div style={S.sidebarHeader}>
-          <div style={S.logoCircle}>
-            <FaUserShield size={22} />
+      <aside style={S.sidebar} className={`admin-sidebar ${mobileSidebarOpen ? 'admin-sidebar-open' : ''}`}>
+        <div style={S.sidebarHeader} className="admin-sidebar-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={S.logoCircle}>
+              <FaUserShield size={22} />
+            </div>
+            <div>
+              <h2 style={S.sidebarTitle}>Admin Panel</h2>
+              <span style={S.sidebarSubtitle}>Eloquence 2026</span>
+            </div>
           </div>
-          <div>
-            <h2 style={S.sidebarTitle}>Admin Panel</h2>
-            <span style={S.sidebarSubtitle}>Eloquence 2026</span>
-          </div>
+          <button 
+            type="button"
+            className="admin-mobile-menu-btn"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileSidebarOpen ? <FaTimes size={18} /> : <FaBars size={18} />}
+          </button>
         </div>
         
-        <nav style={S.navMenu} className="admin-sidebar-nav">
+        <nav style={S.navMenu} className={`admin-sidebar-nav ${mobileSidebarOpen ? 'open' : ''}`}>
           {/* Dashboard Tab */}
           <button 
             type="button"
