@@ -537,7 +537,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
           </button>
         </nav>
 
-        <div style={S.sidebarFooter}>
+        <div style={S.sidebarFooter} className="admin-sidebar-footer">
           <button onClick={onLogout} style={S.logoutBtn}>
             <FaSignOutAlt style={S.navIcon} /> Log Out
           </button>
