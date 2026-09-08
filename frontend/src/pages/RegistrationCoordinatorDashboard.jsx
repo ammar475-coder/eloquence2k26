@@ -21,6 +21,7 @@ import {
   FaTimes
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
+import { getApiUrl } from '../config/api';
 
 export default function RegistrationCoordinatorDashboard({ token, user, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -74,7 +75,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   }, [token]);
 
   const fetchEvents = () => {
-    fetch('/api/events')
+    fetch(getApiUrl('/api/events'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
@@ -86,7 +87,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
   const fetchRegistrations = () => {
     setLoading(true);
-    fetch('/api/registrations')
+    fetch(getApiUrl('/api/registrations'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.registrations)) {
@@ -100,7 +101,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   };
 
   const fetchCoordinators = () => {
-    fetch('/api/coordinators')
+    fetch(getApiUrl('/api/coordinators'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data)) {
@@ -219,7 +220,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     setIsSendingList(true);
     const toastId = toast.loading(`Dispatching list for "${sendTargetEvent.name}"...`);
 
-    fetch('/api/send-participant-list', {
+    fetch(getApiUrl('/api/send-participant-list'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -280,7 +281,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     setIsRegisteringOnSite(true);
     const toastId = toast.loading('Processing on-site registration...');
 
-    fetch('/api/register', {
+    fetch(getApiUrl('/api/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

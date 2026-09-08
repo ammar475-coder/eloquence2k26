@@ -1,9 +1,8 @@
-// ELOQUENCE'26 API Service Layer
-// Communicates with Node/Express backend on /api
+import { getApiUrl } from '../config/api';
 
 export async function submitRegistration(payload) {
   try {
-    const response = await fetch('/api/register', {
+    const response = await fetch(getApiUrl('/api/register'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +68,7 @@ export async function submitRegistration(payload) {
 
 export async function fetchActiveSponsors() {
   try {
-    const res = await fetch('/api/sponsors');
+    const res = await fetch(getApiUrl('/api/sponsors'));
     const data = await res.json();
     if (data.success) return data.data;
     return [];
@@ -81,7 +80,7 @@ export async function fetchActiveSponsors() {
 
 export async function fetchActiveCoordinators() {
   try {
-    const res = await fetch('/api/coordinators');
+    const res = await fetch(getApiUrl('/api/coordinators'));
     const data = await res.json();
     if (data.success) return data.data;
     return [];
@@ -93,7 +92,7 @@ export async function fetchActiveCoordinators() {
 
 export async function fetchCoordinatorsByEvent(eventId) {
   try {
-    const res = await fetch(`/api/coordinators/event/${encodeURIComponent(eventId)}`);
+    const res = await fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(eventId)}`));
     const data = await res.json();
     if (data.success) return data.data;
     return [];
@@ -106,14 +105,14 @@ export async function fetchCoordinatorsByEvent(eventId) {
 // ==================== ADMIN APIS (AUTH REQUIRED) ====================
 
 export async function fetchAdminSponsors(token) {
-  const res = await fetch('/api/admin/sponsors', {
+  const res = await fetch(getApiUrl('/api/admin/sponsors'), {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   return res.json();
 }
 
 export async function createSponsor(sponsorData, token) {
-  const res = await fetch('/api/admin/sponsors', {
+  const res = await fetch(getApiUrl('/api/admin/sponsors'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -125,7 +124,7 @@ export async function createSponsor(sponsorData, token) {
 }
 
 export async function updateSponsor(id, sponsorData, token) {
-  const res = await fetch(`/api/admin/sponsors/${id}`, {
+  const res = await fetch(getApiUrl(`/api/admin/sponsors/${id}`), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -137,7 +136,7 @@ export async function updateSponsor(id, sponsorData, token) {
 }
 
 export async function toggleSponsorStatus(id, token) {
-  const res = await fetch(`/api/admin/sponsors/${id}/toggle`, {
+  const res = await fetch(getApiUrl(`/api/admin/sponsors/${id}/toggle`), {
     method: 'PATCH',
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -145,7 +144,7 @@ export async function toggleSponsorStatus(id, token) {
 }
 
 export async function deleteSponsor(id, token) {
-  const res = await fetch(`/api/admin/sponsors/${id}`, {
+  const res = await fetch(getApiUrl(`/api/admin/sponsors/${id}`), {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -153,7 +152,7 @@ export async function deleteSponsor(id, token) {
 }
 
 export async function uploadSponsorLogo(imageBase64, fileName, token) {
-  const res = await fetch('/api/admin/upload', {
+  const res = await fetch(getApiUrl('/api/admin/upload'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -165,14 +164,14 @@ export async function uploadSponsorLogo(imageBase64, fileName, token) {
 }
 
 export async function fetchAdminCoordinators(token) {
-  const res = await fetch('/api/admin/coordinators', {
+  const res = await fetch(getApiUrl('/api/admin/coordinators'), {
     headers: { 'Authorization': `Bearer ${token}` }
   });
   return res.json();
 }
 
 export async function createCoordinator(coordData, token) {
-  const res = await fetch('/api/admin/coordinators', {
+  const res = await fetch(getApiUrl('/api/admin/coordinators'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -184,7 +183,7 @@ export async function createCoordinator(coordData, token) {
 }
 
 export async function updateCoordinator(id, coordData, token) {
-  const res = await fetch(`/api/admin/coordinators/${id}`, {
+  const res = await fetch(getApiUrl(`/api/admin/coordinators/${id}`), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -196,7 +195,7 @@ export async function updateCoordinator(id, coordData, token) {
 }
 
 export async function toggleCoordinatorStatus(id, token) {
-  const res = await fetch(`/api/admin/coordinators/${id}/toggle`, {
+  const res = await fetch(getApiUrl(`/api/admin/coordinators/${id}/toggle`), {
     method: 'PATCH',
     headers: { 'Authorization': `Bearer ${token}` }
   });
@@ -204,7 +203,7 @@ export async function toggleCoordinatorStatus(id, token) {
 }
 
 export async function deleteCoordinator(id, token) {
-  const res = await fetch(`/api/admin/coordinators/${id}`, {
+  const res = await fetch(getApiUrl(`/api/admin/coordinators/${id}`), {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   });

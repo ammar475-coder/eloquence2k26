@@ -40,6 +40,7 @@ import {
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
+import { getApiUrl } from '../config/api';
 
 const EXISTING_POSTER_PRESETS = [
   { id: 'tech-01', label: 'Slide Craft (PPT)', img: defaultEventImages['tech-01'] },
@@ -286,7 +287,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setIsSendingList(true);
     const toastId = toast.loading(`Dispatching list for "${sendTargetEvent.name}"...`);
 
-    fetch('/api/send-participant-list', {
+    fetch(getApiUrl('/api/send-participant-list'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -319,7 +320,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isEditDispatchModalOpen, setIsEditDispatchModalOpen] = useState(false);
 
   const fetchDispatches = () => {
-    fetch('/api/dispatches')
+    fetch(getApiUrl('/api/dispatches'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data)) {
@@ -333,7 +334,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete and revoke the dispatched list for "${eventName}" sent to ${coordinatorName}?`)) return;
 
     const toastId = toast.loading(`Revoking dispatched list for ${eventName}...`);
-    fetch(`/api/dispatches/${id}`, { method: 'DELETE' })
+    fetch(getApiUrl(`/api/dispatches/${id}`), { method: 'DELETE' })
       .then(res => res.json())
       .then(result => {
         if (result.success) {
@@ -360,7 +361,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!editingDispatchId || !editCoordNameInput.trim()) return toast.error('Please enter a coordinator name');
 
     const toastId = toast.loading('Updating dispatched list...');
-    fetch(`/api/dispatches/${editingDispatchId}`, {
+    fetch(getApiUrl(`/api/dispatches/${editingDispatchId}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ coordinatorName: editCoordNameInput.trim() })
@@ -452,7 +453,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [coordIsActive, setCoordIsActive] = useState(true);
 
   const fetchRegistrations = () => {
-    fetch('/api/registrations')
+    fetch(getApiUrl('/api/registrations'))
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.registrations)) {
@@ -530,7 +531,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setIsRegisteringOnSite(true);
     const toastId = toast.loading('Processing on-site registration...');
 
-    fetch('/api/register', {
+    fetch(getApiUrl('/api/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -559,7 +560,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchDashboardData = () => {
-    fetch('/api/admin/dashboard', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/dashboard'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success) setData(result.data);
@@ -570,7 +571,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchUsers = () => {
-    fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/users'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => { 
         if (result.success) setUsers(result.data); 
@@ -579,7 +580,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchRoles = () => {
-    fetch('/api/admin/roles', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/roles'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => { 
         if (result.success) {
@@ -593,7 +594,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchEvents = () => {
-    fetch('/api/admin/events', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/events'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
@@ -607,7 +608,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchSponsors = () => {
-    fetch('/api/admin/sponsors', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/sponsors'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success) setSponsors(result.data);
@@ -616,7 +617,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const fetchCoordinators = () => {
-    fetch('/api/admin/coordinators', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(getApiUrl('/api/admin/coordinators'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
         if (result.success) setCoordinators(result.data);
@@ -653,7 +654,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingUserId ? 'Updating user...' : 'Creating user...');
     const method = editingUserId ? 'PUT' : 'POST';
-    const url = editingUserId ? `/api/admin/users/${editingUserId}` : '/api/admin/users';
+    const url = editingUserId ? getApiUrl(`/api/admin/users/${editingUserId}`) : getApiUrl('/api/admin/users');
 
     fetch(url, {
       method,
@@ -681,7 +682,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete user "${targetUsername}"?`)) return;
     const loadingToast = toast.loading('Deleting user...');
 
-    fetch(`/api/admin/users/${id}`, {
+    fetch(getApiUrl(`/api/admin/users/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -722,7 +723,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingRoleId ? 'Updating role...' : 'Creating role...');
     const method = editingRoleId ? 'PUT' : 'POST';
-    const url = editingRoleId ? `/api/admin/roles/${editingRoleId}` : '/api/admin/roles';
+    const url = editingRoleId ? getApiUrl(`/api/admin/roles/${editingRoleId}`) : getApiUrl('/api/admin/roles');
 
     fetch(url, {
       method,
@@ -751,7 +752,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete role "${roleName}"?`)) return;
     const loadingToast = toast.loading('Deleting role...');
 
-    fetch(`/api/admin/roles/${id}`, {
+    fetch(getApiUrl(`/api/admin/roles/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -830,7 +831,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       setIsUploadingEventImage(true);
       const loadingToast = toast.loading('Uploading event picture...');
 
-      fetch('/api/admin/upload', {
+      fetch(getApiUrl('/api/admin/upload'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -866,7 +867,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     }
 
     const loadingToast = toast.loading(editingEvent ? 'Saving event changes...' : 'Creating new event...');
-    const url = editingEvent ? `/api/admin/events/${editingEvent.id}` : '/api/admin/events';
+    const url = editingEvent ? getApiUrl(`/api/admin/events/${editingEvent.id}`) : getApiUrl('/api/admin/events');
     const method = editingEvent ? 'PUT' : 'POST';
 
     const payload = {
@@ -910,7 +911,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       return;
     }
     const loadingToast = toast.loading(`Deleting event ${name}...`);
-    fetch(`/api/admin/events/${eventId}`, {
+    fetch(getApiUrl(`/api/admin/events/${eventId}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -989,7 +990,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       setIsUploadingLogo(true);
       const loadingToast = toast.loading('Uploading logo asset...');
 
-      fetch('/api/admin/upload', {
+      fetch(getApiUrl('/api/admin/upload'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1043,7 +1044,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingSponsorId ? 'Updating sponsor...' : 'Creating sponsor...');
     const method = editingSponsorId ? 'PUT' : 'POST';
-    const url = editingSponsorId ? `/api/admin/sponsors/${editingSponsorId}` : '/api/admin/sponsors';
+    const url = editingSponsorId ? getApiUrl(`/api/admin/sponsors/${editingSponsorId}`) : getApiUrl('/api/admin/sponsors');
 
     fetch(url, {
       method,
@@ -1069,7 +1070,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const handleToggleSponsor = (sponsor) => {
     const loadingToast = toast.loading(`Toggling status for ${sponsor.name}...`);
-    fetch(`/api/admin/sponsors/${sponsor.id}/toggle`, {
+    fetch(getApiUrl(`/api/admin/sponsors/${sponsor.id}/toggle`), {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1090,7 +1091,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete sponsor "${name}"? This action cannot be undone.`)) return;
     const loadingToast = toast.loading('Deleting sponsor...');
 
-    fetch(`/api/admin/sponsors/${id}`, {
+    fetch(getApiUrl(`/api/admin/sponsors/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1180,7 +1181,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const loadingToast = toast.loading(editingCoordId ? 'Updating coordinator...' : 'Creating coordinator...');
     const method = editingCoordId ? 'PUT' : 'POST';
-    const url = editingCoordId ? `/api/admin/coordinators/${editingCoordId}` : '/api/admin/coordinators';
+    const url = editingCoordId ? getApiUrl(`/api/admin/coordinators/${editingCoordId}`) : getApiUrl('/api/admin/coordinators');
 
     fetch(url, {
       method,
@@ -1206,7 +1207,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const handleToggleCoord = (coord) => {
     const loadingToast = toast.loading(`Toggling status for ${coord.name}...`);
-    fetch(`/api/admin/coordinators/${coord.id}/toggle`, {
+    fetch(getApiUrl(`/api/admin/coordinators/${coord.id}/toggle`), {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1227,7 +1228,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to delete coordinator "${name}"?`)) return;
     const loadingToast = toast.loading('Deleting coordinator...');
 
-    fetch(`/api/admin/coordinators/${id}`, {
+    fetch(getApiUrl(`/api/admin/coordinators/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     })

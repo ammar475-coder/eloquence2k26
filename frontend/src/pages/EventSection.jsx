@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
+import { getApiUrl } from '../config/api';
 
 export default function EventSection({ onRegister, onViewRules }) {
   const [eventsList, setEventsList] = useState(events);
@@ -9,7 +10,7 @@ export default function EventSection({ onRegister, onViewRules }) {
   const sectionRef = useRef(null);
 
   useEffect(() => {
-    fetch('/api/events')
+    fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
