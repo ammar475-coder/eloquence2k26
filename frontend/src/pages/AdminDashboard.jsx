@@ -48,9 +48,11 @@ import {
   FaSyncAlt,
   FaCheckCircle,
   FaInfoCircle,
-  FaUserPlus
+  FaUserPlus,
+  FaListOl
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
+import rulesData from '../data/rules.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 
@@ -122,6 +124,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [eventImage, setEventImage] = useState('');
   const [eventImagePreview, setEventImagePreview] = useState('');
   const [isUploadingEventImage, setIsUploadingEventImage] = useState(false);
+
+  // Event Rules State
+  const [eventRules, setEventRules] = useState([]);
+  const [rulesInputMode, setRulesInputMode] = useState('list'); // 'list' | 'bulk'
+  const [bulkRulesText, setBulkRulesText] = useState('');
 
   const eventFileInputRef = useRef(null);
 
@@ -1069,6 +1076,42 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   // ==================== EVENT HANDLERS ====================
+  const parseBulkRules = (text) => {
+    if (!text || typeof text !== 'string') return [];
+    return text
+      .split('\n')
+      .map(line => line.replace(/^(\d+[\.\)]\s*|[-*•]\s*)/, '').trim())
+      .filter(line => line.length > 0);
+  };
+
+  const handleAddRule = () => {
+    setEventRules(prev => [...prev, '']);
+  };
+
+  const handleRuleChange = (index, value) => {
+    setEventRules(prev => {
+      const copy = [...prev];
+      copy[index] = value;
+      return copy;
+    });
+  };
+
+  const handleRemoveRule = (index) => {
+    setEventRules(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMoveRule = (index, direction) => {
+    setEventRules(prev => {
+      if ((direction === 'up' && index === 0) || (direction === 'down' && index === prev.length - 1)) return prev;
+      const copy = [...prev];
+      const target = direction === 'up' ? index - 1 : index + 1;
+      const tmp = copy[index];
+      copy[index] = copy[target];
+      copy[target] = tmp;
+      return copy;
+    });
+  };
+
   const resetEventEditModal = () => {
     setEditingEvent(null);
     setEventName('');
@@ -1083,6 +1126,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setEventDesc('');
     setEventImage('');
     setEventImagePreview('');
+    setEventRules([]);
+    setBulkRulesText('');
+    setRulesInputMode('list');
     setIsEventEditModalOpen(false);
     if (eventFileInputRef.current) eventFileInputRef.current.value = '';
   };
@@ -1093,6 +1139,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setEventTiming('10:00 AM – 01:00 PM');
     setEventVenue('CSE Seminar Hall');
     setEventTeamSize('Individual');
+    setEventRules(['']);
+    setBulkRulesText('');
+    setRulesInputMode('list');
     setIsEventEditModalOpen(true);
   };
 
@@ -1110,6 +1159,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setEventDesc(eventItem.description || '');
     setEventImage(eventItem.image || '');
     setEventImagePreview(getEventBanner(eventItem) || '');
+
+    const existingRules = (Array.isArray(eventItem.rules) && eventItem.rules.length > 0)
+      ? eventItem.rules
+      : (rulesData[eventItem.id]?.rules || []);
+    const initialRules = existingRules.length > 0 ? [...existingRules] : [''];
+    setEventRules(initialRules);
+    setBulkRulesText(initialRules.join('\n'));
+    setRulesInputMode('list');
+
     setIsEventEditModalOpen(true);
   };
 
@@ -1165,6 +1223,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
       return toast.error('Please fill in all required event details');
     }
 
+    const activeRulesList = rulesInputMode === 'bulk' ? parseBulkRules(bulkRulesText) : eventRules;
+    const cleanedRules = activeRulesList
+      .map(r => (typeof r === 'string' ? r.replace(/^(\d+[\.\)]\s*|[-*•]\s*)/, '').trim() : ''))
+      .filter(r => r.length > 0);
+
     const loadingToast = toast.loading(editingEvent ? 'Saving event changes...' : 'Creating new event...');
     const url = editingEvent ? getApiUrl(`/api/admin/events/${editingEvent.id}`) : getApiUrl('/api/admin/events');
     const method = editingEvent ? 'PUT' : 'POST';
@@ -1180,7 +1243,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
       teamSize: eventTeamSize.trim(),
       tag: eventTag.trim() || (eventCategory === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
       description: eventDesc.trim(),
-      image: eventImage.trim()
+      image: eventImage.trim(),
+      rules: cleanedRules
     };
 
     fetch(url, {
@@ -1193,9 +1257,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
         if (result.success) {
           toast.success(editingEvent ? 'Event updated! Changes live on main events page.' : 'Event created successfully!', { id: loadingToast });
           if (editingEvent) {
-            setEventsList(eventsList.map(item => item.id === editingEvent.id ? result.data : item));
+            setEventsList(eventsList.map(item => item.id === editingEvent.id ? { ...item, ...result.data, rules: cleanedRules } : item));
           } else {
-            setEventsList([...eventsList, result.data]);
+            setEventsList([...eventsList, { ...result.data, rules: cleanedRules }]);
           }
           resetEventEditModal();
         } else {
@@ -2266,6 +2330,26 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               <span style={S.strongText}>{evt.name}</span>
                               <div style={S.tableSubText}>
                                 <span style={S.idBadgeMini}>{evt.id.toUpperCase()}</span> {evt.subtitle || evt.alias}
+                                <span 
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: '700',
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    background: isDark ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff',
+                                    color: isDark ? '#93c5fd' : '#2563eb',
+                                    border: isDark ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid #bfdbfe',
+                                    marginLeft: '6px',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={(e) => { e.stopPropagation(); handleOpenEditEventModal(evt); }}
+                                  title="Click to view and edit rules"
+                                >
+                                  <FaListOl size={8} /> {((Array.isArray(evt.rules) && evt.rules.length) || rulesData[evt.id]?.rules?.length || 0)} Rules
+                                </span>
                               </div>
                             </div>
                           </td>
@@ -3833,7 +3917,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       {/* ======================================================== */}
       {isEventEditModalOpen && (
         <div style={S.modalBackdrop} onClick={resetEventEditModal}>
-          <div style={{ ...S.modalCard, maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ ...S.modalCard, maxWidth: '740px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div style={S.modalHeader}>
               <div style={S.modalHeaderLeft}>
                 <div style={S.modalIconBoxEvent}>
@@ -4071,6 +4155,240 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     rows={3}
                     placeholder="Brief description of the event, objective, and format..."
                   />
+                </div>
+
+                {/* Event Rules & Regulations Management */}
+                <div style={{
+                  marginTop: '0.5rem',
+                  padding: '1rem',
+                  borderRadius: '12px',
+                  background: isDark ? 'rgba(31, 41, 55, 0.45)' : 'rgba(248, 250, 252, 0.95)',
+                  border: isDark ? '1px solid #374151' : '1px solid #e2e8f0'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FaListOl style={{ color: isDark ? '#93c5fd' : '#2563eb' }} />
+                      <label style={{ ...S.label, margin: 0, fontSize: '0.92rem', fontWeight: '700' }}>
+                        Competition Rules & Guidelines
+                      </label>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: isDark ? '#1e3a8a' : '#dbeafe',
+                        color: isDark ? '#93c5fd' : '#1d4ed8',
+                        fontWeight: '700'
+                      }}>
+                        {rulesInputMode === 'bulk' 
+                          ? `${parseBulkRules(bulkRulesText).length} Rules` 
+                          : `${eventRules.filter(r => r.trim()).length} Rules`}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (rulesInputMode === 'list') {
+                            setBulkRulesText(eventRules.filter(r => r.trim()).join('\n'));
+                            setRulesInputMode('bulk');
+                          } else {
+                            const parsed = parseBulkRules(bulkRulesText);
+                            setEventRules(parsed.length > 0 ? parsed : ['']);
+                            setRulesInputMode('list');
+                          }
+                        }}
+                        style={{
+                          padding: '0.35rem 0.65rem',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                          borderRadius: '6px',
+                          background: isDark ? '#374151' : '#f1f5f9',
+                          color: isDark ? '#e5e7eb' : '#475569',
+                          border: isDark ? '1px solid #4b5563' : '1px solid #cbd5e1',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {rulesInputMode === 'list' ? 'Switch to Bulk Paste' : 'Switch to List View'}
+                      </button>
+
+                      {rulesInputMode === 'list' && (
+                        <button
+                          type="button"
+                          onClick={handleAddRule}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '0.35rem 0.75rem',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            borderRadius: '6px',
+                            background: isDark ? '#1e40af' : '#2563eb',
+                            color: '#ffffff',
+                            border: 'none',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <FaPlus size={10} /> Add Rule
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <p style={{ ...S.inputHelper, marginBottom: '0.75rem' }}>
+                    Rules will appear dynamically with numbered badges on the public event rules page.
+                  </p>
+
+                  {rulesInputMode === 'list' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {eventRules.map((rule, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: isDark ? '#1e293b' : '#e2e8f0',
+                            color: isDark ? '#93c5fd' : '#2563eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.72rem',
+                            fontWeight: '700',
+                            flexShrink: 0
+                          }}>
+                            {idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={rule}
+                            onChange={(e) => handleRuleChange(idx, e.target.value)}
+                            placeholder={`Rule #${idx + 1} (e.g. Teams must present PPT in PowerPoint or PDF format)`}
+                            style={{ ...S.input, flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.85rem' }}
+                          />
+                          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveRule(idx, 'up')}
+                              disabled={idx === 0}
+                              style={{
+                                padding: '4px 6px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: idx === 0 ? '#6b7280' : (isDark ? '#9ca3af' : '#64748b'),
+                                cursor: idx === 0 ? 'default' : 'pointer',
+                                opacity: idx === 0 ? 0.3 : 1
+                              }}
+                              title="Move rule up"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveRule(idx, 'down')}
+                              disabled={idx === eventRules.length - 1}
+                              style={{
+                                padding: '4px 6px',
+                                background: 'transparent',
+                                border: 'none',
+                                color: idx === eventRules.length - 1 ? '#6b7280' : (isDark ? '#9ca3af' : '#64748b'),
+                                cursor: idx === eventRules.length - 1 ? 'default' : 'pointer',
+                                opacity: idx === eventRules.length - 1 ? 0.3 : 1
+                              }}
+                              title="Move rule down"
+                            >
+                              ▼
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRule(idx)}
+                              style={{
+                                padding: '4px 6px',
+                                background: isDark ? '#451a1a' : '#fee2e2',
+                                border: isDark ? '1px solid #7f1d1d' : '1px solid #fecaca',
+                                color: '#ef4444',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                              }}
+                              title="Delete rule"
+                            >
+                              <FaTrash size={11} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {eventRules.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '1rem', color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.85rem' }}>
+                          No rules added yet. Click <strong>+ Add Rule</strong> or <strong>Switch to Bulk Paste</strong> to add rules.
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleAddRule}
+                        style={{
+                          marginTop: '4px',
+                          alignSelf: 'flex-start',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '6px',
+                          background: isDark ? '#1f2937' : '#f8fafc',
+                          border: isDark ? '1px dashed #4b5563' : '1px dashed #cbd5e1',
+                          color: isDark ? '#60a5fa' : '#2563eb',
+                          fontSize: '0.82rem',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <FaPlus size={10} /> Add Another Rule
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <textarea
+                        value={bulkRulesText}
+                        onChange={(e) => setBulkRulesText(e.target.value)}
+                        rows={6}
+                        placeholder="Paste or type one rule per line:&#10;1. Presentation must be prepared in PowerPoint or PDF format.&#10;2. Maximum of 7 slides per team.&#10;3. 5 minutes presentation and 2 minutes for Q&A."
+                        style={{
+                          ...S.input,
+                          width: '100%',
+                          fontFamily: 'monospace',
+                          fontSize: '0.82rem',
+                          lineHeight: '1.5',
+                          resize: 'vertical'
+                        }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                        <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                          Bullet markers (1., 2., -, *) will be cleaned automatically.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const parsed = parseBulkRules(bulkRulesText);
+                            setEventRules(parsed.length > 0 ? parsed : ['']);
+                            setRulesInputMode('list');
+                          }}
+                          style={{
+                            padding: '0.3rem 0.65rem',
+                            fontSize: '0.75rem',
+                            borderRadius: '6px',
+                            background: isDark ? '#374151' : '#e2e8f0',
+                            color: isDark ? '#f3f4f6' : '#1e293b',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontWeight: '600'
+                          }}
+                        >
+                          Apply to List
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
