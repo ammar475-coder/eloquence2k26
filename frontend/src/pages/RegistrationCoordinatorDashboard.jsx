@@ -485,21 +485,21 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
         <nav style={S.navMenu} className={`admin-sidebar-nav ${mobileSidebarOpen ? 'open' : ''}`}>
           <button 
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
           >
             <FaChartBar style={S.navIcon} /> Dashboard
           </button>
 
           <button 
             style={activeTab === 'registration' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('registration')}
+            onClick={() => { setActiveTab('registration'); setMobileSidebarOpen(false); }}
           >
             <FaUserCheck style={S.navIcon} /> Registration
           </button>
 
           <button 
             style={activeTab === 'register-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('register-list')}
+            onClick={() => { setActiveTab('register-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -512,7 +512,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
           <button 
             style={activeTab === 'online-register-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('online-register-list')}
+            onClick={() => { setActiveTab('online-register-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -525,7 +525,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
           <button 
             style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('participant-list')}
+            onClick={() => { setActiveTab('participant-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>

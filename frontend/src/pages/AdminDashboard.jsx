@@ -1461,7 +1461,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           <button 
             type="button"
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }}
+            onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
           >
             <FaChartBar style={S.navIcon} /> Dashboard
           </button>
@@ -1470,7 +1470,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           <button 
             type="button"
             style={activeTab === 'events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('events'); }}
+            onClick={(e) => { e.preventDefault(); setActiveTab('events'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1502,7 +1502,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={S.submenu}>
                   <button 
                     style={activeTab === 'manage-users' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                    onClick={() => setActiveTab('manage-users')}
+                    onClick={() => { setActiveTab('manage-users'); setMobileSidebarOpen(false); }}
                   >
                     <FaUserCheck style={S.subnavIcon} />
                     <span>Manage Users</span>
@@ -1511,7 +1511,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
                   <button 
                     style={activeTab === 'manage-roles' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                    onClick={() => setActiveTab('manage-roles')}
+                    onClick={() => { setActiveTab('manage-roles'); setMobileSidebarOpen(false); }}
                   >
                     <FaShieldAlt style={S.subnavIcon} />
                     <span>Manage Roles</span>
@@ -1526,7 +1526,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           <button 
             type="button"
             style={activeTab === 'manage-sponsors' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('manage-sponsors'); }}
+            onClick={(e) => { e.preventDefault(); setActiveTab('manage-sponsors'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1541,7 +1541,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           <button 
             type="button"
             style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('manage-coordinators'); }}
+            onClick={(e) => { e.preventDefault(); setActiveTab('manage-coordinators'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1556,7 +1556,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           <button 
             type="button"
             style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('participant-list'); }}
+            onClick={(e) => { e.preventDefault(); setActiveTab('participant-list'); setMobileSidebarOpen(false); }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
