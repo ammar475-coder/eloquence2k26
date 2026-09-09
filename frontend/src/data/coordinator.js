@@ -17,7 +17,6 @@ const coordinatorsData = {
         phone: '9994023366',
         displayPhone: '+91 99940 23366',
         role: 'Lead Coordinator'
-        
       },
       {
         slot: 'B',
@@ -149,7 +148,22 @@ const coordinatorsData = {
     eventName: 'The Roborange Botathon',
     alias: 'The Roborange Botathon',
     category: 'technical',
-    coordinators: []
+    coordinators: [
+      {
+        slot: 'A',
+        name: 'MD Faazil Ammar P.',
+        phone: '9025184611',
+        displayPhone: '+91 90251 84611',
+        role: 'Lead Coordinator'
+      },
+      {
+        slot: 'B',
+        name: 'Mohammed Saad V.',
+        phone: '8643033733',
+        displayPhone: '+91 86430 33733',
+        role: 'Lead Coordinator'
+      }
+    ]
   },
 
   /* ───── NON-TECHNICAL EVENT COORDINATORS ───── */
@@ -164,6 +178,13 @@ const coordinatorsData = {
         name: 'Ismail',
         phone: '8098067668',
         displayPhone: '+91 80980 67668',
+        role: 'Lead Coordinator'
+      },
+      {
+        slot: 'B',
+        name: 'Afra Tharanum A.',
+        phone: '6382025752',
+        displayPhone: '+91 63820 25752',
         role: 'Lead Coordinator'
       }
     ]
@@ -279,10 +300,25 @@ const coordinatorsData = {
 
   'nontech-07': {
     eventId: 'nontech-07',
-    eventName: 'BATTLEWORLD BIDDING',
-    alias: 'Battleworld Bidding',
+    eventName: 'AUCTION',
+    alias: 'Auction',
     category: 'non-technical',
-    coordinators: []
+    coordinators: [
+      {
+        slot: 'A',
+        name: 'Bala Murugan M.K.',
+        phone: '8681029193',
+        displayPhone: '+91 86810 29193',
+        role: 'Lead Coordinator'
+      },
+      {
+        slot: 'B',
+        name: 'Vijay Kumar M.',
+        phone: '9840251140',
+        displayPhone: '+91 98402 51140',
+        role: 'Lead Coordinator'
+      }
+    ]
   }
 };
 

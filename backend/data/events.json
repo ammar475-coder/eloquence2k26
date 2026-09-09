@@ -190,6 +190,67 @@
     "image": "/events/img-1788936520321-7906.jpg"
   },
   {
+    "id": "tech-05",
+    "number": "05",
+    "name": "CHART CANVAS",
+    "alias": "Poster Design",
+    "subtitle": "Manual Chart & Visual Design",
+    "category": "technical",
+    "teamSize": "Team (Max 3 members)",
+    "minMembers": 1,
+    "maxMembers": 3,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Creative Graphics",
+    "venue": "Computer Labs 1 & 2",
+    "timing": "10:30 AM – 1:00 PM",
+    "description": "Express engineering concepts, sustainability themes, and digital innovations through creative chart artwork and impactful visual posters.",
+    "rules": [
+      "Participants will be provided with chart paper; bring your own coloring materials, pencils, and markers.",
+      "Theme will be announced on the spot at the start of the event.",
+      "Time duration: 1 hour for design + 3 minutes presentation before the judges.",
+      "Maximum of 3 members per team.",
+      "Pre-drawn materials or use of mobile phones for tracing is strictly prohibited."
+    ],
+    "rounds": [
+      {
+        "name": "Design Phase",
+        "time": "60 Mins",
+        "desc": "Brainstorm and draft your chart poster on the announced technical topic."
+      },
+      {
+        "name": "Concept Presentation",
+        "time": "3 Mins / Team",
+        "desc": "Explain the visual message, symbolism, and technical depth to the jury."
+      }
+    ],
+    "guidelines": [
+      "Originality, neatness, clarity of message, and visual impact are the primary judging criteria.",
+      "Decision of the evaluation panel is final."
+    ],
+    "coordinators": [
+      {
+        "name": "Imran B.",
+        "role": "Lead Coordinator",
+        "phone": "6369954082"
+      },
+      {
+        "name": "Preethi R.",
+        "role": "Lead Coordinator",
+        "phone": "9344114553"
+      }
+    ],
+    "highlights": [
+      "Topics on spot",
+      "1 hour designing",
+      "3 mins presentation",
+      "Materials provided"
+    ],
+    "image": ""
+  },
+  {
     "id": "tech-06",
     "number": "06",
     "name": "UI/UX",
@@ -282,7 +343,19 @@
       "Clean fastest run wins",
       "₹150/head"
     ],
-    "image": "/events/img-1788936555010-2407.png"
+    "image": "/events/img-1788936555010-2407.png",
+    "coordinators": [
+      {
+        "name": "MD Faazil Ammar P.",
+        "role": "Lead Coordinator",
+        "phone": "9025184611"
+      },
+      {
+        "name": "Mohammed Saad V.",
+        "role": "Lead Coordinator",
+        "phone": "8643033733"
+      }
+    ]
   },
   {
     "id": "nontech-01",
@@ -555,13 +628,13 @@
   {
     "id": "nontech-07",
     "number": "07",
-    "name": "BATTLEWORLD BIDDING",
-    "alias": "Battleworld Bidding",
+    "name": "AUCTION",
+    "alias": "Auction",
     "subtitle": "Bid. Think. Win.",
     "category": "non-technical",
-    "teamSize": "Individual",
+    "teamSize": "Individual / Team of 2",
     "minMembers": 1,
-    "maxMembers": 1,
+    "maxMembers": 2,
     "fee": "₹50 per head",
     "feePerHead": 50,
     "feeType": "per_head",
@@ -571,27 +644,28 @@
     "timing": "10:00 AM – 01:00 PM",
     "description": "Step into the world of strategy, wit, and quick decisions. Bid smart, outthink the rest, and take the win!",
     "rules": [
-      "Individual participation only.",
-      "Registration fee: ₹50 per head.",
-      "Each participant is allocated a fixed virtual purse/budget at the start of the event.",
-      "Bidding must strictly follow the auctioneer’s calls and increment brackets.",
-      "Once the gavel strikes, the sale is final and bids cannot be retracted.",
-      "Participants who exhaust or exceed their purse limit will face penalties or disqualification.",
-      "Winner will be determined based on highest total valuation points scored within budget constraints."
+      "Individual participation or team of up to 2 members.",
+      "Virtual purse budget will be allocated to each participating team at the start.",
+      "Bidding follows sequential live auction rounds with strict countdown timers.",
+      "Exceeding allocated purse budget or bid collusion will result in penalty or disqualification.",
+      "Scoring is calculated from total squad/asset valuation, strategic diversity, and remaining funds.",
+      "Decision of the Auctioneer and judges is final and binding."
     ],
     "rounds": [
       {
-        "name": "Round 1: Purse Allocation & Open Bidding",
-        "time": "45 Mins",
-        "desc": "Participants receive virtual credit and compete across dynamic lots."
+        "name": "Purse Allocation & Rules Brief",
+        "time": "15 Mins",
+        "desc": "Rules explanation, category tier reveal, and budget distribution."
       },
       {
-        "name": "Round 2: High Stakes Final Climax",
-        "time": "30 Mins",
-        "desc": "Premium rare asset auction with bonus score multipliers."
+        "name": "Live Auction Bidding",
+        "time": "90 Mins",
+        "desc": "Fast-paced live bidding rounds across featured player/asset pools."
       }
     ],
     "guidelines": [
+      "Paper and calculators will be provided for tracking bids.",
+      "Keep your bidding paddle clearly visible when placing bids.",
       "Virtual purse ledger will be maintained by auction marshals."
     ],
     "highlights": [
@@ -600,6 +674,18 @@
       "Fastest bidder priority",
       "₹50/head"
     ],
-    "image": "/events/nontech-07-1788936459595-9726.png"
+    "image": "/events/nontech-07-1788936459595-9726.png",
+    "coordinators": [
+      {
+        "name": "Bala Murugan M.K.",
+        "role": "Lead Coordinator",
+        "phone": "8681029193"
+      },
+      {
+        "name": "Vijay Kumar M.",
+        "role": "Lead Coordinator",
+        "phone": "9840251140"
+      }
+    ]
   }
 ]

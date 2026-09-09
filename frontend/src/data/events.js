@@ -321,13 +321,13 @@ const events = [
   {
     id: 'nontech-07',
     number: '07',
-    name: 'BATTLEWORLD BIDDING',
-    alias: 'Battleworld Bidding',
+    name: 'AUCTION',
+    alias: 'Auction',
     subtitle: 'Bid. Think. Win.',
     category: 'non-technical',
-    teamSize: 'Individual',
+    teamSize: 'Individual / Team of 2',
     minMembers: 1,
-    maxMembers: 1,
+    maxMembers: 2,
     fee: '₹50 per head',
     feePerHead: 50,
     feeType: 'per_head',
@@ -340,7 +340,7 @@ const events = [
     rounds: rulesData['nontech-07'].rounds,
     guidelines: rulesData['nontech-07'].guidelines,
     coordinators: coordinatorsData['nontech-07']?.coordinators || [],
-    highlights: ['Virtual purse budget', 'Strategic auctioning', 'Fastest bidder priority', '₹50/head'],
+    highlights: ['Strategic bidding', 'Virtual purse management', 'Fast-paced live auction'],
     image: '/events/auction.png'
   }
 ];

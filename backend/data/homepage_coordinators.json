@@ -5,7 +5,7 @@
     "tag": "WEB & TECH CREW",
     "iconName": "Code",
     "tier": "cyan",
-    "desc": "Architecting the official Eloquence 2026 digital platform, registration engine, and interactive cyber experience.",
+    "desc": "",
     "names": [
       "SYED MUSTHAFA S",
       "MOHAMMED AYAZ A",
@@ -37,7 +37,7 @@
     "displayOrder": 1,
     "isActive": true,
     "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-09T05:54:42.713Z"
+    "updatedAt": "2026-09-09T06:41:01.793Z"
   },
   {
     "id": "main-coordinators",
@@ -45,7 +45,7 @@
     "tag": "STUDENT LEADERSHIP",
     "iconName": "Users",
     "tier": "emerald",
-    "desc": "Leading symposium logistics, operations, participant management, and orchestrating Eloquence 2026.",
+    "desc": "",
     "names": [
       "SAMNESH S",
       "HARISH KUMAR RG",
@@ -69,7 +69,7 @@
     "displayOrder": 2,
     "isActive": true,
     "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
+    "updatedAt": "2026-09-09T06:41:15.497Z"
   },
   {
     "id": "team-1788933349572",
@@ -97,6 +97,6 @@
     "displayOrder": 3,
     "isActive": false,
     "createdAt": "2026-09-09T05:55:49.572Z",
-    "updatedAt": "2026-09-09T05:58:52.364Z"
+    "updatedAt": "2026-09-09T06:45:23.097Z"
   }
 ]

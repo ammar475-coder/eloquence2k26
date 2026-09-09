@@ -557,44 +557,44 @@ const rulesData = {
 
   'nontech-07': {
     id: 'nontech-07',
-    name: 'BATTLEWORLD BIDDING',
-    alias: 'Battleworld Bidding',
+    name: 'AUCTION',
+    alias: 'Auction',
     category: 'non-technical',
     fee: '₹50 per head',
     feePerHead: 50,
     feeType: 'per_head',
-    teamSize: 'Individual',
+    teamSize: 'Individual / Team of 2',
     minMembers: 1,
-    maxMembers: 1,
+    maxMembers: 2,
     venue: 'CSE Seminar Hall',
-    timing: '10:00 AM – 01:00 PM',
+    timing: '10:00 AM – 1:00 PM',
     description: 'Step into the world of strategy, wit, and quick decisions. Bid smart, outthink the rest, and take the win!',
     rules: [
-      'Individual participation only.',
-      'Registration fee: ₹50 per head.',
-      'Each participant is allocated a fixed virtual purse/budget at the start of the event.',
-      'Bidding must strictly follow the auctioneer’s calls and increment brackets.',
-      'Once the gavel strikes, the sale is final and bids cannot be retracted.',
-      'Participants who exhaust or exceed their purse limit will face penalties or disqualification.',
-      'Winner will be determined based on highest total valuation points scored within budget constraints.'
+      'Individual participation or team of up to 2 members.',
+      'Virtual purse budget will be allocated to each participating team at the start.',
+      'Bidding follows sequential live auction rounds with strict countdown timers.',
+      'Exceeding allocated purse budget or bid collusion will result in penalty or disqualification.',
+      'Scoring is calculated from total squad/asset valuation, strategic diversity, and remaining funds.',
+      'Decision of the Auctioneer and judges is final and binding.'
     ],
     rounds: [
       {
         round: 'Round 1',
-        title: 'Purse Allocation & Open Bidding',
-        duration: '45 Minutes',
-        desc: 'Participants receive virtual credit and compete across dynamic lots.'
+        title: 'Purse Allocation & Rules Brief',
+        duration: '15 Minutes',
+        desc: 'Rules explanation, category tier reveal, and budget distribution.'
       },
       {
         round: 'Round 2',
-        title: 'High Stakes Final Climax',
-        duration: '30 Minutes',
-        desc: 'Premium rare asset auction with bonus score multipliers.'
+        title: 'Live Auction Bidding',
+        duration: '90 Minutes',
+        desc: 'Fast-paced live bidding rounds across featured player/asset pools.'
       }
     ],
     guidelines: [
-      'Virtual purse ledger will be maintained by auction marshals.',
-      'Collusion or unsportsmanlike bidding will lead to disqualification.'
+      'Paper and calculators will be provided for tracking bids.',
+      'Keep your bidding paddle clearly visible when placing bids.',
+      'Virtual purse ledger will be maintained by auction marshals.'
     ]
   }
 };
