@@ -180,6 +180,23 @@ CREATE INDEX IF NOT EXISTS idx_sponsors_search ON public.sponsors USING gin(to_t
 CREATE INDEX IF NOT EXISTS idx_search_logs_query ON public.search_logs(search_query);
 
 -- ------------------------------------------------------------------------------
+-- 11. HOMEPAGE STUDENT-COORDINATOR TEAMS TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.homepage_coordinators (
+    id TEXT PRIMARY KEY,
+    role TEXT NOT NULL,
+    tag TEXT,
+    icon_name TEXT DEFAULT 'Users',
+    tier TEXT DEFAULT 'emerald',
+    description TEXT,
+    members JSONB DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT true,
+    display_order INT DEFAULT 999,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------------------------
 -- 10. SUPABASE STORAGE BUCKET FOR UPLOADS
 -- ------------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
@@ -191,6 +208,7 @@ ALTER TABLE public.events DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registrations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registration_members DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coordinators DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.homepage_coordinators DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sponsors DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.roles DISABLE ROW LEVEL SECURITY;
@@ -203,3 +221,4 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role
 
 -- Notify schema cache reload
 NOTIFY pgrst, 'reload schema';
+
