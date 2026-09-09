@@ -144,6 +144,14 @@ const coordinatorsData = {
     ]
   },
 
+  'tech-07': {
+    eventId: 'tech-07',
+    eventName: 'The Roborange Botathon',
+    alias: 'The Roborange Botathon',
+    category: 'technical',
+    coordinators: []
+  },
+
   /* ───── NON-TECHNICAL EVENT COORDINATORS ───── */
   'nontech-01': {
     eventId: 'nontech-01',
@@ -267,6 +275,14 @@ const coordinatorsData = {
         role: 'Lead Coordinator'
       }
     ]
+  },
+
+  'nontech-07': {
+    eventId: 'nontech-07',
+    eventName: 'BATTLEWORLD BIDDING',
+    alias: 'Battleworld Bidding',
+    category: 'non-technical',
+    coordinators: []
   }
 };
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import studentCoordinators from '../data/studentCoordinators.json';
 import ShaderCard from '../components/ShaderCard.jsx';
+import { getApiUrl } from '../config/api';
 
 function renderCoordinatorIcon(iconName, tier) {
   const strokeColor =
@@ -221,6 +222,25 @@ function CoordinatorSlideCard({ item, index }) {
 export default function StudentCoordinatorsSection() {
   const sectionRef = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [teamGroups, setTeamGroups] = useState(studentCoordinators);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch(getApiUrl('/api/student-coordinators'))
+      .then((res) => res.json())
+      .then((result) => {
+        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setTeamGroups(result.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Using static student coordinators fallback:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -235,12 +255,12 @@ export default function StudentCoordinatorsSection() {
 
   // Duplicate items for smooth infinite loop in marquee track
   const loopItems = [
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
+    ...teamGroups,
+    ...teamGroups,
+    ...teamGroups,
+    ...teamGroups,
+    ...teamGroups,
+    ...teamGroups,
   ];
 
   return (

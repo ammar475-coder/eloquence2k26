@@ -418,7 +418,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setIsDeletingRegId(id);
     const toastId = toast.loading('Deleting registration...');
 
-    fetch(`/api/admin/registrations/${encodeURIComponent(id)}`, {
+    fetch(getApiUrl(`/api/admin/registrations/${encodeURIComponent(id)}`), {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`

@@ -912,11 +912,11 @@ img {
   opacity: 0.6;
 }
 
-/* Events grid */
+/* Events grid - 3 columns desktop default */
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.75rem;
 }
 
 /* Scroll reveal */
@@ -1061,6 +1061,8 @@ img {
   letter-spacing: 0.04em;
   color: #ffffff;
   line-height: 1.3;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .event-card-desc {
@@ -2107,7 +2109,8 @@ img {
 /* Tablets ≤ 1024px */
 @media (max-width: 1024px) {
   .events-grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
   }
 }
 
@@ -2118,8 +2121,8 @@ img {
   }
 
   .events-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
   }
 
   .why-grid {
@@ -2148,10 +2151,19 @@ img {
   }
 }
 
+/* Mobile ≤ 680px */
+@media (max-width: 680px) {
+  .events-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
 /* Mobile ≤ 480px */
 @media (max-width: 480px) {
   .events-grid {
     grid-template-columns: 1fr;
+    gap: 1.15rem;
   }
 
   .why-grid {
@@ -2501,6 +2513,18 @@ img {
   padding: 2rem 2rem 6rem;
 }
 
+@media (max-width: 768px) {
+  .events-catalog-section {
+    padding: 1.5rem 1.25rem 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .events-catalog-section {
+    padding: 1rem 0.85rem 3.5rem;
+  }
+}
+
 .events-controls-wrapper {
   display: flex;
   flex-direction: column;
@@ -2514,6 +2538,24 @@ img {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
   margin-bottom: 2.2rem;
+}
+
+@media (max-width: 600px) {
+  .events-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    padding: 0.85rem 0.6rem;
+  }
+  .stat-num {
+    font-size: 1.35rem;
+  }
+  .stat-label {
+    font-size: 0.48rem;
+    letter-spacing: 0.1em;
+  }
 }
 
 .stat-card {
@@ -2632,6 +2674,30 @@ img {
 
 .events-controls-wrapper .filter-bar {
   margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .events-controls-wrapper {
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+  }
+  .events-search-box {
+    max-width: 100%;
+    width: 100%;
+  }
+  .events-controls-wrapper .filter-bar {
+    display: flex;
+    width: 100%;
+    gap: 0.5rem;
+    margin-bottom: 0;
+  }
+  .events-controls-wrapper .filter-btn {
+    flex: 1 1 auto;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
 }
 
 /* Results Meta */

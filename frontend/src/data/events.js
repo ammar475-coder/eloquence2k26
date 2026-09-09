@@ -147,6 +147,31 @@ const events = [
     coordinators: coordinatorsData['tech-06'].coordinators,
     highlights: ['Tools: Figma & Canva', 'AI strictly restricted', 'Round 1: Login page', 'Round 2: Dashboard']
   },
+  {
+    id: 'tech-07',
+    number: '07',
+    name: 'The Roborange Botathon',
+    alias: 'The Roborange Botathon',
+    subtitle: 'Line-Follower Robot Competition',
+    category: 'technical',
+    teamSize: 'Max of 4 members',
+    minMembers: 1,
+    maxMembers: 4,
+    fee: '₹150 per head',
+    feePerHead: 150,
+    feeType: 'per_head',
+    isTeam: true,
+    tag: 'Robotics',
+    venue: rulesData['tech-07'].venue,
+    timing: rulesData['tech-07'].timing,
+    description: rulesData['tech-07'].description,
+    rules: rulesData['tech-07'].rules,
+    rounds: rulesData['tech-07'].rounds,
+    guidelines: rulesData['tech-07'].guidelines,
+    coordinators: coordinatorsData['tech-07']?.coordinators || [],
+    highlights: ['Autonomous line follower', 'Max 4 members', 'Clean fastest run wins', '₹150/head'],
+    image: '/events/roborange.png'
+  },
 
   /* ───── NON-TECHNICAL EVENTS ───── */
   {
@@ -292,6 +317,31 @@ const events = [
     guidelines: rulesData['nontech-06'].guidelines,
     coordinators: coordinatorsData['nontech-06'].coordinators,
     highlights: ['Rapid / Blitz time control', 'FIDE standard rules', 'Digital clocks provided']
+  },
+  {
+    id: 'nontech-07',
+    number: '07',
+    name: 'BATTLEWORLD BIDDING',
+    alias: 'Battleworld Bidding',
+    subtitle: 'Bid. Think. Win.',
+    category: 'non-technical',
+    teamSize: 'Individual',
+    minMembers: 1,
+    maxMembers: 1,
+    fee: '₹50 per head',
+    feePerHead: 50,
+    feeType: 'per_head',
+    isTeam: false,
+    tag: 'Strategy & Bidding',
+    venue: rulesData['nontech-07'].venue,
+    timing: rulesData['nontech-07'].timing,
+    description: rulesData['nontech-07'].description,
+    rules: rulesData['nontech-07'].rules,
+    rounds: rulesData['nontech-07'].rounds,
+    guidelines: rulesData['nontech-07'].guidelines,
+    coordinators: coordinatorsData['nontech-07']?.coordinators || [],
+    highlights: ['Virtual purse budget', 'Strategic auctioning', 'Fastest bidder priority', '₹50/head'],
+    image: '/events/auction.png'
   }
 ];
 

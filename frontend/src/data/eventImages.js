@@ -18,12 +18,14 @@ export const defaultEventImages = {
   'tech-04': cardWebImg,
   'tech-05': cardPosterImg,
   'tech-06': cardUiUxImg,
+  'tech-07': '/events/roborange.png',
   'nontech-01': cardSnapImg,
   'nontech-02': cardLinkUpImg,
   'nontech-03': cardHuntZoneImg,
   'nontech-04': cardHennaImg,
   'nontech-05': cardBattleImg,
   'nontech-06': cardChessImg,
+  'nontech-07': '/events/auction.png',
 };
 
 /**
@@ -32,7 +34,9 @@ export const defaultEventImages = {
  */
 export function getEventBanner(eventOrId) {
   if (!eventOrId) return null;
-  const rawImage = typeof eventOrId === 'object' ? eventOrId.image : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http')) ? eventOrId : null);
+  const rawImage = typeof eventOrId === 'object' 
+    ? eventOrId.image 
+    : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http') || eventOrId.startsWith('/')) ? eventOrId : null);
   
   if (rawImage && rawImage.trim()) {
     const img = rawImage.trim();
