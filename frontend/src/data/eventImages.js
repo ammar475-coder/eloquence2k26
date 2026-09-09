@@ -41,14 +41,14 @@ export const defaultEventImages = {
 export function getEventBanner(eventOrId) {
   if (!eventOrId) return cardPptImg;
 
-  // 1. Valid custom data URI or external full URL
+  // 1. Valid custom data URI, public path, or external full URL
   const rawImage = typeof eventOrId === 'object'
     ? eventOrId.image
-    : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http')) ? eventOrId : null);
+    : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http') || eventOrId.startsWith('/')) ? eventOrId : null);
   
   if (rawImage && typeof rawImage === 'string') {
     const trimmed = rawImage.trim();
-    if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) {
       return trimmed;
     }
   }

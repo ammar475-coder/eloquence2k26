@@ -24,20 +24,48 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     ? event.rules
     : (rulesData[event.id]?.rules || []);
 
-  const coordsList = (Array.isArray(event.coordinators) && event.coordinators.length > 0)
-    ? event.coordinators
-    : (coordinatorsData[event.id]?.coordinators || []);
+  const [liveCoordinators, setLiveCoordinators] = useState(() => {
+    return event ? (coordinatorsData[event.id]?.coordinators || []) : [];
+  });
 
   useEffect(() => {
+    let isMounted = true;
     fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
           setEventsList(result.data);
         }
       })
       .catch(() => {});
-  }, []);
+    return () => { isMounted = false; };
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!event?.id) return;
+    let isMounted = true;
+    const staticFallback = coordinatorsData[event.id]?.coordinators || [];
+    fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(event.id)}`))
+      .then((res) => res.json())
+      .then((result) => {
+        if (!isMounted) return;
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setLiveCoordinators(result.data);
+        } else {
+          setLiveCoordinators(staticFallback);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLiveCoordinators(staticFallback);
+      });
+    return () => { isMounted = false; };
+  }, [event?.id]);
+
+  const coordsList = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
+    ? liveCoordinators
+    : (Array.isArray(event.coordinators) && event.coordinators.length > 0
+        ? event.coordinators
+        : (coordinatorsData[event.id]?.coordinators || []));
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });

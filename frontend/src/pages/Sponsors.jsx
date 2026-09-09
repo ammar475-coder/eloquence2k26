@@ -336,14 +336,25 @@ export default function Sponsors() {
         if (!isMounted) return;
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           const list = result.data;
-          const elite = list.filter((s) => s.category?.toLowerCase() === 'elite' || s.category === 'Title Sponsor');
-          const premium = list.filter((s) => s.category?.toLowerCase() === 'premium' || s.category === 'Gold Sponsor' || s.category === 'Silver Sponsor');
-          const standard = list.filter((s) => s.category?.toLowerCase() === 'standard' || s.category === 'Bronze Sponsor' || s.category === 'Other');
+          const elite = [];
+          const premium = [];
+          const standard = [];
+
+          list.forEach((s) => {
+            const cat = (s.category || '').toLowerCase();
+            if (cat.includes('elite') || cat.includes('title')) {
+              elite.push(s);
+            } else if (cat.includes('premium') || cat.includes('gold') || cat.includes('silver')) {
+              premium.push(s);
+            } else {
+              standard.push(s);
+            }
+          });
 
           setLiveTiers({
-            elite: elite,
-            premium: premium,
-            standard: standard,
+            elite,
+            premium,
+            standard,
           });
         }
       })

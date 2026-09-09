@@ -196,17 +196,21 @@ exports.registerEvent = async (req, res) => {
   const ticketCode = `ELQ26-${currentEvent.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(10000 + Math.random() * 90000)}`;
 
   try {
-    // 0. Auto-seed the event on the fly (This ensures the event exists in the database before registering!)
-    await supabase.from('events').upsert([{
-      id: currentEvent.id,
-      name: currentEvent.name,
-      category: currentEvent.category,
-      team_size: currentEvent.teamSize || null,
-      min_members: currentEvent.minMembers || 1,
-      max_members: currentEvent.maxMembers || 1,
-      fee_type: currentEvent.feeType || 'per_head',
-      fee_per_head: currentEvent.feePerHead || 50
-    }], { onConflict: 'id' });
+    // 0. Ensure event exists in database before registration foreign key constraint
+    const { data: existingEv } = await supabase.from('events').select('id').eq('id', currentEvent.id).maybeSingle();
+    if (!existingEv) {
+      await supabase.from('events').insert([{
+        id: currentEvent.id,
+        number: '99',
+        name: currentEvent.name,
+        category: currentEvent.category,
+        team_size: currentEvent.teamSize || 'Individual',
+        min_members: currentEvent.minMembers || 1,
+        max_members: currentEvent.maxMembers || 1,
+        fee_type: currentEvent.feeType || 'per_head',
+        fee_per_head: currentEvent.feePerHead || 50
+      }]);
+    }
 
     const validTeamMembers = (fields.teamMembers || [])
       .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
@@ -562,6 +566,67 @@ exports.getCoordinatorsByEvent = async (req, res) => {
   }
 };
 
+// ==================== PUBLIC STUDENT COORDINATORS (LEADERSHIP) ====================
+exports.getStudentCoordinators = async (req, res) => {
+  try {
+    const { data: dbCoords, error } = await supabase
+      .from('coordinators')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+      const webTeamCoords = dbCoords.filter(c => 
+        (Array.isArray(c.assigned_events) && c.assigned_events.includes('web-team')) ||
+        (c.role && c.role.toLowerCase().includes('website'))
+      );
+      const mainTeamCoords = dbCoords.filter(c => 
+        (Array.isArray(c.assigned_events) && c.assigned_events.includes('main-coordinators')) ||
+        (c.role && c.role.toLowerCase().includes('main coordinator'))
+      );
+
+      const result = [
+        {
+          id: 'web-team',
+          role: 'WEBSITE DEVELOPMENT TEAM',
+          tag: 'WEB & TECH CREW',
+          iconName: 'Code',
+          tier: 'cyan',
+          desc: 'Architecting the official Eloquence 2026 digital platform, registration engine, and interactive cyber experience.',
+          names: webTeamCoords.length > 0 ? webTeamCoords.map(c => c.name) : [
+            "SYED MUSTHAFA S", "MOHAMMED AYAZ A", "SHAWOOR SAQIB SK", "FAAZIL AMMAR", "SHAHID AHAMED VS", "MOHAMMED SAAD V"
+          ]
+        },
+        {
+          id: 'main-coordinators',
+          role: 'MAIN COORDINATOR TEAM',
+          tag: 'STUDENT LEADERSHIP',
+          iconName: 'Users',
+          tier: 'emerald',
+          desc: 'Leading symposium logistics, operations, participant management, and orchestrating Eloquence 2026.',
+          names: mainTeamCoords.length > 0 ? mainTeamCoords.map(c => c.name) : [
+            "SAMNESH S", "HARISH KUMAR RG", "SHARMILA Y", "MADHUMITHA R"
+          ]
+        }
+      ];
+      return res.json({ success: true, data: result });
+    }
+  } catch (e) {
+    console.warn('Supabase getStudentCoordinators fallback:', e.message);
+  }
+
+  // Fallback to static data
+  try {
+    const fallbackPath = path.join(DATA_DIR, 'studentCoordinators.json');
+    if (fs.existsSync(fallbackPath)) {
+      const raw = fs.readFileSync(fallbackPath, 'utf-8');
+      return res.json({ success: true, data: JSON.parse(raw) });
+    }
+  } catch (err) {}
+
+  res.json({ success: true, data: [] });
+};
+
 // ==================== PUBLIC HOMEPAGE STUDENT COORDINATORS ====================
 exports.getPublicHomepageCoordinators = async (req, res) => {
   try {
@@ -590,7 +655,7 @@ exports.getPublicHomepageCoordinators = async (req, res) => {
   }
 };
 
-// ── Participant List Dispatch ──────────────────────────────────────────────────
+// ── Participant List Dispatch (Supabase Live) ──────────────────────────────────────────────────
 const DISPATCHES_FILE = path.join(DATA_DIR, 'dispatches.json');
 
 function readDispatches() {
@@ -611,6 +676,16 @@ function writeDispatches(data) {
   }
 }
 
+const dbToDispatch = (d) => ({
+  id: d.id,
+  eventId: d.event_id || d.eventId,
+  eventName: d.event_name || d.eventName,
+  coordinatorId: d.coordinator_id || d.coordinatorId || null,
+  coordinatorName: d.coordinator_name || d.coordinatorName,
+  dispatchedBy: d.dispatched_by || 'Admin',
+  sentAt: d.sent_at || d.sentAt || d.created_at
+});
+
 exports.sendParticipantList = async (req, res) => {
   try {
     const { eventId, eventName, coordinatorId, coordinatorName } = req.body;
@@ -618,23 +693,37 @@ exports.sendParticipantList = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Event ID and Coordinator Name are required' });
     }
 
-    const dispatches = readDispatches();
-    const newDispatch = {
-      id: Date.now().toString(),
-      eventId,
-      eventName: eventName || eventId,
-      coordinatorId: coordinatorId || null,
-      coordinatorName,
-      sentAt: new Date().toISOString()
+    const dispatchId = Date.now().toString();
+    const now = new Date().toISOString();
+    const dbPayload = {
+      id: dispatchId,
+      event_id: eventId,
+      event_name: eventName || eventId,
+      coordinator_name: coordinatorName,
+      sent_at: now
     };
 
-    dispatches.push(newDispatch);
+    let dispatchData = null;
+    try {
+      const { data, error } = await supabase.from('dispatches').insert([dbPayload]).select();
+      if (!error && data && data.length > 0) {
+        dispatchData = dbToDispatch(data[0]);
+      }
+    } catch (dbErr) {
+      console.warn('Supabase sendParticipantList fallback:', dbErr.message);
+    }
+
+    const formatted = dispatchData || dbToDispatch(dbPayload);
+
+    // Sync to local file
+    const dispatches = readDispatches();
+    dispatches.push(formatted);
     writeDispatches(dispatches);
 
     res.json({
       success: true,
-      message: `Participant list for "${eventName || eventId}" sent to ${coordinatorName} successfully!`,
-      dispatch: newDispatch
+      message: `Participant list for "${eventName || eventId}" sent to ${coordinatorName} successfully in database!`,
+      dispatch: formatted
     });
   } catch (err) {
     console.error('Error sending participant list:', err);
@@ -644,6 +733,15 @@ exports.sendParticipantList = async (req, res) => {
 
 exports.getDispatches = async (req, res) => {
   try {
+    try {
+      const { data, error } = await supabase.from('dispatches').select('*').order('sent_at', { ascending: false });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return res.json({ success: true, data: data.map(dbToDispatch) });
+      }
+    } catch (e) {
+      console.warn('Supabase getDispatches fallback:', e.message);
+    }
+
     const dispatches = readDispatches();
     res.json({ success: true, data: dispatches });
   } catch (err) {
@@ -655,18 +753,26 @@ exports.updateDispatch = async (req, res) => {
   try {
     const { id } = req.params;
     const { coordinatorName, eventName } = req.body;
-    let dispatches = readDispatches();
-    const index = dispatches.findIndex(d => d.id === id);
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Dispatch record not found' });
+    const updatePayload = { updated_at: new Date().toISOString() };
+    if (coordinatorName) updatePayload.coordinator_name = coordinatorName;
+    if (eventName) updatePayload.event_name = eventName;
+
+    try {
+      await supabase.from('dispatches').update(updatePayload).eq('id', id);
+    } catch (dbErr) {
+      console.warn('Supabase updateDispatch fallback:', dbErr.message);
     }
 
-    if (coordinatorName) dispatches[index].coordinatorName = coordinatorName;
-    if (eventName) dispatches[index].eventName = eventName;
-    dispatches[index].updatedAt = new Date().toISOString();
+    let dispatches = readDispatches();
+    const index = dispatches.findIndex(d => d.id === id);
+    if (index !== -1) {
+      if (coordinatorName) dispatches[index].coordinatorName = coordinatorName;
+      if (eventName) dispatches[index].eventName = eventName;
+      dispatches[index].updatedAt = new Date().toISOString();
+      writeDispatches(dispatches);
+    }
 
-    writeDispatches(dispatches);
-    res.json({ success: true, message: 'Sent dispatch updated successfully', data: dispatches[index] });
+    res.json({ success: true, message: 'Sent dispatch updated successfully in database', data: { id, ...updatePayload } });
   } catch (err) {
     console.error('Error updating dispatch:', err);
     res.status(500).json({ success: false, message: 'Failed to update dispatch' });
@@ -676,14 +782,17 @@ exports.updateDispatch = async (req, res) => {
 exports.deleteDispatch = async (req, res) => {
   try {
     const { id } = req.params;
-    let dispatches = readDispatches();
-    const filtered = dispatches.filter(d => d.id !== id);
-    if (filtered.length === dispatches.length) {
-      return res.status(404).json({ success: false, message: 'Dispatch record not found' });
+    try {
+      await supabase.from('dispatches').delete().eq('id', id);
+    } catch (dbErr) {
+      console.warn('Supabase deleteDispatch fallback:', dbErr.message);
     }
 
+    let dispatches = readDispatches();
+    const filtered = dispatches.filter(d => d.id !== id);
     writeDispatches(filtered);
-    res.json({ success: true, message: 'Sent dispatch deleted and revoked successfully' });
+
+    res.json({ success: true, message: 'Sent dispatch deleted and revoked from database successfully' });
   } catch (err) {
     console.error('Error deleting dispatch:', err);
     res.status(500).json({ success: false, message: 'Failed to delete dispatch' });

@@ -730,6 +730,41 @@ exports.getEvents = async (req, res) => {
   res.json({ success: true, data: events });
 };
 
+const saveBase64ImageIfPresent = (imageStr, prefix = 'event') => {
+  if (!imageStr || typeof imageStr !== 'string') return imageStr || '';
+  const trimmed = imageStr.trim();
+  if (!trimmed.startsWith('data:image/')) return trimmed;
+
+  try {
+    const matches = trimmed.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return trimmed;
+    const mimeType = matches[1].toLowerCase();
+    const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : (mimeType.includes('webp') ? 'webp' : (mimeType.includes('svg') ? 'svg' : 'png'));
+    const safeName = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+
+    const frontendPublicEventsDir = path.join(__dirname, '../../frontend/public/events');
+    const localUploadsDir = path.join(__dirname, '../uploads');
+
+    if (!fs.existsSync(frontendPublicEventsDir)) {
+      try { fs.mkdirSync(frontendPublicEventsDir, { recursive: true }); } catch (e) {}
+    }
+    if (fs.existsSync(frontendPublicEventsDir)) {
+      fs.writeFileSync(path.join(frontendPublicEventsDir, safeName), imageBuffer);
+    }
+    if (!fs.existsSync(localUploadsDir)) {
+      try { fs.mkdirSync(localUploadsDir, { recursive: true }); } catch (e) {}
+    }
+    if (fs.existsSync(localUploadsDir)) {
+      fs.writeFileSync(path.join(localUploadsDir, safeName), imageBuffer);
+    }
+    return `/events/${safeName}`;
+  } catch (e) {
+    console.error('Error saving base64 image:', e);
+    return trimmed;
+  }
+};
+
 exports.createEvent = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
@@ -771,7 +806,11 @@ exports.createEvent = async (req, res) => {
     eventId = `${catPrefix}-${nextNum}`;
   }
 
-  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' ? Number(feePerHead) : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
+  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' 
+    ? Number(feePerHead) 
+    : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
+
+  const cleanImage = saveBase64ImageIfPresent(image, eventId);
 
   const newEvent = {
     id: eventId,
@@ -782,15 +821,16 @@ exports.createEvent = async (req, res) => {
     category: cat,
     teamSize: teamSize ? teamSize.trim() : 'Individual',
     minMembers: 1,
-    maxMembers: teamSize && (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) ? 4 : 1,
+    maxMembers: teamSize && (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad')) ? 4 : 1,
     fee: fee ? fee.trim() : '₹50 per head',
     feePerHead: isNaN(parsedFeePerHead) ? 50 : parsedFeePerHead,
     feeType: feeType || 'per_head',
-    isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) : false,
+    isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad')) : false,
     tag: tag ? tag.trim() : (cat === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
     venue: venue ? venue.trim() : 'CSE Department',
     timing: timing ? timing.trim() : '10:00 AM – 01:00 PM',
     description: description ? description.trim() : '',
+    image: cleanImage || '',
     rules: Array.isArray(rules) && rules.length > 0 ? rules : [],
     rounds: Array.isArray(rounds) && rounds.length > 0 ? rounds : [],
     guidelines: Array.isArray(guidelines) && guidelines.length > 0 ? guidelines : [],
@@ -823,18 +863,27 @@ exports.createEvent = async (req, res) => {
       highlights: newEvent.highlights,
       updated_at: new Date().toISOString()
     };
-    const { error: dbErr } = await supabase.from('events').insert([dbPayload]);
-    if (dbErr) console.error('Supabase createEvent error:', dbErr.message);
+    const { error: dbErr } = await supabase.from('events').upsert([dbPayload]);
+    if (dbErr) {
+      console.error('Supabase createEvent error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase createEvent exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
-  events.push(newEvent);
+  const existingIdx = events.findIndex(e => e.id === newEvent.id);
+  if (existingIdx !== -1) {
+    events[existingIdx] = newEvent;
+  } else {
+    events.push(newEvent);
+  }
   saveEventsData(events);
 
   res.json({
     success: true,
-    message: 'Event created successfully',
+    message: 'Event created successfully in live database and storage',
     data: newEvent
   });
 };
@@ -868,6 +917,12 @@ exports.updateEvent = async (req, res) => {
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
 
+  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' 
+    ? Number(feePerHead) 
+    : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : undefined);
+
+  const cleanImage = image !== undefined ? saveBase64ImageIfPresent(image, id) : undefined;
+
   const updateFields = {
     updated_at: new Date().toISOString()
   };
@@ -875,51 +930,100 @@ exports.updateEvent = async (req, res) => {
   if (name) updateFields.name = name.trim();
   if (alias !== undefined) updateFields.alias = alias.trim();
   if (subtitle !== undefined) updateFields.subtitle = subtitle.trim();
-  if (category !== undefined) updateFields.category = category;
+  if (category !== undefined) updateFields.category = category.trim().toLowerCase();
   if (venue !== undefined) updateFields.venue = venue.trim();
   if (timing !== undefined) updateFields.timing = timing.trim();
   if (fee !== undefined) updateFields.fee = fee.trim();
-  if (feePerHead !== undefined && feePerHead !== '') updateFields.fee_per_head = Number(feePerHead);
+  if (parsedFeePerHead !== undefined) updateFields.fee_per_head = parsedFeePerHead;
   if (feeType !== undefined) updateFields.fee_type = feeType;
-  if (teamSize !== undefined) updateFields.team_size = teamSize.trim();
+  if (teamSize !== undefined) {
+    updateFields.team_size = teamSize.trim();
+    updateFields.is_team = (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad'));
+  }
   if (tag !== undefined) updateFields.tag = tag.trim();
   if (description !== undefined) updateFields.description = description.trim();
-  if (image !== undefined) updateFields.image = image.trim();
+  if (cleanImage !== undefined) updateFields.image = cleanImage;
   if (rules !== undefined && Array.isArray(rules)) updateFields.rules = rules;
   if (rounds !== undefined && Array.isArray(rounds)) updateFields.rounds = rounds;
   if (guidelines !== undefined && Array.isArray(guidelines)) updateFields.guidelines = guidelines;
   if (highlights !== undefined && Array.isArray(highlights)) updateFields.highlights = highlights;
 
   try {
-    const { error: dbErr } = await supabase.from('events').update(updateFields).eq('id', id);
-    if (dbErr) console.error('Supabase updateEvent error:', dbErr.message);
+    const { data: existingDbEvent } = await supabase.from('events').select('*').eq('id', id).single();
+    const dbPayload = {
+      id,
+      number: (existingDbEvent && existingDbEvent.number) ? existingDbEvent.number : (events[eventIndex]?.number || '01'),
+      ...(existingDbEvent || {}),
+      ...updateFields
+    };
+    const { error: dbErr } = await supabase.from('events').upsert(dbPayload);
+    if (dbErr) {
+      console.error('Supabase updateEvent error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase updateEvent exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   if (eventIndex !== -1) {
     if (name) events[eventIndex].name = name.trim();
+    if (alias !== undefined) events[eventIndex].alias = alias.trim();
+    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
+    if (category !== undefined) events[eventIndex].category = category.trim().toLowerCase();
     if (venue !== undefined) events[eventIndex].venue = venue.trim();
     if (timing !== undefined) events[eventIndex].timing = timing.trim();
     if (fee !== undefined) events[eventIndex].fee = fee.trim();
-    if (feePerHead !== undefined) events[eventIndex].feePerHead = Number(feePerHead);
+    if (parsedFeePerHead !== undefined) events[eventIndex].feePerHead = parsedFeePerHead;
     if (feeType !== undefined) events[eventIndex].feeType = feeType;
-    if (teamSize !== undefined) events[eventIndex].teamSize = teamSize.trim();
-    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
+    if (teamSize !== undefined) {
+      events[eventIndex].teamSize = teamSize.trim();
+      events[eventIndex].isTeam = (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad'));
+    }
     if (tag !== undefined) events[eventIndex].tag = tag.trim();
     if (description !== undefined) events[eventIndex].description = description.trim();
-    if (image !== undefined) events[eventIndex].image = image.trim();
+    if (cleanImage !== undefined) events[eventIndex].image = cleanImage;
     if (rules !== undefined && Array.isArray(rules)) events[eventIndex].rules = rules;
     if (rounds !== undefined && Array.isArray(rounds)) events[eventIndex].rounds = rounds;
     if (guidelines !== undefined && Array.isArray(guidelines)) events[eventIndex].guidelines = guidelines;
     if (highlights !== undefined && Array.isArray(highlights)) events[eventIndex].highlights = highlights;
     saveEventsData(events);
+  } else {
+    // If not in events.json, append it
+    const constructed = {
+      id,
+      number: String(events.length + 1).padStart(2, '0'),
+      name: name || id,
+      alias: alias || name || id,
+      subtitle: subtitle || '',
+      category: category ? category.trim().toLowerCase() : 'technical',
+      teamSize: teamSize || 'Individual',
+      minMembers: 1,
+      maxMembers: 1,
+      fee: fee || '₹50 per head',
+      feePerHead: parsedFeePerHead || 50,
+      feeType: feeType || 'per_head',
+      isTeam: false,
+      tag: tag || 'Technical Presentation',
+      venue: venue || 'CSE Department',
+      timing: timing || '10:00 AM – 01:00 PM',
+      description: description || '',
+      image: cleanImage || '',
+      rules: Array.isArray(rules) ? rules : [],
+      rounds: Array.isArray(rounds) ? rounds : [],
+      guidelines: Array.isArray(guidelines) ? guidelines : [],
+      highlights: Array.isArray(highlights) ? highlights : []
+    };
+    events.push(constructed);
+    saveEventsData(events);
   }
+
+  const updatedResult = eventIndex !== -1 ? events[eventIndex] : { id, ...req.body, image: cleanImage };
 
   res.json({ 
     success: true, 
-    message: 'Event updated successfully in live database', 
-    data: { id, ...req.body } 
+    message: 'Event updated successfully in live database and storage', 
+    data: updatedResult
   });
 };
 
@@ -932,19 +1036,23 @@ exports.deleteEvent = async (req, res) => {
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
 
+  try {
+    const { error: dbErr } = await supabase.from('events').delete().eq('id', id);
+    if (dbErr) {
+      console.error('Supabase deleteEvent error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
+  } catch (e) {
+    console.error('Supabase deleteEvent exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
   if (eventIndex !== -1) {
     events.splice(eventIndex, 1);
     saveEventsData(events);
   }
 
-  try {
-    const { error: dbErr } = await supabase.from('events').delete().eq('id', id);
-    if (dbErr) console.error('Supabase deleteEvent error:', dbErr.message);
-  } catch (e) {
-    console.error('Supabase deleteEvent exception:', e.message);
-  }
-
-  res.json({ success: true, message: 'Event deleted successfully from live database' });
+  res.json({ success: true, message: 'Event deleted successfully from live database and storage' });
 };
 
 // ==================== SPONSOR MANAGEMENT ====================
@@ -1030,9 +1138,13 @@ exports.createSponsor = async (req, res) => {
   try {
     const dbPayload = sponsorToDb(newSponsor);
     const { error: dbErr } = await supabase.from('sponsors').insert([dbPayload]);
-    if (dbErr) console.error('Supabase createSponsor error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase createSponsor error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase createSponsor exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   sponsors.push(newSponsor);
@@ -1085,9 +1197,13 @@ exports.updateSponsor = async (req, res) => {
   try {
     const dbPayload = sponsorToDb(updatedSponsor);
     const { error: dbErr } = await supabase.from('sponsors').upsert([dbPayload], { onConflict: 'id' });
-    if (dbErr) console.error('Supabase updateSponsor error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase updateSponsor error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase updateSponsor exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   if (index !== -1) {
@@ -1104,22 +1220,27 @@ exports.toggleSponsorStatus = async (req, res) => {
   const sponsor = sponsors.find(s => s.id === id);
 
   let newStatus = true;
-  if (sponsor) {
-    sponsor.isActive = !sponsor.isActive;
-    sponsor.updatedAt = new Date().toISOString();
-    newStatus = sponsor.isActive;
-    saveSponsorsData(sponsors);
-  }
-
   try {
     const { data: dbSponsor } = await supabase.from('sponsors').select('is_active').eq('id', id).single();
     if (dbSponsor) {
       newStatus = !dbSponsor.is_active;
+    } else if (sponsor) {
+      newStatus = !sponsor.isActive;
     }
     const { error: dbErr } = await supabase.from('sponsors').update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
-    if (dbErr) console.error('Supabase toggleSponsorStatus error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase toggleSponsorStatus error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase toggleSponsorStatus exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
+  if (sponsor) {
+    sponsor.isActive = newStatus;
+    sponsor.updatedAt = new Date().toISOString();
+    saveSponsorsData(sponsors);
   }
 
   res.json({ 
@@ -1134,16 +1255,20 @@ exports.deleteSponsor = async (req, res) => {
   const sponsors = getSponsorsData();
   const index = sponsors.findIndex(s => s.id === id);
 
+  try {
+    const { error: dbErr } = await supabase.from('sponsors').delete().eq('id', id);
+    if (dbErr) {
+      console.error('Supabase deleteSponsor error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
+  } catch (e) {
+    console.error('Supabase deleteSponsor exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
   if (index !== -1) {
     sponsors.splice(index, 1);
     saveSponsorsData(sponsors);
-  }
-
-  try {
-    const { error: dbErr } = await supabase.from('sponsors').delete().eq('id', id);
-    if (dbErr) console.error('Supabase deleteSponsor error:', dbErr.message);
-  } catch (e) {
-    console.error('Supabase deleteSponsor exception:', e.message);
   }
 
   res.json({ success: true, message: 'Sponsor deleted successfully from live database' });
@@ -1217,11 +1342,27 @@ exports.uploadLogo = async (req, res) => {
       console.warn('Supabase storage exception fallback:', storageErr.message);
     }
 
-    // 2. Fallback: Store Base64 Data URL directly in Database (Zero local disk file writing!)
+    // 2. Fallback: Save to static disk so it NEVER stores huge base64 in DB/JSON!
+    const frontendPublicEventsDir = path.join(__dirname, '../../frontend/public/events');
+    const localUploadsDir = path.join(__dirname, '../uploads');
+    
+    if (!fs.existsSync(frontendPublicEventsDir)) {
+      try { fs.mkdirSync(frontendPublicEventsDir, { recursive: true }); } catch (e) {}
+    }
+    if (fs.existsSync(frontendPublicEventsDir)) {
+      fs.writeFileSync(path.join(frontendPublicEventsDir, safeName), imageBuffer);
+    }
+    if (!fs.existsSync(localUploadsDir)) {
+      try { fs.mkdirSync(localUploadsDir, { recursive: true }); } catch (e) {}
+    }
+    if (fs.existsSync(localUploadsDir)) {
+      fs.writeFileSync(path.join(localUploadsDir, safeName), imageBuffer);
+    }
+
     return res.json({
       success: true,
-      message: 'Image stored directly in database',
-      url: imageBase64,
+      message: 'Image saved as static asset',
+      url: `/events/${safeName}`,
       fileName: safeName
     });
 
@@ -1316,9 +1457,13 @@ exports.createCoordinator = async (req, res) => {
   try {
     const dbPayload = coordinatorToDb(newCoordinator);
     const { error: dbErr } = await supabase.from('coordinators').insert([dbPayload]);
-    if (dbErr) console.error('Supabase createCoordinator error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase createCoordinator error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase createCoordinator exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   coordinators.push(newCoordinator);
@@ -1349,7 +1494,7 @@ exports.updateCoordinator = async (req, res) => {
   const coordinators = getCoordinatorsData();
   const index = coordinators.findIndex(c => c.id === id);
 
-  const cleanPhone = phone.trim().replace(/\s+/g, '');
+  const cleanPhone = phone ? phone.trim().replace(/\s+/g, '') : (coordinators[index]?.phone || '');
   const updatedCoordinator = {
     id,
     name: name.trim(),
@@ -1368,9 +1513,13 @@ exports.updateCoordinator = async (req, res) => {
   try {
     const dbPayload = coordinatorToDb(updatedCoordinator);
     const { error: dbErr } = await supabase.from('coordinators').upsert([dbPayload], { onConflict: 'id' });
-    if (dbErr) console.error('Supabase updateCoordinator error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase updateCoordinator error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase updateCoordinator exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   if (index !== -1) {
@@ -1387,22 +1536,27 @@ exports.toggleCoordinatorStatus = async (req, res) => {
   const coordinator = coordinators.find(c => c.id === id);
 
   let newStatus = true;
-  if (coordinator) {
-    coordinator.isActive = !coordinator.isActive;
-    coordinator.updatedAt = new Date().toISOString();
-    newStatus = coordinator.isActive;
-    saveCoordinatorsData(coordinators);
-  }
-
   try {
     const { data: dbCoord } = await supabase.from('coordinators').select('is_active').eq('id', id).single();
     if (dbCoord) {
       newStatus = !dbCoord.is_active;
+    } else if (coordinator) {
+      newStatus = !coordinator.isActive;
     }
     const { error: dbErr } = await supabase.from('coordinators').update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
-    if (dbErr) console.error('Supabase toggleCoordinatorStatus error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase toggleCoordinatorStatus error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase toggleCoordinatorStatus exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
+  if (coordinator) {
+    coordinator.isActive = newStatus;
+    coordinator.updatedAt = new Date().toISOString();
+    saveCoordinatorsData(coordinators);
   }
 
   res.json({ 
@@ -1417,16 +1571,20 @@ exports.deleteCoordinator = async (req, res) => {
   const coordinators = getCoordinatorsData();
   const index = coordinators.findIndex(c => c.id === id);
 
+  try {
+    const { error: dbErr } = await supabase.from('coordinators').delete().eq('id', id);
+    if (dbErr) {
+      console.error('Supabase deleteCoordinator error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
+  } catch (e) {
+    console.error('Supabase deleteCoordinator exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
   if (index !== -1) {
     coordinators.splice(index, 1);
     saveCoordinatorsData(coordinators);
-  }
-
-  try {
-    const { error: dbErr } = await supabase.from('coordinators').delete().eq('id', id);
-    if (dbErr) console.error('Supabase deleteCoordinator error:', dbErr.message);
-  } catch (e) {
-    console.error('Supabase deleteCoordinator exception:', e.message);
   }
 
   res.json({ success: true, message: 'Coordinator deleted successfully from live database' });

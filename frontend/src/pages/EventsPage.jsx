@@ -50,14 +50,29 @@ export default function EventsPage({ onNavigate }) {
 
   // Fetch live event data from backend API with static fallback
   useEffect(() => {
+    let isMounted = true;
     fetch(getApiUrl('/api/events'))
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((result) => {
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-          setEventsList(result.data);
+        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
+          const sorted = [...result.data].sort((a, b) => {
+            if (a.category !== b.category) {
+              return a.category === 'technical' ? -1 : 1;
+            }
+            return (a.id || '').localeCompare(b.id || '', undefined, { numeric: true });
+          });
+          setEventsList(sorted);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('EventsPage live fetch fallback to local data:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Scroll to top when page opens

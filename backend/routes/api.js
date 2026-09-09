@@ -16,6 +16,7 @@ router.get('/sponsors', apiController.getActiveSponsors);
 router.get('/sponsors/:id', apiController.getPublicSponsorById);
 router.get('/coordinators', apiController.getActiveCoordinators);
 router.get('/coordinators/event/:eventId', apiController.getCoordinatorsByEvent);
+router.get('/student-coordinators', apiController.getStudentCoordinators);
 router.get('/homepage-coordinators', apiController.getPublicHomepageCoordinators);
 
 // Participant List Dispatch

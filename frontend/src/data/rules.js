@@ -270,6 +270,47 @@ const rulesData = {
     ]
   },
 
+  'tech-07': {
+    id: 'tech-07',
+    name: 'The Roborange Botathon',
+    alias: 'The Roborange Botathon',
+    category: 'technical',
+    fee: '₹150 per head',
+    feePerHead: 150,
+    feeType: 'per_head',
+    teamSize: 'Max of 4 members',
+    minMembers: 1,
+    maxMembers: 4,
+    venue: 'CSE Seminar Hall',
+    timing: '10:00 AM – 01:00 PM',
+    description: 'Watch autonomous robots race to follow a track using their own sensors — no remote control allowed. Fastest clean run wins, with penalty points for going off-track or any manual intervention.',
+    rules: [
+      'Each team must have 2–4 members and register one robot with a unique team name.',
+      'The robot must be a line-follower that runs fully autonomously — no manual or remote control during the run.',
+      'Ranking is based on the fastest successful completion time across the given attempts.',
+      'Penalty points apply for leaving the track, skipping checkpoints, or touching/moving the robot during a run.',
+      'The judges\' decision on time, penalties, and qualification is final.'
+    ],
+    rounds: [
+      {
+        round: 'Round 1',
+        title: 'Track Qualification Run',
+        duration: '10 Minutes',
+        desc: 'Autonomous run through the qualification line path to record baseline timing.'
+      },
+      {
+        round: 'Round 2',
+        title: 'Championship Speed Trials',
+        duration: '15 Minutes',
+        desc: 'Complex obstacle and curve track run to determine fastest clean run.'
+      }
+    ],
+    guidelines: [
+      'Robots must be fully autonomous with onboard power supply.',
+      'Teams must report 15 minutes before the competition start time.'
+    ]
+  },
+
   /* ───── NON-TECHNICAL EVENTS ───── */
   'nontech-01': {
     id: 'nontech-01',
@@ -552,48 +593,8 @@ const rulesData = {
     ],
     guidelines: [
       'Paper and calculators will be provided for tracking bids.',
-      'Keep your bidding paddle clearly visible when placing bids.'
-    ]
-  },
-
-  'tech-07': {
-    id: 'tech-07',
-    name: 'The Roborange Botathon',
-    alias: 'The Roborange Botathon',
-    category: 'technical',
-    fee: '₹150 per head',
-    feePerHead: 150,
-    feeType: 'per_head',
-    teamSize: 'Max of 4 members',
-    minMembers: 1,
-    maxMembers: 4,
-    venue: 'CSE Seminar Hall',
-    timing: '10:00 AM – 1:00 PM',
-    description: 'Watch autonomous robots race to follow a track using their own sensors — no remote control allowed. Fastest clean run wins, with penalty points for going off-track or any manual intervention.',
-    rules: [
-      'Each team must have 2–4 members and register one robot with a unique team name.',
-      'The robot must be a line-follower that runs fully autonomously — no manual or remote control during the run.',
-      'Ranking is based on the fastest successful completion time across the given attempts.',
-      'Penalty points apply for leaving the track, skipping checkpoints, or touching/moving the robot during a run.',
-      'The judges\' decision on time, penalties, and qualification is final.'
-    ],
-    rounds: [
-      {
-        round: 'Round 1',
-        title: 'Track Inspection & Dry Run',
-        duration: '30 Minutes',
-        desc: 'Sensor calibration and test run on the practice strip.'
-      },
-      {
-        round: 'Round 2',
-        title: 'Championship Obstacle Time-Trial',
-        duration: '60 Minutes',
-        desc: 'Timed autonomous run through the full track with checkpoints.'
-      }
-    ],
-    guidelines: [
-      'Robots must pass dimensions and voltage compliance checks before racing.',
-      'Decisions of the track marshals are final.'
+      'Keep your bidding paddle clearly visible when placing bids.',
+      'Virtual purse ledger will be maintained by auction marshals.'
     ]
   }
 };
