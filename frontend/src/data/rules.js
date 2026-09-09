@@ -512,6 +512,89 @@ const rulesData = {
       'Chess boards, pieces, and digital clocks provided.',
       'Decisions of the Chief Arbiter are final and binding.'
     ]
+  },
+
+  'nontech-07': {
+    id: 'nontech-07',
+    name: 'AUCTION',
+    alias: 'Auction',
+    category: 'non-technical',
+    fee: '₹50 per head',
+    feePerHead: 50,
+    feeType: 'per_head',
+    teamSize: 'Individual / Team of 2',
+    minMembers: 1,
+    maxMembers: 2,
+    venue: 'CSE Seminar Hall',
+    timing: '10:00 AM – 1:00 PM',
+    description: 'Step into the world of strategy, wit, and quick decisions. Bid smart, outthink the rest, and take the win!',
+    rules: [
+      'Individual participation or team of up to 2 members.',
+      'Virtual purse budget will be allocated to each participating team at the start.',
+      'Bidding follows sequential live auction rounds with strict countdown timers.',
+      'Exceeding allocated purse budget or bid collusion will result in penalty or disqualification.',
+      'Scoring is calculated from total squad/asset valuation, strategic diversity, and remaining funds.',
+      'Decision of the Auctioneer and judges is final and binding.'
+    ],
+    rounds: [
+      {
+        round: 'Round 1',
+        title: 'Purse Allocation & Rules Brief',
+        duration: '15 Minutes',
+        desc: 'Rules explanation, category tier reveal, and budget distribution.'
+      },
+      {
+        round: 'Round 2',
+        title: 'Live Auction Bidding',
+        duration: '90 Minutes',
+        desc: 'Fast-paced live bidding rounds across featured player/asset pools.'
+      }
+    ],
+    guidelines: [
+      'Paper and calculators will be provided for tracking bids.',
+      'Keep your bidding paddle clearly visible when placing bids.'
+    ]
+  },
+
+  'tech-07': {
+    id: 'tech-07',
+    name: 'The Roborange Botathon',
+    alias: 'The Roborange Botathon',
+    category: 'technical',
+    fee: '₹150 per head',
+    feePerHead: 150,
+    feeType: 'per_head',
+    teamSize: 'Max of 4 members',
+    minMembers: 1,
+    maxMembers: 4,
+    venue: 'CSE Seminar Hall',
+    timing: '10:00 AM – 1:00 PM',
+    description: 'Watch autonomous robots race to follow a track using their own sensors — no remote control allowed. Fastest clean run wins, with penalty points for going off-track or any manual intervention.',
+    rules: [
+      'Each team must have 2–4 members and register one robot with a unique team name.',
+      'The robot must be a line-follower that runs fully autonomously — no manual or remote control during the run.',
+      'Ranking is based on the fastest successful completion time across the given attempts.',
+      'Penalty points apply for leaving the track, skipping checkpoints, or touching/moving the robot during a run.',
+      'The judges\' decision on time, penalties, and qualification is final.'
+    ],
+    rounds: [
+      {
+        round: 'Round 1',
+        title: 'Track Inspection & Dry Run',
+        duration: '30 Minutes',
+        desc: 'Sensor calibration and test run on the practice strip.'
+      },
+      {
+        round: 'Round 2',
+        title: 'Championship Obstacle Time-Trial',
+        duration: '60 Minutes',
+        desc: 'Timed autonomous run through the full track with checkpoints.'
+      }
+    ],
+    guidelines: [
+      'Robots must pass dimensions and voltage compliance checks before racing.',
+      'Decisions of the track marshals are final.'
+    ]
   }
 };
 

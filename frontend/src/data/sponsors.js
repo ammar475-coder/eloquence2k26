@@ -40,6 +40,7 @@ const sponsors = {
       name: 'NOVA SYSTEMS',
       tag: 'ELITE',
       initials: 'NS',
+      logo: '/sponsors/nova_systems.png',
       description: 'Cloud infrastructure partner providing compute credits and mentorship to every team.',
       contactName: 'Priya Sharma',
       contactPhone: '9876543211',
@@ -68,6 +69,18 @@ const sponsors = {
     },
   ],
   premium: [
+    {
+      id: 'sponsor-premium-02',
+      name: 'LITTLE PIRATE',
+      tag: 'PREMIUM',
+      initials: 'LP',
+      logo: '/sponsors/little_pirate.jpg',
+      description: 'Shawarma & BBQ - Vellore\'s premium street food crew. Flame-grilled, delivered with pirate pride.',
+      contactName: 'Deepak Nair',
+      contactPhone: '9876543215',
+      website: 'https://littlepiratevellore.com/',
+      locationUrl: 'https://share.google/LeD6oLe3gbp6CpOha',
+    },
     {
       id: 'premium-01',
       name: 'PULSE ELECTRONICS',
