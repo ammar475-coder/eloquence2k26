@@ -33,7 +33,11 @@
       {
         "name": "MOHAMMED SAAD V"
       }
-    ]
+    ],
+    "displayOrder": 1,
+    "isActive": true,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-09T05:54:42.713Z"
   },
   {
     "id": "main-coordinators",
@@ -61,6 +65,38 @@
       {
         "name": "MADHUMITHA R"
       }
-    ]
+    ],
+    "displayOrder": 2,
+    "isActive": true,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "team-1788933349572",
+    "role": "DESIGNING TEAM",
+    "tag": "TEAM",
+    "iconName": "Rocket",
+    "tier": "cyan",
+    "desc": "",
+    "members": [
+      {
+        "name": "ashfaq"
+      },
+      {
+        "name": "saad"
+      },
+      {
+        "name": "adin"
+      }
+    ],
+    "names": [
+      "ashfaq",
+      "saad",
+      "adin"
+    ],
+    "displayOrder": 3,
+    "isActive": false,
+    "createdAt": "2026-09-09T05:55:49.572Z",
+    "updatedAt": "2026-09-09T05:58:52.364Z"
   }
 ]

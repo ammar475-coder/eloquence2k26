@@ -7,6 +7,7 @@ const DATA_DIR = path.join(__dirname, '../data');
 const DB_FILE = path.join(DATA_DIR, 'registrations.json');
 const SPONSORS_FILE = path.join(DATA_DIR, 'sponsors.json');
 const COORDINATORS_FILE = path.join(DATA_DIR, 'coordinators.json');
+const HOMEPAGE_COORDINATORS_FILE = path.join(DATA_DIR, 'homepage_coordinators.json');
 
 // Ensure data directory and file exist
 if (!fs.existsSync(DATA_DIR)) {
@@ -48,6 +49,15 @@ function readSponsors() {
 function readCoordinators() {
   try {
     const raw = fs.readFileSync(COORDINATORS_FILE, 'utf-8');
+    return JSON.parse(raw || '[]');
+  } catch (err) {
+    return [];
+  }
+}
+
+function readHomepageCoordinators() {
+  try {
+    const raw = fs.readFileSync(HOMEPAGE_COORDINATORS_FILE, 'utf-8');
     return JSON.parse(raw || '[]');
   } catch (err) {
     return [];
@@ -101,6 +111,45 @@ const dbToCoordinator = (c) => ({
   createdAt: c.created_at || c.createdAt,
   updatedAt: c.updated_at || c.updatedAt
 });
+
+const dbToHomepageTeam = (t) => {
+  let members = [];
+  if (Array.isArray(t.members)) {
+    members = t.members;
+  } else if (typeof t.members === 'string') {
+    try {
+      members = JSON.parse(t.members);
+    } catch (e) {
+      members = [];
+    }
+  } else if (Array.isArray(t.names)) {
+    members = t.names.map(n => typeof n === 'string' ? { name: n, role: '', glow: false } : n);
+  }
+
+  const normalizedMembers = (members || []).map(m => {
+    if (typeof m === 'string') return { name: m, role: '', glow: false };
+    return {
+      name: m.name || '',
+      role: m.role || '',
+      glow: m.glow || false
+    };
+  });
+
+  return {
+    id: t.id,
+    role: t.role || '',
+    tag: t.tag || 'TEAM',
+    iconName: t.icon_name || t.iconName || 'Users',
+    tier: t.tier || 'emerald',
+    desc: t.description || t.desc || '',
+    members: normalizedMembers,
+    names: normalizedMembers.map(m => m.name),
+    displayOrder: Number(t.display_order ?? t.displayOrder ?? 999),
+    isActive: t.is_active !== false && t.isActive !== false,
+    createdAt: t.created_at || t.createdAt,
+    updatedAt: t.updated_at || t.updatedAt
+  };
+};
 
 const dbToEvent = (e) => ({
   id: e.id,
@@ -576,6 +625,34 @@ exports.getStudentCoordinators = async (req, res) => {
   } catch (err) {}
 
   res.json({ success: true, data: [] });
+};
+
+// ==================== PUBLIC HOMEPAGE STUDENT COORDINATORS ====================
+exports.getPublicHomepageCoordinators = async (req, res) => {
+  try {
+    try {
+      const { data: dbTeams, error } = await supabase
+        .from('homepage_coordinators')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
+        const active = dbTeams.map(dbToHomepageTeam);
+        return res.json({ success: true, count: active.length, data: active });
+      }
+    } catch (e) {
+      console.warn('Supabase getPublicHomepageCoordinators fallback:', e.message);
+    }
+
+    const teams = readHomepageCoordinators();
+    const active = teams.filter(t => t.isActive !== false);
+    active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+    res.json({ success: true, count: active.length, data: active });
+  } catch (err) {
+    console.error('Error fetching homepage coordinator teams:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch homepage coordinator teams' });
+  }
 };
 
 // ── Participant List Dispatch (Supabase Live) ──────────────────────────────────────────────────

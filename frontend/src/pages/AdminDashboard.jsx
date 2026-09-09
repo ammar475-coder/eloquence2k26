@@ -49,12 +49,24 @@ import {
   FaCheckCircle,
   FaInfoCircle,
   FaUserPlus,
-  FaListOl
+  FaListOl,
+  FaRocket,
+  FaCode,
+  FaTerminal,
+  FaStar,
+  FaLayerGroup
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
+import {
+  fetchAdminHomepageCoordinators,
+  createHomepageCoordinatorTeam,
+  updateHomepageCoordinatorTeam,
+  toggleHomepageCoordinatorTeam,
+  deleteHomepageCoordinatorTeam
+} from '../services/api.js';
 
 const EXISTING_POSTER_PRESETS = [
   { id: 'tech-01', label: 'Slide Craft (PPT)', img: defaultEventImages['tech-01'] },
@@ -750,6 +762,27 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [coordDisplayOrder, setCoordDisplayOrder] = useState('1');
   const [coordIsActive, setCoordIsActive] = useState(true);
 
+  // ==================== HOMEPAGE STUDENT COORDINATORS STATE ====================
+  const [homepageTeams, setHomepageTeams] = useState([]);
+  const [hpTeamSearch, setHpTeamSearch] = useState('');
+  const [isHpTeamModalOpen, setIsHpTeamModalOpen] = useState(false);
+  const [editingHpTeamId, setEditingHpTeamId] = useState(null);
+
+  // Form fields
+  const [hpTeamRole, setHpTeamRole] = useState('');
+  const [hpTeamTag, setHpTeamTag] = useState('TEAM');
+  const [hpTeamIcon, setHpTeamIcon] = useState('Users');
+  const [hpTeamTier, setHpTeamTier] = useState('cyan');
+  const [hpTeamDesc, setHpTeamDesc] = useState('');
+  const [hpTeamOrder, setHpTeamOrder] = useState('1');
+  const [hpTeamIsActive, setHpTeamIsActive] = useState(true);
+  const [hpTeamMembers, setHpTeamMembers] = useState([]);
+  
+  // Quick Member Input fields
+  const [newMemberName, setNewMemberName] = useState('');
+  const [batchMembersText, setBatchMembersText] = useState('');
+  const [isBatchInputOpen, setIsBatchInputOpen] = useState(false);
+
   const fetchRegistrations = () => {
     fetch(getApiUrl('/api/registrations'))
       .then(res => res.json())
@@ -771,6 +804,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     fetchEvents();
     fetchSponsors();
     fetchCoordinators();
+    fetchHomepageTeams();
     fetchRegistrations();
   }, [token]);
 
@@ -1612,6 +1646,237 @@ export default function AdminDashboard({ token, user, onLogout }) {
       .catch(() => toast.error('Server error', { id: loadingToast }));
   };
 
+  // ==================== HOMEPAGE STUDENT COORDINATORS HANDLERS ====================
+  const fetchHomepageTeams = () => {
+    fetchAdminHomepageCoordinators(token)
+      .then(result => {
+        if (result.success && Array.isArray(result.data)) {
+          setHomepageTeams(result.data);
+        }
+      })
+      .catch(console.error);
+  };
+
+  const resetHpTeamForm = () => {
+    setHpTeamRole('');
+    setHpTeamTag('TEAM');
+    setHpTeamIcon('Users');
+    setHpTeamTier('cyan');
+    setHpTeamDesc('');
+    setHpTeamOrder(String(homepageTeams.length + 1));
+    setHpTeamIsActive(true);
+    setHpTeamMembers([]);
+    setNewMemberName('');
+    setBatchMembersText('');
+    setIsBatchInputOpen(false);
+    setEditingHpTeamId(null);
+    setIsHpTeamModalOpen(false);
+  };
+
+  const openCreateHpTeamModal = () => {
+    resetHpTeamForm();
+    setHpTeamOrder(String(homepageTeams.length + 1));
+    setIsHpTeamModalOpen(true);
+  };
+
+  const openEditHpTeamModal = (team) => {
+    setEditingHpTeamId(team.id);
+    setHpTeamRole(team.role || '');
+    setHpTeamTag(team.tag || 'TEAM');
+    setHpTeamIcon(team.iconName || 'Users');
+    setHpTeamTier(team.tier || 'cyan');
+    setHpTeamDesc(team.desc || '');
+    setHpTeamOrder(String(team.displayOrder ?? 1));
+    setHpTeamIsActive(team.isActive !== false);
+
+    const members = (team.members && team.members.length > 0)
+      ? team.members.map(m => typeof m === 'string' ? { name: m } : { name: m.name || '' })
+      : (team.names || []).map(name => ({ name }));
+    setHpTeamMembers(members);
+
+    setNewMemberName('');
+    setBatchMembersText('');
+    setIsBatchInputOpen(false);
+    setIsHpTeamModalOpen(true);
+  };
+
+  const handleAddMemberToTeam = () => {
+    if (!newMemberName.trim()) {
+      toast.error('Please enter a member name');
+      return;
+    }
+    const memberObj = {
+      name: newMemberName.trim()
+    };
+    setHpTeamMembers([...hpTeamMembers, memberObj]);
+    setNewMemberName('');
+  };
+
+  const handleBatchAddMembers = () => {
+    if (!batchMembersText.trim()) return;
+    const lines = batchMembersText
+      .split(/[\n,]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
+
+    if (lines.length === 0) return;
+    const newItems = lines.map(name => ({ name }));
+    setHpTeamMembers([...hpTeamMembers, ...newItems]);
+    setBatchMembersText('');
+    setIsBatchInputOpen(false);
+    toast.success(`Added ${newItems.length} members!`);
+  };
+
+  const handleRemoveMember = (idxToRemove) => {
+    setHpTeamMembers(hpTeamMembers.filter((_, i) => i !== idxToRemove));
+  };
+
+  const handleMoveMember = (idx, direction) => {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= hpTeamMembers.length) return;
+    const updated = [...hpTeamMembers];
+    const temp = updated[idx];
+    updated[idx] = updated[targetIdx];
+    updated[targetIdx] = temp;
+    setHpTeamMembers(updated);
+  };
+
+  const handleSaveHpTeam = (e) => {
+    if (e) e.preventDefault();
+    if (!hpTeamRole.trim()) {
+      toast.error('Team Title / Role is required (e.g., MAIN COORDINATOR TEAM)');
+      return;
+    }
+
+    const cleanNames = hpTeamMembers
+      .map(m => (typeof m === 'string' ? m : (m.name || '')).trim())
+      .filter(n => n.length > 0);
+
+    const payload = {
+      role: hpTeamRole.trim(),
+      tag: hpTeamTag.trim() || 'TEAM',
+      iconName: hpTeamIcon || 'Users',
+      tier: hpTeamTier || 'cyan',
+      desc: hpTeamDesc.trim(),
+      members: cleanNames.map(name => ({ name })),
+      names: cleanNames,
+      displayOrder: Number(hpTeamOrder) || 1,
+      isActive: hpTeamIsActive
+    };
+
+    const loadingToast = toast.loading(editingHpTeamId ? 'Updating homepage team...' : 'Creating homepage team...');
+
+    if (editingHpTeamId) {
+      updateHomepageCoordinatorTeam(editingHpTeamId, payload, token)
+        .then(result => {
+          if (result.success) {
+            toast.success('Homepage team updated successfully!', { id: loadingToast });
+            setHomepageTeams(homepageTeams.map(t => t.id === editingHpTeamId ? result.data : t));
+            resetHpTeamForm();
+            fetchDashboardData();
+          } else {
+            toast.error(result.message || 'Failed to update team', { id: loadingToast });
+          }
+        })
+        .catch(() => toast.error('Server error updating team', { id: loadingToast }));
+    } else {
+      createHomepageCoordinatorTeam(payload, token)
+        .then(result => {
+          if (result.success) {
+            toast.success('Homepage team created successfully!', { id: loadingToast });
+            setHomepageTeams([...homepageTeams, result.data]);
+            resetHpTeamForm();
+            fetchDashboardData();
+          } else {
+            toast.error(result.message || 'Failed to create team', { id: loadingToast });
+          }
+        })
+        .catch(() => toast.error('Server error creating team', { id: loadingToast }));
+    }
+  };
+
+  const handleToggleHpTeam = (team) => {
+    const loadingToast = toast.loading(`Toggling status for "${team.role}"...`);
+    toggleHomepageCoordinatorTeam(team.id, token)
+      .then(result => {
+        if (result.success) {
+          toast.success(result.message, { id: loadingToast });
+          setHomepageTeams(homepageTeams.map(t => t.id === team.id ? result.data : t));
+          fetchDashboardData();
+        } else {
+          toast.error(result.message || 'Toggle failed', { id: loadingToast });
+        }
+      })
+      .catch(() => toast.error('Server error', { id: loadingToast }));
+  };
+
+  const handleDeleteHpTeam = (id, role) => {
+    if (!window.confirm(`Are you sure you want to delete "${role}" from the homepage?`)) return;
+    const loadingToast = toast.loading('Deleting team...');
+    deleteHomepageCoordinatorTeam(id, token)
+      .then(result => {
+        if (result.success) {
+          toast.success('Homepage team deleted successfully', { id: loadingToast });
+          setHomepageTeams(homepageTeams.filter(t => t.id !== id));
+          fetchDashboardData();
+        } else {
+          toast.error(result.message || 'Failed to delete team', { id: loadingToast });
+        }
+      })
+      .catch(() => toast.error('Server error', { id: loadingToast }));
+  };
+
+  const renderHpCoordinatorIcon = (iconName, tier = 'emerald', size = 20) => {
+    const strokeColor =
+      tier === 'cyan' ? '#00f0ff' :
+      tier === 'gold' ? '#f5e4b8' :
+      tier === 'purple' ? '#d946ef' : '#39ff88';
+
+    switch (iconName) {
+      case 'Code':
+      case 'Terminal':
+        return (
+          <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+        );
+      case 'Rocket':
+        return (
+          <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+            <path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-2.5 5-2.5" />
+            <path d="M12 15v5s3.03-.55 4.5-2c1.63-1.62 2.5-5 2.5-5" />
+          </svg>
+        );
+      case 'Sparkles':
+      case 'Star':
+        return (
+          <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+          </svg>
+        );
+      case 'Shield':
+        return (
+          <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        );
+      case 'Users':
+      default:
+        return (
+          <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        );
+    }
+  };
+
   // Helper for counting users in a role
   const getUserCountForRole = (rName) => {
     return users.filter(u => u.role?.toLowerCase() === rName.toLowerCase()).length;
@@ -1657,6 +1922,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
       (Array.isArray(c.assignedEvents) && c.assignedEvents.includes(coordEventFilter));
 
     return matchesSearch && matchesEvent;
+  });
+
+  const filteredHpTeams = homepageTeams.filter(team => {
+    const q = hpTeamSearch.toLowerCase().trim();
+    return !q || 
+      (team.role && team.role.toLowerCase().includes(q)) ||
+      (team.tag && team.tag.toLowerCase().includes(q)) ||
+      (team.desc && team.desc.toLowerCase().includes(q)) ||
+      (Array.isArray(team.members) && team.members.some(m => (typeof m === 'string' ? m : m.name)?.toLowerCase().includes(q))) ||
+      (Array.isArray(team.names) && team.names.some(n => n.toLowerCase().includes(q)));
   });
 
   const isUserManagementActive = activeTab === 'manage-users' || activeTab === 'manage-roles';
@@ -1907,7 +2182,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
-          {/* Student Coordinators Tab */}
+          {/* Event Coordinators Tab */}
           <button 
             type="button"
             style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
@@ -1916,9 +2191,24 @@ export default function AdminDashboard({ token, user, onLogout }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <FaUserTie style={S.navIcon} />
-                <span>Student Coordinators</span>
+                <span>Event Coordinators</span>
               </div>
               <span style={S.badgeCount}>{coordinators.length}</span>
+            </div>
+          </button>
+
+          {/* Homepage Student-Coordinator Team Tab */}
+          <button 
+            type="button"
+            style={activeTab === 'homepage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={(e) => { e.preventDefault(); setActiveTab('homepage-coordinators'); setMobileSidebarOpen(false); }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaUsers style={S.navIcon} />
+                <span>Homepage Student-Coordinator Team</span>
+              </div>
+              <span style={S.badgeCount}>{homepageTeams.length}</span>
             </div>
           </button>
 
@@ -1971,7 +2261,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-users' && 'User Management'}
               {activeTab === 'manage-roles' && 'Role Management'}
               {activeTab === 'manage-sponsors' && 'Sponsor Management'}
-              {activeTab === 'manage-coordinators' && 'Student Coordinator Management'}
+              {activeTab === 'manage-coordinators' && 'Event Coordinators Management'}
+              {activeTab === 'homepage-coordinators' && 'Homepage Student-Coordinator Team'}
               {activeTab === 'registrations' && 'Participant Registrations & Verification'}
               {activeTab === 'participant-list' && 'Event-Wise Participant & Team List'}
             </h1>
@@ -1982,6 +2273,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-roles' && 'Configure custom access roles, permissions, and security hierarchy.'}
               {activeTab === 'manage-sponsors' && 'Manage event partners, categories, logos, contact info, and public visibility.'}
               {activeTab === 'manage-coordinators' && 'Assign student leads and coordinators dynamically to symposium events.'}
+              {activeTab === 'homepage-coordinators' && 'Manage student coordinator teams (Main Coordinator Team, Website Coordinator Team, etc.) displayed dynamically on the homepage marquee.'}
               {activeTab === 'registrations' && 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.'}
               {activeTab === 'participant-list' && 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.'}
             </p>
@@ -2928,6 +3220,595 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* HOMEPAGE STUDENT-COORDINATOR TEAMS VIEW                  */}
+          {/* ======================================================== */}
+          {activeTab === 'homepage-coordinators' && (
+            <div style={S.viewContainer}>
+              {/* Metrics Overview Bar */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '1.2rem 1.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px'
+                }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: isDark ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff',
+                    color: '#3b82f6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem',
+                    flexShrink: 0
+                  }}>
+                    <FaUsers />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      Total Teams
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '2px' }}>
+                      {homepageTeams.length}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '1.2rem 1.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px'
+                }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
+                    color: '#10b981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem',
+                    flexShrink: 0
+                  }}>
+                    <FaCheckCircle />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      Active on Homepage
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10b981', marginTop: '2px' }}>
+                      {homepageTeams.filter(t => t.isActive !== false).length}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '1.2rem 1.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px'
+                }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: isDark ? 'rgba(217, 70, 239, 0.15)' : '#fdf2f8',
+                    color: '#d946ef',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem',
+                    flexShrink: 0
+                  }}>
+                    <FaUserPlus />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      Listed Members
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '2px' }}>
+                      {homepageTeams.reduce((sum, t) => sum + ((t.members && t.members.length) || (t.names && t.names.length) || 0), 0)}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '1.2rem 1.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px'
+                }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: isDark ? 'rgba(245, 228, 184, 0.15)' : '#fefce8',
+                    color: '#f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.25rem',
+                    flexShrink: 0
+                  }}>
+                    <FaStar />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      Marquee Status
+                    </div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '2px' }}>
+                      Auto-Looping
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Header & Filter Controls Card */}
+              <div style={{
+                background: isDark ? '#111827' : '#ffffff',
+                padding: '1.25rem 1.5rem',
+                borderRadius: '16px',
+                border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  {/* Search Bar */}
+                  <div style={{ flex: 1, minWidth: '260px', maxWidth: '420px', position: 'relative' }}>
+                    <input
+                      type="text"
+                      placeholder="Search teams, members, tags, or description..."
+                      value={hpTeamSearch}
+                      onChange={(e) => setHpTeamSearch(e.target.value)}
+                      style={{
+                        ...S.searchInput,
+                        width: '100%',
+                        paddingLeft: '2.5rem'
+                      }}
+                    />
+                    <FaSearch style={{
+                      position: 'absolute',
+                      left: '0.85rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: isDark ? '#6b7280' : '#94a3b8',
+                      fontSize: '0.9rem'
+                    }} />
+                    {hpTeamSearch && (
+                      <button
+                        onClick={() => setHpTeamSearch('')}
+                        style={{
+                          position: 'absolute',
+                          right: '0.75rem',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: isDark ? '#9ca3af' : '#64748b',
+                          cursor: 'pointer',
+                          padding: '4px'
+                        }}
+                      >
+                        <FaTimes size={12} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Add New Team Button */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <button
+                      onClick={fetchHomepageTeams}
+                      style={{
+                        ...S.filterBtn,
+                        padding: '0.55rem 0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      title="Reload homepage teams"
+                    >
+                      <FaSyncAlt size={12} />
+                      <span>Refresh</span>
+                    </button>
+
+                    <button
+                      onClick={openCreateHpTeamModal}
+                      style={{
+                        ...S.primaryBtn,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '0.65rem 1.25rem',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                        boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                        fontWeight: '700'
+                      }}
+                    >
+                      <FaPlus />
+                      <span>Add Homepage Team</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Homepage Teams Grid */}
+              {filteredHpTeams.length > 0 ? (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                  gap: '1.5rem'
+                }}>
+                  {filteredHpTeams.map((team) => {
+                    const tier = team.tier || 'emerald';
+                    const tierBorderColor =
+                      tier === 'cyan' ? '#00f0ff' :
+                      tier === 'gold' ? '#f5e4b8' :
+                      tier === 'purple' ? '#d946ef' : '#39ff88';
+
+                    const tierBgTint =
+                      tier === 'cyan' ? 'rgba(0, 240, 255, 0.04)' :
+                      tier === 'gold' ? 'rgba(245, 228, 184, 0.04)' :
+                      tier === 'purple' ? 'rgba(217, 70, 239, 0.04)' : 'rgba(57, 255, 136, 0.04)';
+
+                    const tierBadgeText =
+                      tier === 'cyan' ? '#38bdf8' :
+                      tier === 'gold' ? '#fcd34d' :
+                      tier === 'purple' ? '#f472b6' : '#4ade80';
+
+                    const rawMembers = (team.members && team.members.length > 0)
+                      ? team.members
+                      : (team.names || []).map(name => ({ name, role: '', glow: false }));
+
+                    const members = rawMembers.filter(m => {
+                      if (!m) return false;
+                      if (typeof m === 'string') return m.trim().length > 0;
+                      return m.name && m.name.trim().length > 0;
+                    });
+
+                    return (
+                      <div
+                        key={team.id}
+                        style={{
+                          background: isDark ? '#111827' : '#ffffff',
+                          border: isDark ? `1px solid ${tierBorderColor}40` : `1px solid ${tierBorderColor}60`,
+                          boxShadow: isDark
+                            ? `0 6px 24px rgba(0, 0, 0, 0.5), inset 0 0 16px ${tierBgTint}`
+                            : '0 4px 20px rgba(0, 0, 0, 0.06)',
+                          borderRadius: '16px',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                          position: 'relative'
+                        }}
+                      >
+                        {/* Top Accent Stripe */}
+                        <div style={{
+                          height: '4px',
+                          width: '100%',
+                          background: `linear-gradient(90deg, ${tierBorderColor}, transparent)`
+                        }} />
+
+                        <div style={{ padding: '1.4rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                          {/* Top Badges & Status Row */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span style={{
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase',
+                                background: isDark ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff',
+                                color: isDark ? '#93c5fd' : '#2563eb',
+                                border: '1px solid rgba(37, 99, 235, 0.3)'
+                              }}>
+                                {team.tag || 'TEAM'}
+                              </span>
+                            </div>
+
+                            {/* Active Status Badge */}
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '0.25rem 0.6rem',
+                              borderRadius: '999px',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              background: team.isActive !== false
+                                ? (isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5')
+                                : (isDark ? 'rgba(107, 114, 128, 0.15)' : '#f3f4f6'),
+                              color: team.isActive !== false ? '#10b981' : (isDark ? '#9ca3af' : '#6b7280'),
+                              border: team.isActive !== false
+                                ? '1px solid rgba(16, 185, 129, 0.3)'
+                                : '1px solid rgba(107, 114, 128, 0.3)'
+                            }}>
+                              <span style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: team.isActive !== false ? '#10b981' : '#9ca3af'
+                              }} />
+                              {team.isActive !== false ? 'Live' : 'Hidden'}
+                            </span>
+                          </div>
+
+                          {/* Team Role Title & Icon */}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '0.75rem' }}>
+                            <div style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '10px',
+                              background: isDark ? '#1a2234' : '#f8fafc',
+                              border: `1.5px solid ${tierBorderColor}60`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}>
+                              {renderHpCoordinatorIcon(team.iconName, tier, 22)}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <h3 style={{
+                                margin: 0,
+                                fontSize: '1.15rem',
+                                fontWeight: '800',
+                                color: isDark ? '#f9fafb' : '#0f172a',
+                                letterSpacing: '-0.01em',
+                                lineHeight: '1.3'
+                              }}>
+                                {team.role}
+                              </h3>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                color: isDark ? '#9ca3af' : '#64748b',
+                                fontWeight: '600'
+                              }}>
+                                Order: #{team.displayOrder ?? 1}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p style={{
+                            margin: '0 0 1.15rem 0',
+                            fontSize: '0.85rem',
+                            color: isDark ? '#cbd5e1' : '#475569',
+                            lineHeight: '1.5',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {team.desc || 'No description specified for this team.'}
+                          </p>
+
+                          {/* Members Section */}
+                          <div style={{
+                            background: isDark ? '#0b0f19' : '#f8fafc',
+                            border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                            borderRadius: '12px',
+                            padding: '0.85rem 1rem',
+                            marginBottom: '1.25rem',
+                            flex: 1
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '0.65rem'
+                            }}>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                fontWeight: '800',
+                                letterSpacing: '0.06em',
+                                textTransform: 'uppercase',
+                                color: isDark ? '#9ca3af' : '#64748b'
+                              }}>
+                                Team Members ({members.length})
+                              </span>
+                            </div>
+
+                            <div style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '6px',
+                              maxHeight: '140px',
+                              overflowY: 'auto'
+                            }}>
+                              {members.length > 0 ? (
+                                members.map((member, mIdx) => {
+                                  const nameStr = typeof member === 'string' ? member : (member?.name || '');
+                                  return (
+                                    <span
+                                      key={mIdx}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        padding: '0.25rem 0.6rem',
+                                        borderRadius: '6px',
+                                        fontSize: '0.78rem',
+                                        fontWeight: '600',
+                                        background: isDark ? '#1f2937' : '#ffffff',
+                                        color: isDark ? '#e2e8f0' : '#334155',
+                                        border: isDark ? '1px solid #374151' : '1px solid #cbd5e1'
+                                      }}
+                                    >
+                                      <span style={{ fontSize: '0.7rem', color: isDark ? '#60a5fa' : '#2563eb' }}>❖</span>
+                                      <span>{nameStr}</span>
+                                    </span>
+                                  );
+                                })
+                              ) : (
+                                <span style={{ fontSize: '0.8rem', fontStyle: 'italic', color: isDark ? '#6b7280' : '#94a3b8' }}>
+                                  No members assigned yet.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Footer Action Buttons */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingTop: '0.75rem',
+                            borderTop: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9',
+                            marginTop: 'auto'
+                          }}>
+                            {/* Toggle Live Switch */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleHpTeam(team)}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                color: team.isActive !== false ? '#10b981' : (isDark ? '#6b7280' : '#94a3b8'),
+                                fontSize: '0.82rem',
+                                fontWeight: '700',
+                                padding: '4px'
+                              }}
+                              title={team.isActive !== false ? 'Hide from homepage' : 'Show on homepage'}
+                            >
+                              {team.isActive !== false ? (
+                                <FaToggleOn size={22} color="#10b981" />
+                              ) : (
+                                <FaToggleOff size={22} color="#6b7280" />
+                              )}
+                              <span>{team.isActive !== false ? 'Active' : 'Inactive'}</span>
+                            </button>
+
+                            {/* Edit & Delete Action Buttons */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <button
+                                onClick={() => openEditHpTeamModal(team)}
+                                style={{
+                                  ...S.actionBtnEdit,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '0.45rem 0.85rem'
+                                }}
+                                title="Edit this team"
+                              >
+                                <FaEdit size={13} />
+                                <span>Edit</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteHpTeam(team.id, team.role)}
+                                style={{
+                                  ...S.actionBtnDelete,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '0.45rem 0.85rem'
+                                }}
+                                title="Delete this team"
+                              >
+                                <FaTrash size={13} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '3.5rem 2rem',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: isDark ? '#1f2937' : '#f1f5f9',
+                    color: isDark ? '#9ca3af' : '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.75rem',
+                    marginBottom: '1rem'
+                  }}>
+                    <FaUsers />
+                  </div>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.25rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                    No Homepage Coordinator Teams Found
+                  </h3>
+                  <p style={{ margin: '0 0 1.5rem 0', color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.9rem', maxWidth: '420px' }}>
+                    {hpTeamSearch || hpTeamTierFilter !== 'all'
+                      ? 'No teams match your search or tier filter. Try clearing the filter.'
+                      : 'You haven’t created any homepage teams yet. Add your first team to display it on the live marquee!'}
+                  </p>
+                  {(hpTeamSearch || hpTeamTierFilter !== 'all') ? (
+                    <button
+                      onClick={() => { setHpTeamSearch(''); setHpTeamTierFilter('all'); }}
+                      style={{ ...S.secondaryBtn, padding: '0.65rem 1.25rem' }}
+                    >
+                      Clear Filters
+                    </button>
+                  ) : (
+                    <button
+                      onClick={openCreateHpTeamModal}
+                      style={{ ...S.primaryBtn, padding: '0.65rem 1.4rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <FaPlus />
+                      <span>Create First Team</span>
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -5432,6 +6313,541 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <button type="button" onClick={() => setIsOnSiteRegisterModalOpen(false)} style={S.cancelBtn}>Cancel</button>
                 <button type="submit" disabled={isRegisteringOnSite} style={{ ...S.primaryBtn, background: '#059669' }}>
                   {isRegisteringOnSite ? 'Recording...' : 'Record On-Site Registration'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* HOMEPAGE STUDENT-COORDINATOR TEAM CREATE/EDIT MODAL      */}
+      {/* ======================================================== */}
+      {isHpTeamModalOpen && (
+        <div style={S.modalBackdrop} onClick={resetHpTeamForm}>
+          <div
+            style={{
+              ...S.modalCard,
+              maxWidth: '960px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={S.modalHeader}>
+              <div style={S.modalHeaderLeft}>
+                <div style={{
+                  ...S.modalIconBoxEvent,
+                  background: isDark ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff',
+                  color: '#2563eb'
+                }}>
+                  <FaUsers size={20} />
+                </div>
+                <div>
+                  <h3 style={S.modalTitle}>
+                    {editingHpTeamId ? `Edit Homepage Team: ${hpTeamRole || 'Team'}` : 'Add New Homepage Student-Coordinator Team'}
+                  </h3>
+                  <p style={S.modalSubtitle}>
+                    Teams configured here will appear dynamically in the live scrolling marquee on the symposium homepage.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={resetHpTeamForm}
+                style={S.modalCloseBtn}
+                title="Close (Esc)"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveHpTeam} style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+              <div style={{
+                padding: '1.5rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                gap: '1.75rem',
+                overflowY: 'auto',
+                maxHeight: 'calc(92vh - 150px)'
+              }}>
+                {/* Left Column: Form Controls */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Team Title / Role */}
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>
+                      Team Name / Role Title <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. MAIN COORDINATOR TEAM, WEBSITE DEVELOPMENT TEAM, MEDIA & PROMOTIONS TEAM"
+                      value={hpTeamRole}
+                      onChange={(e) => setHpTeamRole(e.target.value)}
+                      style={S.input}
+                    />
+                    <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      This is the prominent headline displayed on the card (usually in ALL CAPS).
+                    </span>
+                  </div>
+
+                  {/* Category Tag & Display Order */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+                    <div style={S.modalInputGroup}>
+                      <label style={S.label}>Category Tag / Badge</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. STUDENT LEADERSHIP, WEB & TECH CREW, CREATIVE TEAM"
+                        value={hpTeamTag}
+                        onChange={(e) => setHpTeamTag(e.target.value)}
+                        style={S.input}
+                      />
+                    </div>
+                    <div style={S.modalInputGroup}>
+                      <label style={S.label}>Display Order</label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                        value={hpTeamOrder}
+                        onChange={(e) => setHpTeamOrder(e.target.value)}
+                        style={S.input}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Icon Selector */}
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Card Icon</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                      {[
+                        { id: 'Users', label: 'Users' },
+                        { id: 'Code', label: 'Code' },
+                        { id: 'Terminal', label: 'Terminal' },
+                        { id: 'Rocket', label: 'Rocket' },
+                        { id: 'Sparkles', label: 'Sparkles' },
+                        { id: 'Shield', label: 'Shield' },
+                      ].map(ic => {
+                        const isSelected = hpTeamIcon === ic.id;
+                        return (
+                          <button
+                            key={ic.id}
+                            type="button"
+                            onClick={() => setHpTeamIcon(ic.id)}
+                            style={{
+                              padding: '0.65rem 0.4rem',
+                              borderRadius: '10px',
+                              border: isSelected ? '2px solid #2563eb' : (isDark ? '1px solid #374151' : '1px solid #e2e8f0'),
+                              background: isSelected ? (isDark ? 'rgba(37, 99, 235, 0.2)' : '#eff6ff') : 'transparent',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {renderHpCoordinatorIcon(ic.id, hpTeamTier, 20)}
+                            <span style={{ fontSize: '0.7rem', fontWeight: isSelected ? '700' : '500', color: isDark ? '#d1d5db' : '#475569' }}>
+                              {ic.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>Team Description / Mission</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Briefly describe what this team organizes or builds for Eloquence 2026..."
+                      value={hpTeamDesc}
+                      onChange={(e) => setHpTeamDesc(e.target.value)}
+                      style={{ ...S.textarea, minHeight: '65px' }}
+                    />
+                  </div>
+
+                  {/* Active on Homepage Toggle */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '10px',
+                    background: isDark ? '#161e2e' : '#f8fafc',
+                    border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0'
+                  }}>
+                    <input
+                      type="checkbox"
+                      id="hpTeamActiveCheck"
+                      checked={hpTeamIsActive}
+                      onChange={(e) => setHpTeamIsActive(e.target.checked)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="hpTeamActiveCheck" style={{ fontSize: '0.88rem', fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', cursor: 'pointer' }}>
+                      Publish this team to the live homepage marquee
+                    </label>
+                  </div>
+
+                  {/* Members Manager Section */}
+                  <div style={{
+                    border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                    borderRadius: '14px',
+                    padding: '1.15rem',
+                    background: isDark ? '#0e1524' : '#fafafa',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.85rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                        Team Members ({hpTeamMembers.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsBatchInputOpen(!isBatchInputOpen)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#2563eb',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        {isBatchInputOpen ? 'Single Add Mode' : '+ Batch Paste Multiple Names'}
+                      </button>
+                    </div>
+
+                    {isBatchInputOpen ? (
+                      /* Batch Paste Box */
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <textarea
+                          rows={3}
+                          placeholder="Paste member names separated by commas or line breaks (e.g.&#10;SAMNESH S&#10;HARISH KUMAR RG&#10;SHARMILA Y)"
+                          value={batchMembersText}
+                          onChange={(e) => setBatchMembersText(e.target.value)}
+                          style={{ ...S.textarea, fontSize: '0.82rem' }}
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setIsBatchInputOpen(false)}
+                            style={{ ...S.cancelBtn, padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleBatchAddMembers}
+                            style={{ ...S.primaryBtn, padding: '0.4rem 0.85rem', fontSize: '0.78rem' }}
+                          >
+                            Import All Names
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Single Member Add Controls */
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="Member Full Name (e.g. MOHAMMED AYAZ A)"
+                          value={newMemberName}
+                          onChange={(e) => setNewMemberName(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddMemberToTeam(); } }}
+                          style={{ ...S.input, fontSize: '0.86rem', flex: 1 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddMemberToTeam}
+                          style={{
+                            ...S.primaryBtn,
+                            padding: '0.55rem 1.15rem',
+                            fontSize: '0.84rem',
+                            whiteSpace: 'nowrap',
+                            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                            fontWeight: '700'
+                          }}
+                        >
+                          + Add Member
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Members List Table / Cards */}
+                    <div style={{
+                      maxHeight: '180px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '5px',
+                      marginTop: '4px'
+                    }}>
+                      {hpTeamMembers.length > 0 ? (
+                        hpTeamMembers.map((mem, idx) => {
+                          const nameStr = typeof mem === 'string' ? mem : (mem?.name || '');
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '0.45rem 0.75rem',
+                                borderRadius: '8px',
+                                background: isDark ? '#1a2234' : '#ffffff',
+                                border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                                fontSize: '0.84rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: '0.72rem', color: isDark ? '#6b7280' : '#94a3b8', width: '22px' }}>
+                                  #{idx + 1}
+                                </span>
+                                <span style={{
+                                  fontWeight: '700',
+                                  color: isDark ? '#f9fafb' : '#0f172a',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {nameStr}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {idx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveMember(idx, -1)}
+                                    style={{ background: 'none', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem' }}
+                                    title="Move Up"
+                                  >
+                                    ▲
+                                  </button>
+                                )}
+                                {idx < hpTeamMembers.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveMember(idx, 1)}
+                                    style={{ background: 'none', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem' }}
+                                    title="Move Down"
+                                  >
+                                    ▼
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(idx)}
+                                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px' }}
+                                  title="Remove Member"
+                                >
+                                  <FaTrash size={11} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <span style={{ fontSize: '0.8rem', fontStyle: 'italic', color: isDark ? '#6b7280' : '#94a3b8', padding: '0.5rem' }}>
+                          No members added yet. Type a name above or use Batch Paste.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Real-Time Live Preview */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{
+                      fontSize: '0.76rem',
+                      fontWeight: '800',
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: isDark ? '#9ca3af' : '#64748b'
+                    }}>
+                      Live Homepage Marquee Preview
+                    </span>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      color: '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                      Real-Time Rendering
+                    </span>
+                  </div>
+
+                  {/* Cyber Slide Card Preview */}
+                  {(() => {
+                    const tier = hpTeamTier || 'emerald';
+                    const strokeColor =
+                      tier === 'cyan' ? '#00f0ff' :
+                      tier === 'gold' ? '#f5e4b8' :
+                      tier === 'purple' ? '#d946ef' : '#39ff88';
+
+                    let color1 = '#00a83b';
+                    let color2 = '#39ff88';
+                    let color3 = '#040a06';
+
+                    if (tier === 'cyan') {
+                      color1 = '#0077b6';
+                      color2 = '#00f0ff';
+                      color3 = '#020e18';
+                    } else if (tier === 'gold') {
+                      color1 = '#b99358';
+                      color2 = '#f5e4b8';
+                      color3 = '#0a0804';
+                    } else if (tier === 'purple') {
+                      color1 = '#7928ca';
+                      color2 = '#d946ef';
+                      color3 = '#0d0216';
+                    }
+
+                    return (
+                      <div style={{
+                        background: `radial-gradient(circle at top left, ${color1}25, transparent 60%), linear-gradient(180deg, ${color3}, #050810)`,
+                        border: `1.5px solid ${strokeColor}70`,
+                        boxShadow: `0 0 25px ${strokeColor}25, inset 0 0 20px ${strokeColor}10`,
+                        borderRadius: '20px',
+                        padding: '1.75rem',
+                        position: 'relative',
+                        color: '#ffffff',
+                        minHeight: '380px',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        {/* Header Badge Row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                          <div style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '12px',
+                            background: `${strokeColor}15`,
+                            border: `1px solid ${strokeColor}40`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: `0 0 12px ${strokeColor}30`
+                          }}>
+                            {renderHpCoordinatorIcon(hpTeamIcon, tier, 22)}
+                          </div>
+                          <div style={{
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '999px',
+                            background: `${strokeColor}15`,
+                            border: `1px solid ${strokeColor}50`,
+                            fontSize: '0.72rem',
+                            fontWeight: '800',
+                            letterSpacing: '0.08em',
+                            color: strokeColor,
+                            textTransform: 'uppercase'
+                          }}>
+                            {hpTeamTag || 'TEAM'}
+                          </div>
+                        </div>
+
+                        {/* Role Title */}
+                        <h3 style={{
+                          margin: '0 0 0.75rem 0',
+                          fontSize: '1.25rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.04em',
+                          color: '#f8fafc',
+                          textTransform: 'uppercase'
+                        }}>
+                          {hpTeamRole || 'TEAM NAME'}
+                        </h3>
+
+                        {/* Flourish Line with Diamond Symbol */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '0.5rem 0 1rem 0' }}>
+                          <div style={{ flex: 1, height: '1px', background: `linear-gradient(90deg, ${strokeColor}60, transparent)` }} />
+                          <span style={{ color: strokeColor, fontSize: '0.7rem' }}>◆</span>
+                          <div style={{ flex: 1, height: '1px', background: `linear-gradient(90deg, transparent, ${strokeColor}60)` }} />
+                        </div>
+
+                        {/* Members List */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1rem' }}>
+                          {hpTeamMembers.length > 0 ? (
+                            hpTeamMembers.map((m, i) => {
+                              const nameStr = typeof m === 'string' ? m : (m?.name || '');
+                              return (
+                                <div
+                                  key={i}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '0.2rem 0'
+                                  }}
+                                >
+                                  <span style={{ color: strokeColor, fontSize: '0.75rem' }}>❖</span>
+                                  <span style={{
+                                    fontSize: '0.88rem',
+                                    fontWeight: '700',
+                                    color: '#f1f5f9'
+                                  }}>
+                                    {nameStr}
+                                  </span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div style={{ padding: '1rem 0', color: '#64748b', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                              Members announcement coming soon
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        {hpTeamDesc && (
+                          <p style={{
+                            margin: '0',
+                            fontSize: '0.82rem',
+                            color: '#94a3b8',
+                            lineHeight: '1.5',
+                            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                            paddingTop: '0.75rem'
+                          }}>
+                            {hpTeamDesc}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div style={S.modalFooter}>
+                <button
+                  type="button"
+                  onClick={resetHpTeamForm}
+                  style={S.cancelBtn}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    ...S.primaryBtn,
+                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    padding: '0.65rem 1.6rem',
+                    fontWeight: '700'
+                  }}
+                >
+                  {editingHpTeamId ? 'Save Changes' : 'Create Team'}
                 </button>
               </div>
             </form>

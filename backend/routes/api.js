@@ -17,6 +17,7 @@ router.get('/sponsors/:id', apiController.getPublicSponsorById);
 router.get('/coordinators', apiController.getActiveCoordinators);
 router.get('/coordinators/event/:eventId', apiController.getCoordinatorsByEvent);
 router.get('/student-coordinators', apiController.getStudentCoordinators);
+router.get('/homepage-coordinators', apiController.getPublicHomepageCoordinators);
 
 // Participant List Dispatch
 router.post('/send-participant-list', apiController.sendParticipantList);
@@ -64,5 +65,13 @@ router.delete('/admin/coordinators/:id', adminController.verifyToken, adminContr
 
 // ── Admin Registration Management ──────────────────────────────────────────
 router.delete('/admin/registrations/:id', adminController.verifyToken, adminController.deleteRegistration);
+
+// ── Admin Homepage Coordinator Team Management ───────────────────────────
+router.get('/admin/homepage-coordinators', adminController.verifyToken, adminController.getHomepageCoordinators);
+router.get('/admin/homepage-coordinators/:id', adminController.verifyToken, adminController.getHomepageCoordinatorById);
+router.post('/admin/homepage-coordinators', adminController.verifyToken, adminController.createHomepageCoordinator);
+router.put('/admin/homepage-coordinators/:id', adminController.verifyToken, adminController.updateHomepageCoordinator);
+router.patch('/admin/homepage-coordinators/:id/toggle', adminController.verifyToken, adminController.toggleHomepageCoordinatorStatus);
+router.delete('/admin/homepage-coordinators/:id', adminController.verifyToken, adminController.deleteHomepageCoordinator);
 
 module.exports = router;

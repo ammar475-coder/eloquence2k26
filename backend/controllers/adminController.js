@@ -8,6 +8,8 @@ const rolesFilePath = path.join(__dirname, '../data/roles.json');
 const eventsFilePath = path.join(__dirname, '../data/events.json');
 const sponsorsFilePath = path.join(__dirname, '../data/sponsors.json');
 const coordinatorsFilePath = path.join(__dirname, '../data/coordinators.json');
+const homepageCoordinatorsFilePath = path.join(__dirname, '../data/homepage_coordinators.json');
+const frontendStudentCoordinatorsFilePath = path.join(__dirname, '../../frontend/src/data/studentCoordinators.json');
 const registrationsFilePath = path.join(__dirname, '../data/registrations.json');
 const uploadsDir = path.join(__dirname, '../uploads');
 
@@ -134,6 +136,60 @@ const dbToEvent = (e) => ({
   updatedAt: e.updated_at || e.updatedAt
 });
 
+const dbToHomepageTeam = (t) => {
+  let members = [];
+  if (Array.isArray(t.members)) {
+    members = t.members;
+  } else if (typeof t.members === 'string') {
+    try {
+      members = JSON.parse(t.members);
+    } catch (e) {
+      members = [];
+    }
+  } else if (Array.isArray(t.names)) {
+    members = t.names.map(n => typeof n === 'string' ? { name: n, role: '', glow: false } : n);
+  }
+
+  const normalizedMembers = (members || []).map(m => {
+    if (typeof m === 'string') return { name: m, role: '', glow: false };
+    return {
+      name: m.name || '',
+      role: m.role || '',
+      glow: m.glow || false
+    };
+  });
+
+  return {
+    id: t.id,
+    role: t.role || '',
+    tag: t.tag || 'TEAM',
+    iconName: t.icon_name || t.iconName || 'Users',
+    tier: t.tier || 'emerald',
+    desc: t.description || t.desc || '',
+    members: normalizedMembers,
+    names: normalizedMembers.map(m => m.name),
+    displayOrder: Number(t.display_order ?? t.displayOrder ?? 999),
+    isActive: t.is_active !== false && t.isActive !== false,
+    createdAt: t.created_at || t.createdAt,
+    updatedAt: t.updated_at || t.updatedAt
+  };
+};
+
+const homepageTeamToDb = (t) => {
+  return {
+    id: t.id,
+    role: t.role,
+    tag: t.tag || 'TEAM',
+    icon_name: t.iconName || 'Users',
+    tier: t.tier || 'emerald',
+    description: t.desc || '',
+    members: t.members || [],
+    display_order: Number(t.displayOrder ?? 999),
+    is_active: t.isActive !== false,
+    updated_at: new Date().toISOString()
+  };
+};
+
 // ==================== LOCAL JSON FALLBACK HELPERS ====================
 const getUsersData = () => {
   try {
@@ -224,6 +280,44 @@ const saveCoordinatorsData = (coordinators) => {
   }
 };
 
+const getHomepageCoordinatorsData = () => {
+  try {
+    const data = fs.readFileSync(homepageCoordinatorsFilePath, 'utf8');
+    return JSON.parse(data || '[]');
+  } catch (err) {
+    return [];
+  }
+};
+
+const saveHomepageCoordinatorsData = (teams) => {
+  try {
+    fs.writeFileSync(homepageCoordinatorsFilePath, JSON.stringify(teams, null, 2), 'utf8');
+    if (fs.existsSync(frontendStudentCoordinatorsFilePath)) {
+      try {
+        const activeTeamsForFrontend = teams
+          .filter(t => t.isActive !== false)
+          .map(t => ({
+            id: t.id,
+            role: t.role,
+            tag: t.tag,
+            iconName: t.iconName,
+            tier: t.tier,
+            desc: t.desc,
+            names: (t.members || []).map(m => typeof m === 'string' ? m : m.name),
+            members: t.members || []
+          }));
+        fs.writeFileSync(frontendStudentCoordinatorsFilePath, JSON.stringify(activeTeamsForFrontend, null, 2), 'utf8');
+      } catch (fErr) {
+        console.warn('Sync to frontend studentCoordinators.json skipped:', fErr.message);
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error('Error writing homepage_coordinators.json:', err);
+    return false;
+  }
+};
+
 const getRegistrationsData = () => {
   try {
     const data = fs.readFileSync(registrationsFilePath, 'utf8');
@@ -298,20 +392,23 @@ exports.getDashboardData = async (req, res) => {
     let registrations = getRegistrationsData();
     let sponsors = getSponsorsData();
     let coordinators = getCoordinatorsData();
+    let homepageTeams = getHomepageCoordinatorsData();
     let events = getEventsData();
 
     try {
-      const [regRes, spRes, coRes, evRes] = await Promise.all([
+      const [regRes, spRes, coRes, evRes, hpRes] = await Promise.all([
         supabase.from('registrations').select('*'),
         supabase.from('sponsors').select('*'),
         supabase.from('coordinators').select('*'),
-        supabase.from('events').select('*')
+        supabase.from('events').select('*'),
+        supabase.from('homepage_coordinators').select('*')
       ]);
 
       if (regRes.data && regRes.data.length > 0) registrations = regRes.data;
       if (spRes.data && spRes.data.length > 0) sponsors = spRes.data.map(dbToSponsor);
       if (coRes.data && coRes.data.length > 0) coordinators = coRes.data.map(dbToCoordinator);
       if (evRes.data && evRes.data.length > 0) events = evRes.data.map(dbToEvent);
+      if (hpRes.data && hpRes.data.length > 0) homepageTeams = hpRes.data.map(dbToHomepageTeam);
     } catch (dbErr) {
       console.warn('Dashboard live metrics query error fallback:', dbErr.message);
     }
@@ -325,6 +422,7 @@ exports.getDashboardData = async (req, res) => {
     const offlineRevenue = offlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
+    const activeHomepageTeams = homepageTeams.filter(t => t.isActive !== false);
 
     const recentRegistrations = [...registrations]
       .reverse()
@@ -355,7 +453,9 @@ exports.getDashboardData = async (req, res) => {
           totalSponsors: sponsors.length,
           activeSponsors: activeSponsors.length,
           totalCoordinators: coordinators.length,
-          activeCoordinators: activeCoordinators.length
+          activeCoordinators: activeCoordinators.length,
+          totalHomepageTeams: homepageTeams.length,
+          activeHomepageTeams: activeHomepageTeams.length
         },
         recentRegistrations
       }
@@ -1522,3 +1622,217 @@ exports.deleteRegistration = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to delete registration' });
   }
 };
+
+// ==================== HOMEPAGE STUDENT COORDINATOR TEAMS ====================
+exports.getHomepageCoordinators = async (req, res) => {
+  try {
+    try {
+      const { data: dbTeams, error } = await supabase.from('homepage_coordinators').select('*').order('display_order', { ascending: true });
+      if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
+        return res.json({ success: true, data: dbTeams.map(dbToHomepageTeam) });
+      }
+    } catch (e) {
+      console.warn('Supabase getHomepageCoordinators fallback:', e.message);
+    }
+    const teams = getHomepageCoordinatorsData();
+    teams.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+    res.json({ success: true, data: teams });
+  } catch (err) {
+    console.error('Error in getHomepageCoordinators:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch homepage coordinator teams' });
+  }
+};
+
+exports.getHomepageCoordinatorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    try {
+      const { data: dbTeam, error } = await supabase.from('homepage_coordinators').select('*').eq('id', id).single();
+      if (!error && dbTeam) {
+        return res.json({ success: true, data: dbToHomepageTeam(dbTeam) });
+      }
+    } catch (e) {
+      console.warn('Supabase getHomepageCoordinatorById fallback:', e.message);
+    }
+    const teams = getHomepageCoordinatorsData();
+    const team = teams.find(t => t.id === id);
+    if (!team) return res.status(404).json({ success: false, message: 'Homepage team not found' });
+    res.json({ success: true, data: team });
+  } catch (err) {
+    console.error('Error in getHomepageCoordinatorById:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch team details' });
+  }
+};
+
+exports.createHomepageCoordinator = async (req, res) => {
+  try {
+    const { role, tag, iconName, tier, desc, members, names, displayOrder, isActive } = req.body;
+    if (!role || !role.trim()) {
+      return res.status(400).json({ success: false, message: 'Team title / role is required' });
+    }
+
+    const teams = getHomepageCoordinatorsData();
+    const id = req.body.id && req.body.id.trim()
+      ? req.body.id.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-')
+      : `team-${Date.now()}`;
+
+    // Normalize members
+    let normalizedMembers = [];
+    if (Array.isArray(members) && members.length > 0) {
+      normalizedMembers = members
+        .map(m => typeof m === 'string' ? { name: m.trim() } : { name: m.name ? m.name.trim() : '' })
+        .filter(m => m.name.length > 0);
+    } else if (Array.isArray(names) && names.length > 0) {
+      normalizedMembers = names
+        .filter(n => typeof n === 'string' && n.trim().length > 0)
+        .map(n => ({ name: n.trim() }));
+    }
+
+    const newTeam = {
+      id,
+      role: role.trim(),
+      tag: (tag || 'TEAM').trim(),
+      iconName: iconName || 'Users',
+      tier: tier || 'emerald',
+      desc: (desc || '').trim(),
+      members: normalizedMembers,
+      names: normalizedMembers.map(m => m.name),
+      displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : teams.length + 1,
+      isActive: isActive !== false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Save to Supabase if available
+    try {
+      const dbPayload = homepageTeamToDb(newTeam);
+      const { error: dbErr } = await supabase.from('homepage_coordinators').insert([dbPayload]);
+      if (dbErr) console.error('Supabase createHomepageCoordinator error:', dbErr.message);
+    } catch (e) {
+      console.error('Supabase createHomepageCoordinator exception:', e.message);
+    }
+
+    // Save to local file & sync frontend
+    teams.push(newTeam);
+    saveHomepageCoordinatorsData(teams);
+
+    res.status(201).json({ success: true, message: 'Homepage coordinator team created successfully', data: newTeam });
+  } catch (err) {
+    console.error('Error in createHomepageCoordinator:', err);
+    res.status(500).json({ success: false, message: 'Failed to create homepage coordinator team' });
+  }
+};
+
+exports.updateHomepageCoordinator = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, tag, iconName, tier, desc, members, names, displayOrder, isActive } = req.body;
+
+    const teams = getHomepageCoordinatorsData();
+    const index = teams.findIndex(t => t.id === id);
+
+    let normalizedMembers = undefined;
+    if (Array.isArray(members)) {
+      normalizedMembers = members
+        .map(m => typeof m === 'string' ? { name: m.trim() } : { name: m.name ? m.name.trim() : '' })
+        .filter(m => m.name.length > 0);
+    } else if (Array.isArray(names)) {
+      normalizedMembers = names
+        .filter(n => typeof n === 'string' && n.trim().length > 0)
+        .map(n => ({ name: n.trim() }));
+    }
+
+    const existingTeam = index !== -1 ? teams[index] : {};
+    const updatedTeam = {
+      ...existingTeam,
+      id,
+      role: role !== undefined ? role.trim() : existingTeam.role,
+      tag: tag !== undefined ? tag.trim() : (existingTeam.tag || 'TEAM'),
+      iconName: iconName !== undefined ? iconName : (existingTeam.iconName || 'Users'),
+      tier: tier !== undefined ? tier : (existingTeam.tier || 'emerald'),
+      desc: desc !== undefined ? desc.trim() : (existingTeam.desc || ''),
+      members: normalizedMembers !== undefined ? normalizedMembers : (existingTeam.members || []),
+      names: normalizedMembers !== undefined ? normalizedMembers.map(m => m.name) : (existingTeam.names || []),
+      displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : (existingTeam.displayOrder || 999),
+      isActive: isActive !== undefined ? Boolean(isActive) : (existingTeam.isActive !== false),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update in Supabase
+    try {
+      const dbPayload = homepageTeamToDb(updatedTeam);
+      const { error: dbErr } = await supabase.from('homepage_coordinators').upsert([dbPayload]);
+      if (dbErr) console.error('Supabase updateHomepageCoordinator error:', dbErr.message);
+    } catch (e) {
+      console.error('Supabase updateHomepageCoordinator exception:', e.message);
+    }
+
+    // Update in local file
+    if (index !== -1) {
+      teams[index] = updatedTeam;
+    } else {
+      teams.push(updatedTeam);
+    }
+    saveHomepageCoordinatorsData(teams);
+
+    res.json({ success: true, message: 'Homepage coordinator team updated successfully', data: updatedTeam });
+  } catch (err) {
+    console.error('Error in updateHomepageCoordinator:', err);
+    res.status(500).json({ success: false, message: 'Failed to update homepage coordinator team' });
+  }
+};
+
+exports.toggleHomepageCoordinatorStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const teams = getHomepageCoordinatorsData();
+    const index = teams.findIndex(t => t.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Homepage team not found' });
+    }
+
+    const newStatus = teams[index].isActive === false ? true : false;
+    teams[index].isActive = newStatus;
+    teams[index].updatedAt = new Date().toISOString();
+
+    try {
+      await supabase.from('homepage_coordinators').update({ is_active: newStatus, updated_at: teams[index].updatedAt }).eq('id', id);
+    } catch (e) {
+      console.error('Supabase toggle status error:', e.message);
+    }
+
+    saveHomepageCoordinatorsData(teams);
+    res.json({
+      success: true,
+      message: `Team "${teams[index].role}" is now ${newStatus ? 'visible on' : 'hidden from'} the homepage`,
+      data: teams[index]
+    });
+  } catch (err) {
+    console.error('Error in toggleHomepageCoordinatorStatus:', err);
+    res.status(500).json({ success: false, message: 'Failed to toggle homepage team status' });
+  }
+};
+
+exports.deleteHomepageCoordinator = async (req, res) => {
+  try {
+    const { id } = req.params;
+    try {
+      await supabase.from('homepage_coordinators').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteHomepageCoordinator fallback:', e.message);
+    }
+
+    let teams = getHomepageCoordinatorsData();
+    const initialLen = teams.length;
+    teams = teams.filter(t => t.id !== id);
+    if (teams.length !== initialLen) {
+      saveHomepageCoordinatorsData(teams);
+    }
+
+    res.json({ success: true, message: 'Homepage coordinator team deleted successfully' });
+  } catch (err) {
+    console.error('Error in deleteHomepageCoordinator:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete homepage coordinator team' });
+  }
+};
+
