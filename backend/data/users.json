@@ -16,5 +16,11 @@
     "username": "shahid_admin",
     "password": "admin",
     "role": "superadmin"
+  },
+  {
+    "id": 1788929069120,
+    "username": "Faazil",
+    "password": "eloquenceadmin",
+    "role": "web-coordinator"
   }
 ]

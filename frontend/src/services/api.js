@@ -209,3 +209,65 @@ export async function deleteCoordinator(id, token) {
   });
   return res.json();
 }
+
+// ==================== HOMEPAGE STUDENT COORDINATOR TEAMS APIS ====================
+
+export async function fetchPublicHomepageCoordinators() {
+  try {
+    const res = await fetch(getApiUrl('/api/homepage-coordinators'));
+    const data = await res.json();
+    if (data.success && Array.isArray(data.data)) return data.data;
+    return null;
+  } catch (err) {
+    console.warn('Failed to fetch public homepage coordinators from server:', err);
+    return null;
+  }
+}
+
+export async function fetchAdminHomepageCoordinators(token) {
+  const res = await fetch(getApiUrl('/api/admin/homepage-coordinators'), {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return res.json();
+}
+
+export async function createHomepageCoordinatorTeam(teamData, token) {
+  const res = await fetch(getApiUrl('/api/admin/homepage-coordinators'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(teamData)
+  });
+  return res.json();
+}
+
+export async function updateHomepageCoordinatorTeam(id, teamData, token) {
+  const res = await fetch(getApiUrl(`/api/admin/homepage-coordinators/${id}`), {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(teamData)
+  });
+  return res.json();
+}
+
+export async function toggleHomepageCoordinatorTeam(id, token) {
+  const res = await fetch(getApiUrl(`/api/admin/homepage-coordinators/${id}/toggle`), {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return res.json();
+}
+
+export async function deleteHomepageCoordinatorTeam(id, token) {
+  const res = await fetch(getApiUrl(`/api/admin/homepage-coordinators/${id}`), {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  return res.json();
+}
+

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import studentCoordinators from '../data/studentCoordinators.json';
 import ShaderCard from '../components/ShaderCard.jsx';
+import { fetchPublicHomepageCoordinators } from '../services/api.js';
 
 function renderCoordinatorIcon(iconName, tier) {
   const strokeColor =
@@ -170,22 +171,10 @@ function CoordinatorSlideCard({ item, index }) {
           <div className="coordinator-names-list">
             {membersList.length > 0 ? (
               membersList.map((member, i) => {
-                const nameStr = typeof member === 'string' ? member : member.name;
-                const normalized = (nameStr || '').trim().toUpperCase();
-                const isShahid = normalized.includes('SHAHID AHMED') || normalized.includes('SHAHID ADMED');
-                const glowType =
-                  typeof member === 'object' && member.glow
-                    ? (member.glow === true ? 'gold' : member.glow)
-                    : isShahid
-                    ? 'gold'
-                    : null;
-
-                const isGlowing = Boolean(glowType);
-                const glowClasses = isGlowing ? `is-glowing glow-${glowType} is-glowing-${glowType}` : '';
-
+                const nameStr = typeof member === 'string' ? member : (member?.name || '');
                 return (
                   <div
-                    className={`coordinator-name-item ${glowClasses}`}
+                    className="coordinator-name-item"
                     key={typeof member === 'string' ? member : member.name || i}
                   >
                     <span className="coordinator-name-bullet">❖</span>
@@ -193,9 +182,6 @@ function CoordinatorSlideCard({ item, index }) {
                       <span className="coordinator-name-text">
                         {nameStr}
                       </span>
-                      {typeof member === 'object' && member.role && (
-                        <span className="coordinator-sub-role">{member.role}</span>
-                      )}
                     </div>
                   </div>
                 );
@@ -221,6 +207,7 @@ function CoordinatorSlideCard({ item, index }) {
 export default function StudentCoordinatorsSection() {
   const sectionRef = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [teams, setTeams] = useState(studentCoordinators);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -233,15 +220,30 @@ export default function StudentCoordinatorsSection() {
     return () => observer.disconnect();
   }, []);
 
-  // Duplicate items for smooth infinite loop in marquee track
-  const loopItems = [
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-    ...studentCoordinators,
-  ];
+  useEffect(() => {
+    let isMounted = true;
+    fetchPublicHomepageCoordinators()
+      .then((liveTeams) => {
+        if (isMounted && Array.isArray(liveTeams) && liveTeams.length > 0) {
+          setTeams(liveTeams);
+        }
+      })
+      .catch((err) => {
+        console.warn('Fallback to local student coordinators:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const activeTeams = (teams && teams.length > 0 ? teams : studentCoordinators).filter(
+    (t) => t.isActive !== false
+  );
+  const displayList = activeTeams.length > 0 ? activeTeams : studentCoordinators;
+
+  // Duplicate items dynamically for smooth infinite loop in marquee track (aim for at least 12 cards)
+  const repeatFactor = Math.max(2, Math.ceil(12 / (displayList.length || 1)));
+  const loopItems = Array(repeatFactor).fill(displayList).flat();
 
   return (
     <section
