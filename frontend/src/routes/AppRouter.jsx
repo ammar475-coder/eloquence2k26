@@ -22,7 +22,7 @@ function parseHash(hash) {
 
   if (pathPart.startsWith('#/register/') || pathPart === '#/register' || pathPart.startsWith('#register')) {
     const parts = pathPart.split('/');
-    const id = parts[2] ? parts[2].trim() : null;
+    const id = parts[2] ? parts[2].trim() : (params.get('event') || null);
     let game = gameParam;
     if (!game && parts[3]) {
       const g = parts[3].toLowerCase();
