@@ -1,7 +1,89 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes, FaSpinner } from 'react-icons/fa';
+import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes, FaSpinner, FaSyncAlt } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 import EventCard from './EventCard.jsx';
 import { getApiUrl } from '../config/api';
+
+function EventsLoadingSkeleton() {
+  return (
+    <div className="events-loading-container">
+      {/* High-tech cyberpunk orbital radar loader */}
+      <div className="cyber-loader-wrap">
+        <motion.div
+          className="cyber-orbit-ring-outer"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+        />
+        <motion.div
+          className="cyber-orbit-ring-inner"
+          animate={{ rotate: -360 }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+        />
+        <motion.div
+          className="cyber-loader-core"
+          animate={{
+            scale: [0.92, 1.08, 0.92],
+            boxShadow: [
+              '0 0 15px rgba(57, 255, 136, 0.4)',
+              '0 0 28px rgba(0, 240, 255, 0.75)',
+              '0 0 15px rgba(57, 255, 136, 0.4)',
+            ],
+          }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <FaBolt className="cyber-loader-icon" />
+        </motion.div>
+      </div>
+
+      <div className="cyber-loading-meta">
+        <h4 className="cyber-loading-title">LOADING EVENTS</h4>
+        <p className="cyber-loading-subtext">
+          Please wait while we fetch the latest events
+          <span className="cyber-loading-dots">
+            <span>.</span><span>.</span><span>.</span>
+          </span>
+        </p>
+        <div className="cyber-loading-beam-wrap">
+          <motion.div
+            className="cyber-loading-beam"
+            animate={{ x: ['-100%', '100%'] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </div>
+      </div>
+
+      {/* Grid of skeleton placeholder cards */}
+      <div className="events-skeleton-grid">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={`skeleton-${i}`}
+            className="event-card-skeleton"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.06 }}
+          >
+            <div className="skeleton-banner">
+              <div className="skeleton-shimmer-sweep" />
+              <div className="skeleton-badge-tag" />
+            </div>
+            <div className="skeleton-content">
+              <div className="skeleton-row-header">
+                <div className="skeleton-circle-icon" />
+                <div className="skeleton-title-bar" />
+              </div>
+              <div className="skeleton-line full" />
+              <div className="skeleton-line half" />
+              <div className="skeleton-action-bar">
+                <div className="skeleton-meta-chip" />
+                <div className="skeleton-btn-pill" />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, duration = 1800 }) {
   const [displayVal, setDisplayVal] = useState(0);
@@ -232,19 +314,19 @@ export default function EventsPage({ onNavigate }) {
               className={`filter-btn ${filter === 'all' ? 'filter-btn-active' : ''}`}
               onClick={() => setFilter('all')}
             >
-              ALL EVENTS ({eventsList.length})
+              ALL EVENTS ({loading ? '..' : eventsList.length})
             </button>
             <button
               className={`filter-btn ${filter === 'technical' ? 'filter-btn-active' : ''}`}
               onClick={() => setFilter('technical')}
             >
-              TECHNICAL ({totalTechCount})
+              TECHNICAL ({loading ? '..' : totalTechCount})
             </button>
             <button
               className={`filter-btn ${filter === 'non-technical' ? 'filter-btn-active' : ''}`}
               onClick={() => setFilter('non-technical')}
             >
-              NON-TECHNICAL ({totalNonTechCount})
+              NON-TECHNICAL ({loading ? '..' : totalNonTechCount})
             </button>
           </div>
         </div>
@@ -252,83 +334,128 @@ export default function EventsPage({ onNavigate }) {
         {/* Quick Stats Grid below Search Bar & Filters */}
         <div className="events-stats-grid">
           <div className="stat-card">
-            <AnimatedNumber value={eventsList.length} padDigits={2} duration={1800} />
+            {loading ? (
+              <span className="stat-skeleton-num" />
+            ) : (
+              <AnimatedNumber value={eventsList.length} padDigits={2} duration={1800} />
+            )}
             <span className="stat-label">TOTAL SHOWDOWNS</span>
           </div>
           <div className="stat-card">
-            <AnimatedNumber value={totalTechCount} padDigits={2} duration={1600} />
+            {loading ? (
+              <span className="stat-skeleton-num" />
+            ) : (
+              <AnimatedNumber value={totalTechCount} padDigits={2} duration={1600} />
+            )}
             <span className="stat-label">TECHNICAL EVENTS</span>
           </div>
           <div className="stat-card">
-            <AnimatedNumber value={totalNonTechCount} padDigits={2} duration={1600} />
+            {loading ? (
+              <span className="stat-skeleton-num" />
+            ) : (
+              <AnimatedNumber value={totalNonTechCount} padDigits={2} duration={1600} />
+            )}
             <span className="stat-label">NON-TECHNICAL</span>
           </div>
         </div>
 
         {/* Results Info */}
         <div className="events-results-meta">
-          <span>Showing <strong>{filteredEvents.length}</strong> competition{filteredEvents.length !== 1 ? 's' : ''}</span>
-          {searchQuery && (
-            <span className="search-query-badge">
-              Filter: "{searchQuery}"
+          {loading ? (
+            <span className="events-loading-badge">
+              <span className="pulse-dot" /> Loading events...
             </span>
+          ) : (
+            <>
+              <span>Showing <strong>{filteredEvents.length}</strong> competition{filteredEvents.length !== 1 ? 's' : ''}</span>
+              {searchQuery && (
+                <span className="search-query-badge">
+                  Filter: "{searchQuery}"
+                </span>
+              )}
+            </>
           )}
         </div>
 
-        {filteredEvents.length === 0 ? (
-          <div className="no-events-found">
-            <p className="no-events-title">No Events Match Your Search</p>
-            <p className="no-events-desc">Try searching for a different keyword or resetting your filter.</p>
-            <button
-              className="btn btn-primary"
-              onClick={() => { setFilter('all'); setSearchQuery(''); }}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="events-loading-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.25 } }}
+              transition={{ duration: 0.3 }}
             >
-              RESET FILTERS
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Technical Events Grid */}
-            {(filter === 'all' || filter === 'technical') && techEvents.length > 0 && (
-              <div className="event-group-block">
-                <div className="category-header-row">
-                  <div className="category-label">TECHNICAL EVENTS ({techEvents.length})</div>
-                  <div className="category-line" />
+              <EventsLoadingSkeleton />
+            </motion.div>
+          ) : filteredEvents.length === 0 ? (
+            <motion.div
+              key="events-empty-view"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+              className="no-events-found"
+            >
+              <p className="no-events-title">No Events Match Your Search</p>
+              <p className="no-events-desc">Try searching for a different keyword or resetting your filter.</p>
+              <button
+                className="btn btn-primary"
+                onClick={() => { setFilter('all'); setSearchQuery(''); }}
+              >
+                RESET FILTERS
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="events-content-view"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35 }}
+            >
+              {/* Technical Events Grid */}
+              {(filter === 'all' || filter === 'technical') && techEvents.length > 0 && (
+                <div className="event-group-block">
+                  <div className="category-header-row">
+                    <div className="category-label">TECHNICAL EVENTS ({techEvents.length})</div>
+                    <div className="category-line" />
+                  </div>
+                  <div className="events-grid">
+                    {techEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        event={event}
+                        onViewRules={handleViewRules}
+                        onRegister={handleRegister}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="events-grid">
-                  {techEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      onViewRules={handleViewRules}
-                      onRegister={handleRegister}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Non-Technical Events Grid */}
-            {(filter === 'all' || filter === 'non-technical') && nonTechEvents.length > 0 && (
-              <div className="event-group-block">
-                <div className="category-header-row">
-                  <div className="category-label">NON-TECHNICAL EVENTS ({nonTechEvents.length})</div>
-                  <div className="category-line" />
+              {/* Non-Technical Events Grid */}
+              {(filter === 'all' || filter === 'non-technical') && nonTechEvents.length > 0 && (
+                <div className="event-group-block">
+                  <div className="category-header-row">
+                    <div className="category-label">NON-TECHNICAL EVENTS ({nonTechEvents.length})</div>
+                    <div className="category-line" />
+                  </div>
+                  <div className="events-grid">
+                    {nonTechEvents.map((event) => (
+                      <EventCard
+                        key={event.id}
+                        event={event}
+                        onViewRules={handleViewRules}
+                        onRegister={handleRegister}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="events-grid">
-                  {nonTechEvents.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      onViewRules={handleViewRules}
-                      onRegister={handleRegister}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
     </div>
   );

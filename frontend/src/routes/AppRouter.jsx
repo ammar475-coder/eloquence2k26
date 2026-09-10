@@ -22,7 +22,7 @@ function parseHash(hash) {
 
   if (pathPart.startsWith('#/register/') || pathPart === '#/register' || pathPart.startsWith('#register')) {
     const parts = pathPart.split('/');
-    const id = parts[2] ? parts[2].trim() : null;
+    const id = parts[2] ? parts[2].trim() : (params.get('event') || null);
     let game = gameParam;
     if (!game && parts[3]) {
       const g = parts[3].toLowerCase();
@@ -68,7 +68,15 @@ export default function AppRouter() {
   const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
   const checkIsAdminOrCoordinator = () => {
     const path = window.location.pathname;
-    return path.startsWith('/admin') || path.startsWith('/coordinators');
+    const hash = window.location.hash || '';
+    return (
+      path.startsWith('/admin') ||
+      path.startsWith('/coordinators') ||
+      hash.startsWith('#/admin') ||
+      hash.startsWith('#admin') ||
+      hash.startsWith('#/coordinators') ||
+      hash.startsWith('#coordinators')
+    );
   };
 
   const [isAdminRoute, setIsAdminRoute] = useState(checkIsAdminOrCoordinator);
@@ -76,9 +84,10 @@ export default function AppRouter() {
   useEffect(() => {
     const handleHashChange = () => {
       setRoute(parseHash(window.location.hash));
+      setIsAdminRoute(checkIsAdminOrCoordinator());
     };
 
-    // Minimal popstate listener to detect path changes for admin & coordinators
+    // Popstate listener to detect path changes for admin & coordinators
     const handlePopState = () => {
       setIsAdminRoute(checkIsAdminOrCoordinator());
     };
@@ -151,6 +160,14 @@ export default function AppRouter() {
         window.history.pushState({ from: null }, '', '#/events');
       } catch (e) {}
       window.location.hash = '/events';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (page === 'admin') {
+      setIsAdminRoute(true);
+      try {
+        window.history.pushState({}, '', '/admin');
+      } catch (e) {
+        window.location.hash = '/admin';
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       const sectionId = typeof extra === 'string' ? extra : null;
