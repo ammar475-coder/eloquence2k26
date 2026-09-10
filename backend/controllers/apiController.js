@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const supabase = require('../config/supabase');
+const { broadcastRegistrationUpdate } = require('../utils/websocket');
 
 let razorpayClient = null;
 function getRazorpayClient() {
@@ -463,6 +464,13 @@ exports.verifyPaymentAndRegister = async (req, res) => {
       console.warn('Local backup registration write error:', localErr);
     }
 
+    // Broadcast real-time registration event to all active admin/coordinator WebSocket clients
+    try {
+      broadcastRegistrationUpdate('CREATE', ticketData);
+    } catch (wsErr) {
+      console.warn('WS broadcast error:', wsErr.message);
+    }
+
     return res.json({
       success: true,
       message: 'Payment verified and registration successfully confirmed',
@@ -590,6 +598,13 @@ exports.registerEvent = async (req, res) => {
       writeRegistrations(localRegs);
     } catch (localErr) {
       console.warn('Local backup registration write error:', localErr);
+    }
+
+    // Broadcast real-time registration event to all active admin/coordinator WebSocket clients
+    try {
+      broadcastRegistrationUpdate('CREATE', ticketData);
+    } catch (wsErr) {
+      console.warn('WS broadcast error:', wsErr.message);
     }
 
     res.json({

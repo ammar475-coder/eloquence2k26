@@ -285,5 +285,21 @@
     "timestamp": "10/9/2026, 2:24:20 pm",
     "createdAt": "2026-09-10T08:54:20.732Z",
     "id": "72752752-85b1-49d2-9995-875ac21e931a"
+  },
+  {
+    "registrationId": "ELQ26-TCH-94277",
+    "id": "86f8e8a9-57e8-4d78-a656-668bfe31a3d8",
+    "fullName": "WS Realtime Test User",
+    "email": "wstest@example.com",
+    "phone": "9876543210",
+    "college": "Test College",
+    "department": "CSE",
+    "year": "3rd Year",
+    "eventId": "tech-01",
+    "eventName": "Slide Craft",
+    "isTeam": false,
+    "teamName": null,
+    "totalAmount": 0,
+    "createdAt": "2026-09-10T13:30:15.851Z"
   }
 ]

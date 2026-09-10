@@ -60,7 +60,7 @@ import {
   FaCopy
 } from 'react-icons/fa';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
-import { getApiUrl } from '../config/api';
+import { getApiUrl, getWsUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 import {
   fetchAdminHomepageCoordinators,
@@ -91,10 +91,28 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const isRegCoordinator = loggedRole.includes('registration') || loggedRole.includes('reg_coord') || loggedRole === 'registration coordinator';
   const isLeadCoordinator = loggedRole.includes('lead') || loggedRole === 'lead coordinator' || loggedRole === 'lead_coordinator';
 
+  // Persist active tab across browser refreshes
   const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const saved = localStorage.getItem('admin_active_tab');
+      if (saved) {
+        if (!isAdminOrSuper && (saved === 'manage-users' || saved === 'manage-roles')) {
+          return isRegCoordinator ? 'registration' : 'dashboard';
+        }
+        return saved;
+      }
+    } catch (e) {}
     if (isRegCoordinator) return 'registration';
     return 'dashboard';
   });
+
+  useEffect(() => {
+    if (activeTab) {
+      try {
+        localStorage.setItem('admin_active_tab', activeTab);
+      } catch (e) {}
+    }
+  }, [activeTab]);
 
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -806,6 +824,80 @@ export default function AdminDashboard({ token, user, onLogout }) {
       })
       .catch(err => console.warn('Error fetching registrations list:', err));
   };
+
+  // ==================== REAL-TIME REGISTRATION WEBSOCKET ====================
+  const [wsConnected, setWsConnected] = useState(false);
+
+  useEffect(() => {
+    let ws = null;
+    let reconnectTimeout = null;
+    let isMounted = true;
+
+    const connectWS = () => {
+      try {
+        const wsUrl = getWsUrl('/ws/registrations');
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          if (!isMounted) return;
+          setWsConnected(true);
+        };
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'REGISTRATION_UPDATE') {
+              // Automatically refresh registrations and live analytics
+              fetchRegistrations();
+              fetchDashboardData();
+
+              const action = msg.action;
+              const rData = msg.data || {};
+              const ticket = rData.ticketCode || rData.ticket_code || rData.registrationId || rData.id || '';
+              const name = rData.fullName || rData.leadName || rData.full_name || 'Participant';
+              const evt = rData.eventName || 'Event';
+
+              if (action === 'CREATE') {
+                toast.success(`⚡ Live Registration: ${name} (${evt})!`, { icon: '🔔', duration: 5000 });
+              } else if (action === 'VERIFY') {
+                toast.success(`✅ Live Update: Registration #${ticket} verified!`, { duration: 4000 });
+              } else if (action === 'DELETE') {
+                toast(`🗑️ Live Update: Registration #${ticket} deleted`, { icon: 'ℹ️', duration: 4000 });
+              }
+            }
+          } catch (e) {
+            console.warn('WS message parse error:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          if (!isMounted) return;
+          setWsConnected(false);
+          reconnectTimeout = setTimeout(connectWS, 3000);
+        };
+
+        ws.onerror = () => {
+          if (!isMounted) return;
+          setWsConnected(false);
+        };
+      } catch (err) {
+        if (isMounted) {
+          reconnectTimeout = setTimeout(connectWS, 5000);
+        }
+      }
+    };
+
+    connectWS();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
+  }, []);
 
   // ==================== INITIAL DATA FETCH ====================
   useEffect(() => {
