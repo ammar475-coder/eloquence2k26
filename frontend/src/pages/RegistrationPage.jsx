@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import { getApiUrl } from '../config/api';
 import {
   FaBolt,
@@ -515,7 +516,62 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   };
 
   if (!selectedEvent) {
-    return null;
+    return (
+      <div className="registration-page" style={{ minHeight: '75vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="events-loading-container"
+          style={{ padding: '3rem 1.5rem', maxWidth: '480px' }}
+        >
+          {/* High-tech cyberpunk orbital radar loader */}
+          <div className="cyber-loader-wrap">
+            <motion.div
+              className="cyber-orbit-ring-outer"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+            />
+            <motion.div
+              className="cyber-orbit-ring-inner"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+            />
+            <motion.div
+              className="cyber-loader-core"
+              animate={{
+                scale: [0.92, 1.08, 0.92],
+                boxShadow: [
+                  '0 0 15px rgba(57, 255, 136, 0.4)',
+                  '0 0 28px rgba(0, 240, 255, 0.75)',
+                  '0 0 15px rgba(57, 255, 136, 0.4)',
+                ],
+              }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <FaBolt className="cyber-loader-icon" />
+            </motion.div>
+          </div>
+
+          <div className="cyber-loading-meta">
+            <h4 className="cyber-loading-title">LOADING REGISTRATION</h4>
+            <p className="cyber-loading-subtext">
+              Preparing registration gateway
+              <span className="cyber-loading-dots">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </p>
+            <div className="cyber-loading-beam-wrap">
+              <motion.div
+                className="cyber-loading-beam"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
