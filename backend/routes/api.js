@@ -7,6 +7,8 @@ const adminController = require('../controllers/adminController');
 router.get('/health', apiController.getHealth);
 router.get('/status', apiController.getStatus);
 router.post('/register', apiController.registerEvent);
+router.post('/payment/create-order', apiController.createPaymentOrder);
+router.post('/payment/verify-and-register', apiController.verifyPaymentAndRegister);
 router.get('/registrations', apiController.getRegistrations);
 router.get('/registrations/:id', apiController.getRegistrationById);
 router.get('/events', apiController.getPublicEvents);

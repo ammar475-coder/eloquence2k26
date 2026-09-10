@@ -1,6 +1,24 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const Razorpay = require('razorpay');
 const supabase = require('../config/supabase');
+
+let razorpayClient = null;
+function getRazorpayClient() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) {
+    return null;
+  }
+  if (!razorpayClient) {
+    razorpayClient = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret
+    });
+  }
+  return razorpayClient;
+}
 
 // Persistent Data Storage Path
 const DATA_DIR = path.join(__dirname, '../data');
@@ -86,6 +104,7 @@ const dbToSponsor = (s) => {
     website,
     locationUrl,
     contactName: s.contact_name || s.contactName || '',
+    
     contactEmail: s.contact_email || s.contactEmail || '',
     contactPhone: s.contact_phone || s.contactPhone || '',
     category: s.category || 'Elite',
@@ -183,6 +202,280 @@ exports.getStatus = (req, res) => {
     success: true,
     message: 'API is working properly'
   });
+};
+
+// ── Razorpay Payment Gateway Integration ──────────────────────────────────────
+
+exports.createPaymentOrder = async (req, res) => {
+  try {
+    const { currentEvent, fields, totalFee, game } = req.body;
+
+    if (!currentEvent || !fields) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing event details or participant registration form fields.'
+      });
+    }
+
+    const amountInRupees = Number(totalFee);
+    if (isNaN(amountInRupees) || amountInRupees <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid registration fee amount.'
+      });
+    }
+
+    const razorpay = getRazorpayClient();
+    if (!razorpay) {
+      return res.status(500).json({
+        success: false,
+        message: 'Razorpay keys are not configured on the backend server.'
+      });
+    }
+
+    const amountInPaise = Math.round(amountInRupees * 100);
+    const shortReceipt = `rcpt_${Date.now().toString().slice(-8)}_${Math.floor(100 + Math.random() * 900)}`;
+
+    const options = {
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: shortReceipt,
+      notes: {
+        eventId: currentEvent.id || '',
+        eventName: currentEvent.name || '',
+        fullName: fields.fullName || '',
+        email: fields.email || '',
+        phone: fields.phone || '',
+        game: game || ''
+      }
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    return res.json({
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (err) {
+    console.error('[Razorpay createPaymentOrder Error]:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create Razorpay payment order',
+      errorDetails: err.message || err.toString()
+    });
+  }
+};
+
+exports.verifyPaymentAndRegister = async (req, res) => {
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    currentEvent,
+    fields,
+    totalFee,
+    game,
+    paymentMethod
+  } = req.body;
+
+  if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing Razorpay payment verification credentials (order ID, payment ID, or signature).'
+    });
+  }
+
+  if (!currentEvent || !fields) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing registration details for payment verification.'
+    });
+  }
+
+  // 1. Verify Razorpay HMAC SHA256 Signature
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keySecret) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server missing Razorpay secret key for verification.'
+    });
+  }
+
+  const hmac = crypto.createHmac('sha256', keySecret);
+  hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+  const generatedSignature = hmac.digest('hex');
+
+  if (generatedSignature !== razorpay_signature) {
+    console.error('[Razorpay Signature Mismatch]', {
+      generated: generatedSignature,
+      received: razorpay_signature
+    });
+    return res.status(400).json({
+      success: false,
+      message: 'Payment verification failed: Invalid transaction signature.'
+    });
+  }
+
+  // 2. Generate unique Ticket Code
+  const eventCat = currentEvent.category === 'technical' ? 'TCH' : 'NT';
+  const ticketCode = `ELQ26-${eventCat}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+  try {
+    // Ensure event exists in Supabase events table
+    try {
+      const { data: existingEv } = await supabase
+        .from('events')
+        .select('id')
+        .eq('id', currentEvent.id)
+        .maybeSingle();
+
+      if (!existingEv) {
+        await supabase.from('events').insert([{
+          id: currentEvent.id,
+          number: '99',
+          name: currentEvent.name,
+          category: currentEvent.category,
+          team_size: currentEvent.teamSize || 'Individual',
+          min_members: currentEvent.minMembers || 1,
+          max_members: currentEvent.maxMembers || 1,
+          fee_type: currentEvent.feeType || 'per_head',
+          fee_per_head: currentEvent.feePerHead || 50
+        }]);
+      }
+    } catch (eEv) {
+      console.warn('Supabase event auto-sync warning:', eEv.message);
+    }
+
+    const validTeamMembers = (fields.teamMembers || [])
+      .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
+
+    // 3. Insert into Supabase registrations table
+    const paymentMeta = {
+      venue: currentEvent.venue || 'CSE Department Labs',
+      payment_method: paymentMethod || 'RAZORPAY',
+      razorpay_payment_id,
+      razorpay_order_id,
+      razorpay_signature
+    };
+    const venueSnapshotStr = JSON.stringify(paymentMeta);
+
+    // Supabase requires registration_status: 'active' and non-null college/dept/year
+    const regPayload = {
+      event_id: currentEvent.id,
+      ticket_code: ticketCode,
+      team_name: fields.teamName || null,
+      full_name: fields.fullName,
+      email: fields.email,
+      phone: fields.phone,
+      college: fields.college || 'C. Abdul Hakeem College of Engg & Tech',
+      department: fields.department || 'CSE',
+      year: fields.year || '3rd Year',
+      members_count: 1 + validTeamMembers.length,
+      total_fee: totalFee,
+      payment_status: 'paid',
+      registration_status: 'active',
+      venue_snapshot: venueSnapshotStr,
+      timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM'
+    };
+
+    try {
+      const { data: regData, error: regError } = await supabase
+        .from('registrations')
+        .insert([regPayload])
+        .select('id');
+
+      if (regError) {
+        console.warn('Supabase registration insert warning:', regError.message);
+      } else {
+        registrationId = regData && regData[0] ? regData[0].id : null;
+      }
+    } catch (dbErr) {
+      console.error('Supabase registration insert exception:', dbErr.message);
+    }
+
+    // Insert team members if any
+    if (registrationId && validTeamMembers.length > 0) {
+      try {
+        const membersToInsert = validTeamMembers.map((member, idx) => ({
+          registration_id: registrationId,
+          member_number: idx + 2,
+          member_name: (typeof member === 'string' ? member : (member.name || '')).trim()
+        }));
+
+        await supabase.from('registration_members').insert(membersToInsert);
+      } catch (memErr) {
+        console.warn('Registration members insert warning:', memErr.message);
+      }
+    }
+
+    // Build structured ticket data for frontend
+    const ticketData = {
+      ticketCode,
+      registrationId: ticketCode,
+      eventId: currentEvent.id,
+      event_id: currentEvent.id,
+      eventName: currentEvent.name,
+      category: currentEvent.category,
+      eventCategory: currentEvent.category,
+      leadName: fields.fullName,
+      fullName: fields.fullName,
+      college: fields.college,
+      department: fields.department,
+      email: fields.email,
+      phone: fields.phone,
+      year: fields.year,
+      teamName: fields.teamName || null,
+      isTeam: Boolean(currentEvent.isTeam),
+      membersCount: 1 + validTeamMembers.length,
+      participantCount: 1 + validTeamMembers.length,
+      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : m.name),
+      totalFee,
+      totalAmount: totalFee,
+      paymentStatus: 'PAID',
+      payment_status: 'paid',
+      registrationStatus: 'ACTIVE',
+      registration_status: 'active',
+      paymentMethod: paymentMethod === 'RAZORPAY_UPI' ? 'RAZORPAY_UPI' : (paymentMethod || 'RAZORPAY'),
+      payment_method: paymentMethod === 'RAZORPAY_UPI' ? 'RAZORPAY_UPI' : (paymentMethod || 'RAZORPAY'),
+      razorpayPaymentId: razorpay_payment_id,
+      razorpay_payment_id,
+      razorpayOrderId: razorpay_order_id,
+      razorpay_order_id,
+      venue: currentEvent.venue || 'CSE Department Labs',
+      timing: currentEvent.timing || '10:00 AM – 1:00 PM',
+      game: game || null,
+      timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+      createdAt: new Date().toISOString()
+    };
+
+    // Save backup to local JSON
+    try {
+      const localRegs = readRegistrations();
+      localRegs.push({
+        ...ticketData,
+        id: registrationId || ticketCode
+      });
+      writeRegistrations(localRegs);
+    } catch (localErr) {
+      console.warn('Local backup registration write error:', localErr);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Payment verified and registration successfully confirmed',
+      ticketData
+    });
+  } catch (err) {
+    console.error('Registration processing error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error processing registration after payment',
+      errorDetails: err.message || err.toString()
+    });
+  }
 };
 
 exports.registerEvent = async (req, res) => {
@@ -345,10 +638,54 @@ exports.getPublicEvents = async (req, res) => {
   }
 };
 
+// Helper to enrich a database registration with parsed venue_snapshot metadata (Razorpay info)
+const enrichRegistrationRecord = (r) => {
+  if (!r) return r;
+  const copy = { ...r };
+
+  // Harmonize camelCase and snake_case defaults
+  copy.fullName = copy.full_name || copy.fullName;
+  copy.ticketCode = copy.ticket_code || copy.ticketCode || copy.registrationId || copy.id;
+  copy.registrationId = copy.ticketCode;
+  copy.eventId = copy.event_id || copy.eventId;
+  copy.teamName = copy.team_name || copy.teamName;
+  copy.totalAmount = Number(copy.total_fee || copy.totalAmount || copy.total_fee || 0);
+  copy.totalFee = copy.totalAmount;
+  copy.paymentStatus = (copy.payment_status || copy.paymentStatus || 'PENDING').toUpperCase();
+  copy.registrationStatus = (copy.registration_status || copy.registrationStatus || 'ACTIVE').toUpperCase();
+  copy.paymentMethod = copy.payment_method || copy.paymentMethod || 'ONLINE';
+
+  if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(copy.venue_snapshot);
+      if (parsed.payment_method) {
+        copy.payment_method = parsed.payment_method;
+        copy.paymentMethod = parsed.payment_method;
+      }
+      if (parsed.razorpay_payment_id) {
+        copy.razorpay_payment_id = parsed.razorpay_payment_id;
+        copy.razorpayPaymentId = parsed.razorpay_payment_id;
+      }
+      if (parsed.razorpay_order_id) {
+        copy.razorpay_order_id = parsed.razorpay_order_id;
+        copy.razorpayOrderId = parsed.razorpay_order_id;
+      }
+      if (parsed.venue) {
+        copy.venue = parsed.venue;
+      }
+    } catch (e) {
+      // Not JSON or parse error, keep venue_snapshot as venue string
+    }
+  }
+
+  return copy;
+};
+
 exports.getRegistrations = async (req, res) => {
   try {
     const { eventId, category, status } = req.query;
 
+    let dbRegistrations = [];
     // Query Supabase live
     try {
       let query = supabase
@@ -361,34 +698,78 @@ exports.getRegistrations = async (req, res) => {
       }
 
       const { data: dbData, error: dbError } = await query;
-      if (!dbError && Array.isArray(dbData) && dbData.length > 0) {
-        return res.json({
-          success: true,
-          count: dbData.length,
-          registrations: dbData
-        });
+      if (!dbError && Array.isArray(dbData)) {
+        dbRegistrations = dbData.map(enrichRegistrationRecord);
       }
     } catch (dbErr) {
       console.warn('Supabase getRegistrations fallback:', dbErr.message);
     }
 
-    // Fallback to local registrations.json
-    const registrations = readRegistrations();
-    let filtered = registrations;
-    if (eventId) {
-      filtered = filtered.filter((r) => r.eventId === eventId);
-    }
-    if (category) {
-      filtered = filtered.filter((r) => r.eventCategory && r.eventCategory.toLowerCase() === category.toLowerCase());
-    }
-    if (status) {
-      filtered = filtered.filter((r) => r.registrationStatus && r.registrationStatus.toLowerCase() === status.toLowerCase());
+    // Read local fallback registrations
+    const localRegistrations = readRegistrations().map(enrichRegistrationRecord);
+
+    // Merge Supabase and local registrations by unique ticket code
+    const mergedMap = new Map();
+
+    for (const r of dbRegistrations) {
+      const key = (r.ticket_code || r.ticketCode || r.id || '').toUpperCase();
+      if (key) mergedMap.set(key, r);
     }
 
-    res.json({
+    for (const loc of localRegistrations) {
+      const key = (loc.ticketCode || loc.ticket_code || loc.registrationId || loc.id || '').toUpperCase();
+      if (!key) continue;
+
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        mergedMap.set(key, {
+          ...loc,
+          ...existing,
+          payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
+          paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
+          razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,
+          razorpayPaymentId: existing.razorpayPaymentId || loc.razorpayPaymentId || loc.razorpay_payment_id,
+          razorpay_order_id: existing.razorpay_order_id || loc.razorpay_order_id || loc.razorpayOrderId,
+          razorpayOrderId: existing.razorpayOrderId || loc.razorpayOrderId || loc.razorpay_order_id,
+          eventName: existing.eventName || loc.eventName,
+          eventId: existing.event_id || existing.eventId || loc.eventId || loc.event_id,
+          event_id: existing.event_id || existing.eventId || loc.eventId || loc.event_id
+        });
+      } else {
+        mergedMap.set(key, loc);
+      }
+    }
+
+    let allRegistrations = Array.from(mergedMap.values());
+
+    // Sort descending by creation date
+    allRegistrations.sort((a, b) => {
+      const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
+      const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+
+    // Apply optional query filters
+    if (eventId) {
+      allRegistrations = allRegistrations.filter(r => (r.event_id === eventId || r.eventId === eventId));
+    }
+    if (category) {
+      allRegistrations = allRegistrations.filter(r => {
+        const cat = r.eventCategory || r.category || '';
+        return cat.toLowerCase() === category.toLowerCase();
+      });
+    }
+    if (status) {
+      allRegistrations = allRegistrations.filter(r => {
+        const st = r.payment_status || r.paymentStatus || r.registration_status || r.registrationStatus || '';
+        return st.toLowerCase() === status.toLowerCase();
+      });
+    }
+
+    return res.json({
       success: true,
-      count: filtered.length,
-      registrations: filtered
+      count: allRegistrations.length,
+      registrations: allRegistrations
     });
   } catch (err) {
     console.error('Error fetching registrations:', err);
@@ -408,7 +789,13 @@ exports.getRegistrationById = async (req, res) => {
         .or(`ticket_code.eq.${id},id.eq.${id}`);
 
       if (!error && data && data.length > 0) {
-        return res.json(data[0]);
+        const enriched = enrichRegistrationRecord(data[0]);
+        // Also check local for additional fields
+        const local = readRegistrations().find(
+          r => (r.ticketCode && r.ticketCode.toUpperCase() === id.toUpperCase()) ||
+               (r.ticket_code && r.ticket_code.toUpperCase() === id.toUpperCase())
+        );
+        return res.json(local ? { ...local, ...enriched } : enriched);
       }
     } catch (e) {
       console.warn('Supabase getRegistrationById fallback:', e.message);
@@ -418,12 +805,14 @@ exports.getRegistrationById = async (req, res) => {
     const registrations = readRegistrations();
     const record = registrations.find(
       (r) => (r.registrationId && r.registrationId.toUpperCase() === id.toUpperCase()) ||
-             (r.ticketCode && r.ticketCode.toUpperCase() === id.toUpperCase())
+             (r.ticketCode && r.ticketCode.toUpperCase() === id.toUpperCase()) ||
+             (r.ticket_code && r.ticket_code.toUpperCase() === id.toUpperCase()) ||
+             (r.id && r.id.toUpperCase() === id.toUpperCase())
     );
     if (!record) {
       return res.status(404).json({ success: false, error: 'Registration record not found' });
     }
-    res.json(record);
+    res.json(enrichRegistrationRecord(record));
   } catch (err) {
     console.error('Error fetching registration:', err);
     res.status(500).json({ success: false, error: 'Failed to retrieve registration' });

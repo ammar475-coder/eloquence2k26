@@ -404,7 +404,60 @@ exports.getDashboardData = async (req, res) => {
         supabase.from('homepage_coordinators').select('*')
       ]);
 
-      if (regRes.data && regRes.data.length > 0) registrations = regRes.data;
+      let dbRegs = [];
+      if (regRes.data && regRes.data.length > 0) {
+        dbRegs = regRes.data.map(r => {
+          const copy = { ...r };
+          if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
+            try {
+              const parsed = JSON.parse(copy.venue_snapshot);
+              if (parsed.payment_method) {
+                copy.payment_method = parsed.payment_method;
+                copy.paymentMethod = parsed.payment_method;
+              }
+              if (parsed.razorpay_payment_id) {
+                copy.razorpay_payment_id = parsed.razorpay_payment_id;
+                copy.razorpayPaymentId = parsed.razorpay_payment_id;
+              }
+              if (parsed.razorpay_order_id) {
+                copy.razorpay_order_id = parsed.razorpay_order_id;
+                copy.razorpayOrderId = parsed.razorpay_order_id;
+              }
+            } catch (e) {}
+          }
+          return copy;
+        });
+      }
+
+      const localRegs = getRegistrationsData();
+      const mergedMap = new Map();
+
+      for (const r of dbRegs) {
+        const k = (r.ticket_code || r.ticketCode || r.id || '').toUpperCase();
+        if (k) mergedMap.set(k, r);
+      }
+
+      for (const loc of localRegs) {
+        const k = (loc.ticketCode || loc.ticket_code || loc.registrationId || loc.id || '').toUpperCase();
+        if (!k) continue;
+        if (mergedMap.has(k)) {
+          const existing = mergedMap.get(k);
+          mergedMap.set(k, {
+            ...loc,
+            ...existing,
+            payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
+            paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
+            razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,
+            razorpayPaymentId: existing.razorpayPaymentId || loc.razorpayPaymentId || loc.razorpay_payment_id,
+            razorpay_order_id: existing.razorpay_order_id || loc.razorpay_order_id || loc.razorpayOrderId,
+            razorpayOrderId: existing.razorpayOrderId || loc.razorpayOrderId || loc.razorpay_order_id
+          });
+        } else {
+          mergedMap.set(k, loc);
+        }
+      }
+
+      registrations = Array.from(mergedMap.values());
       if (spRes.data && spRes.data.length > 0) sponsors = spRes.data.map(dbToSponsor);
       if (coRes.data && coRes.data.length > 0) coordinators = coRes.data.map(dbToCoordinator);
       if (evRes.data && evRes.data.length > 0) events = evRes.data.map(dbToEvent);
@@ -413,7 +466,7 @@ exports.getDashboardData = async (req, res) => {
       console.warn('Dashboard live metrics query error fallback:', dbErr.message);
     }
 
-    const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
+    const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod || '').toUpperCase() !== 'ON_SITE_DESK';
     const onlineRegs = registrations.filter(isOnlineRecord);
     const offlineRegs = registrations.filter(r => !isOnlineRecord(r));
 
@@ -428,11 +481,13 @@ exports.getDashboardData = async (req, res) => {
       .reverse()
       .slice(0, 8)
       .map(r => ({
-        id: r.ticket_code || r.registrationId || r.id,
+        id: r.ticket_code || r.ticketCode || r.registrationId || r.id,
         name: r.full_name || r.fullName || 'Anonymous',
         event: r.event_id || r.eventName || 'General Registration',
         mode: isOnlineRecord(r) ? 'Online' : 'Offline Desk',
         paymentMethod: r.payment_method || r.paymentMethod || (isOnlineRecord(r) ? 'ONLINE' : 'ON_SITE_DESK'),
+        paymentStatus: r.payment_status || r.paymentStatus || 'PAID',
+        razorpayPaymentId: r.razorpay_payment_id || r.razorpayPaymentId || '',
         fee: Number(r.total_fee || r.totalAmount || r.total_amount) || 0,
         phone: r.phone || '',
         college: r.college || '',
