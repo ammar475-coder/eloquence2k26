@@ -28,7 +28,28 @@ import {
   FaHeadset,
   FaBookOpen
 } from 'react-icons/fa';
-import { submitRegistration } from '../services/api.js';
+import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
+
+// Helper to dynamically load official Razorpay Checkout SDK
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && window.Razorpay) {
+      return resolve(true);
+    }
+    const existing = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'];
 
@@ -88,6 +109,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi'); // 'upi' | 'all'
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
@@ -362,7 +384,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     window.scrollTo({ top: 120, behavior: 'smooth' });
   };
 
-  // Final submission
+  // Final submission with Razorpay Payment Integration
   const handleFinalSubmit = async () => {
     // Validate everything once more
     const pErrors = validateParticipant();
@@ -378,59 +400,28 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     setIsSubmitting(true);
     setServerError(null);
 
-    const payload = {
-      fullName: fields.fullName,
-      email: fields.email,
-      phone: fields.phone,
-      whatsapp: fields.whatsapp || null,
-      college: fields.college,
-      department: fields.department,
-      year: fields.year,
-      eventId: selectedEvent.id,
-      eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
-      eventCategory: selectedEvent.category,
-      game: isEsports ? selectedGame : null,
-      isTeam: selectedEvent.isTeam,
-      teamName: fields.teamName || null,
-      teamMembers: fields.teamMembers || [],
-      feePerHead: selectedEvent.feePerHead,
-      totalFee: feeInfo.total,
-      feeFormula: feeInfo.formula,
-    };
+    const activeEventPayload = isEsports
+      ? { ...selectedEvent, name: `${selectedEvent.name} (${selectedGame})`, game: selectedGame }
+      : selectedEvent;
 
-    try {
-      const result = await submitRegistration(payload);
-      if (result.success) {
-        setTicketData(result.data);
-        setStep('success');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        setServerError(result.error || 'Registration submission failed. Please try again.');
-      }
-    } catch (err) {
-      console.error('Submission error:', err);
-      setServerError('An unexpected network error occurred. Please verify your connection.');
-    } finally {
-      setIsSubmitting(false);
-    }
-    fetch(getApiUrl('/api/register'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        currentEvent: isEsports 
-          ? { ...selectedEvent, name: `${selectedEvent.name} (${selectedGame})`, game: selectedGame }
-          : selectedEvent,
-        fields,
-        totalFee: feeInfo.total,
-        game: isEsports ? selectedGame : null
-      }),
-    })
-      .then(res => res.json())
-      .then(data => {
+    const totalPayable = Number(feeInfo.total) || 0;
+
+    // ── CASE A: FREE EVENT (totalFee === 0) ──
+    if (totalPayable === 0) {
+      try {
+        const response = await fetch(getApiUrl('/api/register'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentEvent: activeEventPayload,
+            fields,
+            totalFee: 0,
+            game: isEsports ? selectedGame : null
+          })
+        });
+        const data = await response.json();
         if (data.success) {
-          toast.success('Registration successful!');
+          toast.success('Registration confirmed!');
           const resTicket = data.ticketData || {};
           setTicketData({
             ...resTicket,
@@ -441,62 +432,175 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             year: fields.year,
             phone: fields.phone,
             email: fields.email,
-            eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
+            eventName: activeEventPayload.name,
             eventCategory: selectedEvent.category,
             isTeam: selectedEvent.isTeam,
             teamName: fields.teamName,
             participantCount: 1 + (fields.teamMembers ? fields.teamMembers.length : 0),
-            totalFee: feeInfo.total,
+            totalFee: 0,
+            totalAmount: 0,
+            paymentStatus: 'FREE',
+            paymentMethod: 'FREE_EVENT',
             game: isEsports ? selectedGame : null
           });
           setStep('success');
-          if (formRef.current) {
-            formRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-          toast.error('Registration failed: ' + (data.errorDetails || data.message || 'Unknown error'));
+          toast.error('Registration failed: ' + (data.message || 'Server error'));
+          setServerError(data.message || 'Registration failed.');
         }
-      })
-      .catch(async (err) => {
-        console.warn('API fetch failed, trying local fallback:', err);
-        const payload = {
-          fullName: fields.fullName,
+      } catch (err) {
+        console.error('Free registration error:', err);
+        toast.error('Server connection error. Please try again.');
+        setServerError('Network error while communicating with registration server.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // ── CASE B: PAID EVENT → RAZORPAY PAYMENT FLOW ──
+    try {
+      // 1. Ensure Razorpay Checkout SDK is loaded
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        toast.error('Could not load Razorpay payment gateway. Please check your internet connection.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 2. Request backend to create Razorpay Order
+      const orderPayload = {
+        currentEvent: activeEventPayload,
+        fields,
+        totalFee: totalPayable,
+        game: isEsports ? selectedGame : null
+      };
+
+      const orderData = await createPaymentOrder(orderPayload);
+      if (!orderData.success || !orderData.orderId) {
+        toast.error(orderData.message || 'Failed to initialize payment order.');
+        setServerError(orderData.message || 'Could not initiate secure payment order with Razorpay.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 3. Configure and Launch Razorpay Checkout Popup
+      const isUpiPreferred = selectedPaymentMethod === 'upi';
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: "ELOQUENCE '26",
+        description: `Registration for ${activeEventPayload.name}`,
+        order_id: orderData.orderId,
+        prefill: {
+          name: fields.fullName,
           email: fields.email,
-          phone: fields.phone,
-          whatsapp: fields.whatsapp || null,
-          college: fields.college,
-          department: fields.department,
-          year: fields.year,
-          eventId: selectedEvent.id,
-          eventName: isEsports ? `${selectedEvent.name} (${selectedGame})` : selectedEvent.name,
-          eventCategory: selectedEvent.category,
-          game: isEsports ? selectedGame : null,
-          isTeam: selectedEvent.isTeam,
-          teamName: fields.teamName || null,
-          teamMembers: fields.teamMembers || [],
-          feePerHead: selectedEvent.feePerHead,
-          totalFee: feeInfo.total,
-          feeFormula: feeInfo.formula,
-        };
-        try {
-          const result = await submitRegistration(payload);
-          if (result.success) {
-            toast.success('Registration saved!');
-            setTicketData(result.data);
-            setStep('success');
-            if (formRef.current) {
-              formRef.current.scrollIntoView({ behavior: 'smooth' });
+          contact: fields.phone,
+          ...(isUpiPreferred ? { method: 'upi' } : {})
+        },
+        config: isUpiPreferred ? {
+          display: {
+            blocks: {
+              upi: {
+                name: "Pay via UPI (GPay, PhonePe, Paytm, QR)",
+                instruments: [
+                  {
+                    method: "upi"
+                  }
+                ]
+              },
+              other: {
+                name: "Cards, Netbanking & Other Modes",
+                instruments: [
+                  {
+                    method: "card"
+                  },
+                  {
+                    method: "netbanking"
+                  },
+                  {
+                    method: "wallet"
+                  }
+                ]
+              }
+            },
+            sequence: ["block.upi", "block.other"],
+            preferences: {
+              show_default_blocks: true
             }
-          } else {
-            toast.error('Registration failed: ' + (result.error || 'Server error'));
           }
-        } catch (fallbackErr) {
-          toast.error('Something went wrong connecting to the server. Please try again.');
+        } : undefined,
+        notes: {
+          event: activeEventPayload.name,
+          category: selectedEvent.category,
+          college: fields.college,
+          team: fields.teamName || 'Solo',
+          chosenPaymentMethod: isUpiPreferred ? 'UPI' : 'CARDS_NETBANKING'
+        },
+        theme: {
+          color: '#00f5ff'
+        },
+        modal: {
+          ondismiss: () => {
+            setIsSubmitting(false);
+            toast('Payment window closed. You can review your details and retry payment anytime.', {
+              icon: 'ℹ️'
+            });
+          }
+        },
+        handler: async (response) => {
+          setIsSubmitting(true);
+          try {
+            // 4. Send payment proof to backend for HMAC verification and Supabase persistence
+            const verifyRes = await verifyPaymentAndRegister({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              currentEvent: activeEventPayload,
+              fields,
+              totalFee: totalPayable,
+              game: isEsports ? selectedGame : null,
+              paymentMethod: isUpiPreferred ? 'RAZORPAY_UPI' : 'RAZORPAY'
+            });
+
+            if (verifyRes.success && verifyRes.ticketData) {
+              toast.success('Payment verified! Registration successfully confirmed.');
+              setTicketData(verifyRes.ticketData);
+              setStep('success');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              const errMsg = verifyRes.message || 'Payment verification failed on server.';
+              toast.error(errMsg);
+              setServerError(errMsg);
+            }
+          } catch (verifyErr) {
+            console.error('Verification error:', verifyErr);
+            toast.error(
+              `Network error confirming payment. Please note Payment ID: ${response.razorpay_payment_id} and contact coordinators.`
+            );
+            setServerError('Server error during payment verification. Payment ID: ' + response.razorpay_payment_id);
+          } finally {
+            setIsSubmitting(false);
+          }
         }
-      })
-      .finally(() => {
+      };
+
+      const rzpInstance = new window.Razorpay(options);
+      rzpInstance.on('payment.failed', function (failureRes) {
+        console.error('Razorpay Payment Failed:', failureRes.error);
+        toast.error(`Payment failed: ${failureRes.error.description || failureRes.error.reason || 'Transaction could not be completed.'}`);
         setIsSubmitting(false);
       });
+      rzpInstance.open();
+
+    } catch (paymentErr) {
+      console.error('Razorpay initialization error:', paymentErr);
+      toast.error('Unexpected error launching Razorpay checkout. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleCopyId = () => {
@@ -980,9 +1084,9 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 </div>
 
                 <div className="summary-desk-note">
-                  <div className="desk-note-icon">ℹ</div>
+                  <div className="desk-note-icon">🔒</div>
                   <p>
-                    <strong>On-Site Desk Payment:</strong> Payment will be settled at the CAHCET campus registration desk upon reporting on September 26, 2026.
+                    <strong>Secure Razorpay Checkout:</strong> Instant online verification via UPI, Cards, Netbanking & Wallets with official E-Pass ticket generation.
                   </p>
                 </div>
 
@@ -1189,8 +1293,98 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                       </span>
                     </div>
                   </div>
+
+                  {/* UPI & Payment Mode Selection (Inside Razorpay Gateway) */}
+                  {feeInfo.total > 0 && (
+                    <div className="payment-selection-container" style={{ marginTop: '1.35rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.08em', color: '#00f5ff', textTransform: 'uppercase' }}>
+                          CHOOSE PAYMENT MODE (POWERED BY RAZORPAY)
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
+                          <FaShieldAlt style={{ marginRight: '0.3rem', color: '#00f5ff' }} /> 100% Encrypted & Secure
+                        </span>
+                      </div>
+
+                      <div className="payment-options-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.9rem' }}>
+                        {/* Option 1: UPI */}
+                        <div
+                          className={`payment-option-card ${selectedPaymentMethod === 'upi' ? 'selected-payment-card' : ''}`}
+                          onClick={() => setSelectedPaymentMethod('upi')}
+                          style={{
+                            cursor: 'pointer',
+                            padding: '1.1rem 1.25rem',
+                            borderRadius: '8px',
+                            border: selectedPaymentMethod === 'upi' ? '2px solid #00f5ff' : '1px solid rgba(255, 255, 255, 0.12)',
+                            background: selectedPaymentMethod === 'upi' ? 'rgba(0, 245, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                            boxShadow: selectedPaymentMethod === 'upi' ? '0 0 20px rgba(0, 245, 255, 0.22)' : 'none',
+                            transition: 'all 0.2s ease',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '1.25rem' }}>⚡</span>
+                              <strong style={{ fontSize: '0.95rem', color: '#ffffff', letterSpacing: '0.04em' }}>UPI PAYMENT</strong>
+                            </div>
+                            <span style={{ fontSize: '0.62rem', fontWeight: '800', background: 'linear-gradient(90deg, #00f5ff, #3b82f6)', color: '#000', padding: '0.2rem 0.55rem', borderRadius: '4px' }}>
+                              POPULAR / INSTANT
+                            </span>
+                          </div>
+                          <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.4' }}>
+                            Pay instantly using Google Pay, PhonePe, Paytm, BHIM, or by scanning UPI QR.
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            {['Google Pay', 'PhonePe', 'Paytm', 'BHIM / UPI QR'].map((app, i) => (
+                              <span key={i} style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', background: selectedPaymentMethod === 'upi' ? 'rgba(0, 245, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)', borderRadius: '4px', border: selectedPaymentMethod === 'upi' ? '1px solid rgba(0, 245, 255, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)', color: selectedPaymentMethod === 'upi' ? '#00f5ff' : 'rgba(255, 255, 255, 0.8)' }}>
+                                {app}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Option 2: Cards & Netbanking */}
+                        <div
+                          className={`payment-option-card ${selectedPaymentMethod === 'all' ? 'selected-payment-card' : ''}`}
+                          onClick={() => setSelectedPaymentMethod('all')}
+                          style={{
+                            cursor: 'pointer',
+                            padding: '1.1rem 1.25rem',
+                            borderRadius: '8px',
+                            border: selectedPaymentMethod === 'all' ? '2px solid #00f5ff' : '1px solid rgba(255, 255, 255, 0.12)',
+                            background: selectedPaymentMethod === 'all' ? 'rgba(0, 245, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                            boxShadow: selectedPaymentMethod === 'all' ? '0 0 20px rgba(0, 245, 255, 0.22)' : 'none',
+                            transition: 'all 0.2s ease',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '1.25rem' }}>💳</span>
+                              <strong style={{ fontSize: '0.95rem', color: '#ffffff', letterSpacing: '0.04em' }}>CARDS & NETBANKING</strong>
+                            </div>
+                          </div>
+                          <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.4' }}>
+                            Pay with Debit / Credit Cards (Visa, MasterCard, RuPay), Netbanking or Wallets.
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                            {['Debit Cards', 'Credit Cards', 'Net Banking', 'Wallets'].map((item, i) => (
+                              <span key={i} style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', background: selectedPaymentMethod === 'all' ? 'rgba(0, 245, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)', borderRadius: '4px', border: selectedPaymentMethod === 'all' ? '1px solid rgba(0, 245, 255, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)', color: selectedPaymentMethod === 'all' ? '#00f5ff' : 'rgba(255, 255, 255, 0.8)' }}>
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="fin-desk-reminder">
-                    * Registration status will be marked as <strong>CONFIRMED</strong> with payment settled at on-site helpdesk.
+                    {feeInfo.total === 0
+                      ? '* Free event entry. Registration will be confirmed immediately.'
+                      : selectedPaymentMethod === 'upi'
+                      ? '* Fast UPI checkout: Opens directly with Google Pay, PhonePe, Paytm or UPI QR Code scan.'
+                      : '* Secured by Razorpay. Supports all major bank Credit/Debit Cards, Netbanking & Wallets.'}
                   </p>
                 </div>
 
@@ -1238,15 +1432,24 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   className="btn btn-primary btn-confirm-submit"
                   onClick={handleFinalSubmit}
                   disabled={isSubmitting}
+                  style={feeInfo.total > 0 ? { background: selectedPaymentMethod === 'upi' ? 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)', boxShadow: '0 0 22px rgba(0, 245, 255, 0.45)', color: '#000', fontWeight: '800' } : {}}
                 >
                   {isSubmitting ? (
                     <>
                       <FaSpinner className="spinner-rotate" style={{ marginRight: '0.5rem' }} />
-                      TRANSMITTING TO TERMINAL...
+                      OPENING RAZORPAY GATEWAY...
+                    </>
+                  ) : feeInfo.total === 0 ? (
+                    <>CONFIRM REGISTRATION (FREE) →</>
+                  ) : selectedPaymentMethod === 'upi' ? (
+                    <>
+                      <span style={{ marginRight: '0.45rem', fontSize: '1.05rem' }}>⚡</span>
+                      PAY ₹{feeInfo.total} VIA UPI (RAZORPAY) →
                     </>
                   ) : (
                     <>
-                      CONFIRM REGISTRATION →
+                      <FaShieldAlt style={{ marginRight: '0.45rem' }} />
+                      PROCEED TO PAY ₹{feeInfo.total} VIA RAZORPAY →
                     </>
                   )}
                 </button>
@@ -1330,17 +1533,42 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   </div>
                 )}
                 <div className="ticket-info-item">
-                  <span className="ticket-label">REGISTRATION STATUS</span>
-                  <span className="ticket-val status-confirmed">
+                  <span className="ticket-label">PAYMENT STATUS</span>
+                  <span className="ticket-val status-confirmed" style={{ color: '#10b981' }}>
                     <FaCheckCircle style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                    {ticketData.registrationStatus || 'CONFIRMED'}
+                    {ticketData.paymentStatus === 'PAID'
+                      ? 'PAID ONLINE (VERIFIED)'
+                      : ticketData.paymentStatus === 'FREE'
+                      ? 'FREE ENTRY'
+                      : (ticketData.paymentStatus || 'CONFIRMED')}
                   </span>
                 </div>
 
                 <div className="ticket-info-item">
-                  <span className="ticket-label">TOTAL PAYABLE FEE</span>
+                  <span className="ticket-label">PAYMENT MODE</span>
+                  <span className="ticket-val" style={{ color: '#00f5ff', fontWeight: '700' }}>
+                    {ticketData.paymentMethod === 'RAZORPAY_UPI'
+                      ? '⚡ UPI (Razorpay)'
+                      : ticketData.paymentMethod === 'RAZORPAY'
+                      ? '💳 Cards / Netbanking (Razorpay)'
+                      : (ticketData.paymentMethod || 'ONLINE')}
+                  </span>
+                </div>
+
+                {ticketData.razorpayPaymentId && (
+                  <div className="ticket-info-item">
+                    <span className="ticket-label">RAZORPAY PAYMENT ID</span>
+                    <span className="ticket-val" style={{ color: '#00f5ff', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      {ticketData.razorpayPaymentId}
+                    </span>
+                  </div>
+                )}
+
+                <div className="ticket-info-item">
+                  <span className="ticket-label">REGISTRATION FEE</span>
                   <span className="ticket-val fee-highlight">
-                    {ticketData.totalAmount === 0 ? 'FREE' : `₹${ticketData.totalAmount}`} (On-Site Desk)
+                    {ticketData.totalAmount === 0 ? 'FREE' : `₹${ticketData.totalAmount}`}
+                    {ticketData.paymentStatus === 'PAID' && ' (PAID)'}
                   </span>
                 </div>
               </div>

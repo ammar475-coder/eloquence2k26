@@ -70,6 +70,12 @@ CREATE TABLE IF NOT EXISTS public.registrations (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure Razorpay Payment Gateway Columns Exist in registrations
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS razorpay_signature TEXT;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'razorpay';
+
 -- ------------------------------------------------------------------------------
 -- 3. REGISTRATION MEMBERS TABLE
 -- ------------------------------------------------------------------------------
