@@ -167,19 +167,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const getTeamMembers = (r) => {
+    if (!r) return [];
     if (Array.isArray(r.registration_members) && r.registration_members.length > 0) {
-      return r.registration_members.map(m => m.member_name || m.name || m);
+      return r.registration_members.map(m => typeof m === 'string' ? m : (m.member_name || m.name || m.fullName || ''));
     }
     if (Array.isArray(r.teamMembersList) && r.teamMembersList.length > 0) {
-      return r.teamMembersList;
+      return r.teamMembersList.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
     }
     if (Array.isArray(r.teamMembers) && r.teamMembers.length > 0) {
-      return r.teamMembers;
+      return r.teamMembers.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
     }
     if (typeof r.team_members === 'string') {
       try {
         const parsed = JSON.parse(r.team_members);
-        if (Array.isArray(parsed)) return parsed.map(m => typeof m === 'string' ? m : (m.name || m));
+        if (Array.isArray(parsed)) return parsed.map(m => typeof m === 'string' ? m : (m.fullName || m.name || m));
       } catch (e) {
         if (r.team_members.trim()) return [r.team_members.trim()];
       }
