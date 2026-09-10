@@ -18,6 +18,12 @@
     "role": "superadmin"
   },
   {
+    "id": 1788800000000,
+    "username": "lead_coordinator",
+    "password": "leadcoordinator",
+    "role": "lead coordinator"
+  },
+  {
     "id": 1788929069120,
     "username": "Faazil",
     "password": "eloquenceadmin",

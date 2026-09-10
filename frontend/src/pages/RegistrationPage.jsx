@@ -27,8 +27,6 @@ import {
   FaHeadset,
   FaBookOpen
 } from 'react-icons/fa';
-import events from '../data/events.js';
-import coordinatorsData from '../data/coordinator.js';
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
 
 // Helper to dynamically load official Razorpay Checkout SDK
@@ -55,32 +53,30 @@ const loadRazorpayScript = () => {
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'];
 
 export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
-  const [eventsList, setEventsList] = useState(events);
-  // Determine initially selected event
-  const initialEvent = eventId ? (events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || null) : null;
-  const [selectedEvent, setSelectedEvent] = useState(initialEvent);
+  const [eventsList, setEventsList] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (result.success && Array.isArray(result.data)) {
           setEventsList(result.data);
           if (eventId) {
             const found = result.data.find(
-              (e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()
+              (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
             );
             if (found) setSelectedEvent(found);
           }
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to load events in registration page:', err);
+      });
   }, [eventId]);
 
-  // Event-specific student coordinators (live from backend with local fallback)
-  const [liveCoordinators, setLiveCoordinators] = useState(() => {
-    return selectedEvent ? (coordinatorsData[selectedEvent.id]?.coordinators || []) : [];
-  });
+  // Event-specific student coordinators (live from backend DB)
+  const [liveCoordinators, setLiveCoordinators] = useState([]);
 
   useEffect(() => {
     if (!selectedEvent?.id) {
@@ -89,8 +85,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     }
 
     let isMounted = true;
-    const staticFallback = coordinatorsData[selectedEvent.id]?.coordinators || [];
-
     fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(selectedEvent.id)}`))
       .then((res) => res.json())
       .then((result) => {
@@ -98,11 +92,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         if (result.success && Array.isArray(result.data)) {
           setLiveCoordinators(result.data);
         } else {
-          setLiveCoordinators(staticFallback);
+          setLiveCoordinators([]);
         }
       })
       .catch(() => {
-        if (isMounted) setLiveCoordinators(staticFallback);
+        if (isMounted) setLiveCoordinators([]);
       });
 
     return () => {
@@ -115,21 +109,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi'); // 'upi' | 'all'
-
-  useEffect(() => {
-    if (!eventId) {
-      if (onNavigate) {
-        onNavigate('events');
-      } else {
-        window.location.hash = '/events';
-      }
-    } else {
-      const found = eventsList.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
-      if (found) {
-        setSelectedEvent(found);
-      }
-    }
-  }, [eventId, eventsList, onNavigate]);
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
@@ -172,18 +151,17 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [ticketData, setTicketData] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // Sync when eventId prop changes from routing
+  // Sync when eventId prop or eventsList changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (eventId) {
-      const ev = events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
-      if (ev) {
-        setSelectedEvent(ev);
-        setStep('participant');
-        initTeamMembersForEvent(ev);
-      } else {
-        if (onNavigate) onNavigate('events');
-        else window.location.hash = '/events';
+      if (eventsList.length > 0) {
+        const ev = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId.toLowerCase());
+        if (ev) {
+          setSelectedEvent(ev);
+          setStep('participant');
+          initTeamMembersForEvent(ev);
+        }
       }
     } else {
       if (onNavigate) onNavigate('events');
@@ -192,7 +170,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     if (initialGame) {
       setSelectedGame(getValidGame(initialGame));
     }
-  }, [eventId, initialGame, onNavigate]);
+  }, [eventId, eventsList, initialGame, onNavigate]);
 
   // Helper to pre-populate team members based on event requirements
   const initTeamMembersForEvent = (event) => {

@@ -33,7 +33,7 @@ export const defaultEventImages = {
 /**
  * Returns the resolved event banner picture URL or imported asset.
  * Priority:
- * 1. Custom uploaded/base64 image (event.image)
+ * 1. Custom uploaded DB image / base64 image (event.image, event.img, event.poster)
  * 2. Exact event ID match in defaultEventImages
  * 3. Smart keyword matching on name/alias/subtitle/tag
  * 4. Categorical fallback banner
@@ -43,7 +43,7 @@ export function getEventBanner(eventOrId) {
 
   // 1. Valid custom data URI, public path, or external full URL
   const rawImage = typeof eventOrId === 'object'
-    ? eventOrId.image
+    ? (eventOrId.image || eventOrId.img || eventOrId.poster || '')
     : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http') || eventOrId.startsWith('/')) ? eventOrId : null);
   
   if (rawImage && typeof rawImage === 'string') {

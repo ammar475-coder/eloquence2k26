@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import events from '../data/events.js';
 import EventCard from './EventCard.jsx';
 import { getApiUrl } from '../config/api';
 
 export default function EventSection({ onRegister, onViewRules }) {
-  const [eventsList, setEventsList] = useState(events);
+  const [eventsList, setEventsList] = useState([]);
   const [filter, setFilter] = useState('all');
   const [visible, setVisible] = useState(false);
   const sectionRef = useRef(null);
@@ -17,7 +16,7 @@ export default function EventSection({ onRegister, onViewRules }) {
         return res.json();
       })
       .then((result) => {
-        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (isMounted && result.success && Array.isArray(result.data)) {
           const sorted = [...result.data].sort((a, b) => {
             if (a.category !== b.category) {
               return a.category === 'technical' ? -1 : 1;
@@ -28,7 +27,7 @@ export default function EventSection({ onRegister, onViewRules }) {
         }
       })
       .catch((err) => {
-        console.warn('EventSection live fetch fallback to local data:', err);
+        console.warn('Failed to fetch events from DB for EventSection:', err);
       });
     return () => {
       isMounted = false;
