@@ -8,79 +8,79 @@ import {
   FaMoneyBillWave,
   FaUsers,
   FaListOl,
-  FaHeadset
+  FaHeadset,
+  FaSpinner
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import events from '../data/events.js';
-import rulesData from '../data/rules.js';
 import { getApiUrl } from '../config/api';
-import coordinatorsData from '../data/coordinator.js';
 
 export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
-  const [eventsList, setEventsList] = useState(events);
-  const event = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()) || eventsList[0] || events[0];
-
-  const rulesList = (Array.isArray(event.rules) && event.rules.length > 0)
-    ? event.rules
-    : (rulesData[event.id]?.rules || []);
-
-  const [liveCoordinators, setLiveCoordinators] = useState(() => {
-    return event ? (coordinatorsData[event.id]?.coordinators || []) : [];
-  });
+  const [eventsList, setEventsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [liveCoordinators, setLiveCoordinators] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
     fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
-        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (isMounted && result.success && Array.isArray(result.data)) {
           setEventsList(result.data);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to load events from DB:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
     return () => { isMounted = false; };
   }, [eventId]);
+
+  const event = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()) || (eventsList.length > 0 ? eventsList[0] : null);
 
   useEffect(() => {
     if (!event?.id) return;
     let isMounted = true;
-    const staticFallback = coordinatorsData[event.id]?.coordinators || [];
     fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(event.id)}`))
       .then((res) => res.json())
       .then((result) => {
         if (!isMounted) return;
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (result.success && Array.isArray(result.data)) {
           setLiveCoordinators(result.data);
         } else {
-          setLiveCoordinators(staticFallback);
+          setLiveCoordinators([]);
         }
       })
       .catch(() => {
-        if (isMounted) setLiveCoordinators(staticFallback);
+        if (isMounted) setLiveCoordinators([]);
       });
     return () => { isMounted = false; };
   }, [event?.id]);
 
+  const rulesList = (event && Array.isArray(event.rules) && event.rules.length > 0)
+    ? event.rules
+    : [];
+
   const coordsList = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
     ? liveCoordinators
-    : (Array.isArray(event.coordinators) && event.coordinators.length > 0
-        ? event.coordinators
-        : (coordinatorsData[event.id]?.coordinators || []));
+    : (event && Array.isArray(event.coordinators) && event.coordinators.length > 0 ? event.coordinators : []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [eventId]);
 
-  const isEsports = event.id === 'nontech-05';
+  const isEsports = event && (event.id === 'nontech-05' || event.name?.toLowerCase().includes('gaming') || event.name?.toLowerCase().includes('battle of champions'));
 
   const handleRegister = () => {
-    if (onNavigate) {
+    if (onNavigate && event) {
       onNavigate('register', event.id);
     }
   };
 
   const handleRegisterGame = (game) => {
-    if (onNavigate) {
+    if (onNavigate && event) {
       onNavigate('register', { eventId: event.id, game });
     }
   };
@@ -101,6 +101,31 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
       onNavigate('events');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="event-rules-page" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: '#00f0ff' }}>
+          <FaSpinner className="fa-spin" size={32} style={{ animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: '1rem', fontSize: '1rem', color: '#94a3b8', letterSpacing: '0.05em' }}>Loading event rules from database...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="event-rules-page" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '400px', padding: '2rem' }}>
+          <h2 style={{ color: '#ef4444', marginBottom: '0.5rem' }}>Event Not Found</h2>
+          <p style={{ color: '#94a3b8', marginBottom: '1.5rem' }}>This competition does not exist or hasn't been added to the database yet.</p>
+          <button className="btn btn-primary" onClick={handleBackToEvents}>
+            <FaArrowLeft style={{ marginRight: '6px' }} /> Return to Events
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="event-rules-page">

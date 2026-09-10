@@ -27,39 +27,35 @@ import {
   FaHeadset,
   FaBookOpen
 } from 'react-icons/fa';
-import events from '../data/events.js';
-import coordinatorsData from '../data/coordinator.js';
 import { submitRegistration } from '../services/api.js';
 
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Other'];
 
 export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
-  const [eventsList, setEventsList] = useState(events);
-  // Determine initially selected event
-  const initialEvent = eventId ? (events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || null) : null;
-  const [selectedEvent, setSelectedEvent] = useState(initialEvent);
+  const [eventsList, setEventsList] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (result.success && Array.isArray(result.data)) {
           setEventsList(result.data);
           if (eventId) {
             const found = result.data.find(
-              (e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()
+              (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
             );
             if (found) setSelectedEvent(found);
           }
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to load events in registration page:', err);
+      });
   }, [eventId]);
 
-  // Event-specific student coordinators (live from backend with local fallback)
-  const [liveCoordinators, setLiveCoordinators] = useState(() => {
-    return selectedEvent ? (coordinatorsData[selectedEvent.id]?.coordinators || []) : [];
-  });
+  // Event-specific student coordinators (live from backend DB)
+  const [liveCoordinators, setLiveCoordinators] = useState([]);
 
   useEffect(() => {
     if (!selectedEvent?.id) {
@@ -68,8 +64,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     }
 
     let isMounted = true;
-    const staticFallback = coordinatorsData[selectedEvent.id]?.coordinators || [];
-
     fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(selectedEvent.id)}`))
       .then((res) => res.json())
       .then((result) => {
@@ -77,11 +71,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         if (result.success && Array.isArray(result.data)) {
           setLiveCoordinators(result.data);
         } else {
-          setLiveCoordinators(staticFallback);
+          setLiveCoordinators([]);
         }
       })
       .catch(() => {
-        if (isMounted) setLiveCoordinators(staticFallback);
+        if (isMounted) setLiveCoordinators([]);
       });
 
     return () => {
@@ -101,8 +95,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       } else {
         window.location.hash = '/events';
       }
-    } else {
-      const found = eventsList.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase()) || events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
+    } else if (eventsList.length > 0) {
+      const found = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase());
       if (found) {
         setSelectedEvent(found);
       }

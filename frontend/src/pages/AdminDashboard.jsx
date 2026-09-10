@@ -57,8 +57,6 @@ import {
   FaStar,
   FaLayerGroup
 } from 'react-icons/fa';
-import defaultEvents from '../data/events.js';
-import rulesData from '../data/rules.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';

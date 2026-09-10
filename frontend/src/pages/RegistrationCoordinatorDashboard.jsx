@@ -22,7 +22,6 @@ import {
   FaBars,
   FaQrcode
 } from 'react-icons/fa';
-import defaultEvents from '../data/events.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 
@@ -40,7 +39,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   };
 
   // State
-  const [eventsList, setEventsList] = useState(defaultEvents);
+  const [eventsList, setEventsList] = useState([]);
   const [registrationsList, setRegistrationsList] = useState([]);
   const [coordinatorsList, setCoordinatorsList] = useState([]);
   const [loading, setLoading] = useState(true);

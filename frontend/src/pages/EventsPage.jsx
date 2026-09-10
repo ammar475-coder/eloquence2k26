@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes } from 'react-icons/fa';
-import events from '../data/events.js';
+import { FaBolt, FaArrowLeft, FaArrowRight, FaTimes, FaSpinner } from 'react-icons/fa';
 import EventCard from './EventCard.jsx';
 import { getApiUrl } from '../config/api';
 
@@ -43,21 +42,23 @@ function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, durati
 }
 
 export default function EventsPage({ onNavigate }) {
-  const [eventsList, setEventsList] = useState(events);
+  const [eventsList, setEventsList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const canvasRef = useRef(null);
 
-  // Fetch live event data from backend API with static fallback
+  // Fetch live event data directly from database
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
     fetch(getApiUrl('/api/events'))
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
       .then((result) => {
-        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (isMounted && result.success && Array.isArray(result.data)) {
           const sorted = [...result.data].sort((a, b) => {
             if (a.category !== b.category) {
               return a.category === 'technical' ? -1 : 1;
@@ -68,7 +69,10 @@ export default function EventsPage({ onNavigate }) {
         }
       })
       .catch((err) => {
-        console.warn('EventsPage live fetch fallback to local data:', err);
+        console.error('Failed to load events from DB:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
       });
     return () => {
       isMounted = false;

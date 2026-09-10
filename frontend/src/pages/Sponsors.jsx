@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaGlobe, FaMapMarkerAlt, FaPhoneAlt, FaUser } from 'react-icons/fa';
-import sponsors from '../data/sponsors.js';
 import { getApiUrl } from '../config/api';
 
 function SponsorCard({ sponsor, tier }) {
@@ -316,17 +315,17 @@ function SponsorRow({ tier, label, items, direction }) {
 
 export default function Sponsors() {
   const sectionRef = useRef(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
   const [liveTiers, setLiveTiers] = useState(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.1 }
+      { threshold: 0.05 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [liveTiers]);
 
   useEffect(() => {
     let isMounted = true;
@@ -359,7 +358,7 @@ export default function Sponsors() {
         }
       })
       .catch((err) => {
-        console.warn('Using static sponsors fallback:', err);
+        console.warn('Error fetching sponsors from DB:', err);
       });
 
     return () => {
@@ -367,7 +366,12 @@ export default function Sponsors() {
     };
   }, []);
 
-  const tiers = liveTiers || sponsors;
+  const tiers = liveTiers || { elite: [], premium: [], standard: [] };
+  const hasAnySponsors = (tiers.elite?.length || 0) + (tiers.premium?.length || 0) + (tiers.standard?.length || 0) > 0;
+
+  if (!hasAnySponsors) {
+    return null;
+  }
 
   return (
     <section
