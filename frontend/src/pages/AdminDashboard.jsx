@@ -117,7 +117,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   }, [activeTab, isAdminOrSuper, isRegCoordinator]);
 
   // ==================== EVENTS STATE ====================
-  const [eventsList, setEventsList] = useState(defaultEvents);
+  const [eventsList, setEventsList] = useState([]);
   const [eventFilter, setEventFilter] = useState('all');
   const [eventSearch, setEventSearch] = useState('');
   const [isEventEditModalOpen, setIsEventEditModalOpen] = useState(false);
@@ -946,13 +946,12 @@ export default function AdminDashboard({ token, user, onLogout }) {
     fetch(getApiUrl('/api/admin/events'), { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(result => {
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (result.success && Array.isArray(result.data)) {
           setEventsList(result.data);
         }
       })
-      .catch(() => {
-        // Fallback to defaultEvents if API is unreachable
-        setEventsList(defaultEvents);
+      .catch((err) => {
+        console.error('Error fetching admin events from DB:', err);
       });
   };
 
@@ -1205,7 +1204,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
     const existingRules = (Array.isArray(eventItem.rules) && eventItem.rules.length > 0)
       ? eventItem.rules
-      : (rulesData[eventItem.id]?.rules || []);
+      : [];
     const initialRules = existingRules.length > 0 ? [...existingRules] : [''];
     setEventRules(initialRules);
     setBulkRulesText(initialRules.join('\n'));
@@ -2673,7 +2672,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditEventModal(evt); }}
                                   title={isLeadCoordinator ? "Click to view rules" : "Click to view and edit rules"}
                                 >
-                                  <FaListOl size={8} /> {((Array.isArray(evt.rules) && evt.rules.length) || rulesData[evt.id]?.rules?.length || 0)} Rules
+                                  <FaListOl size={8} /> {((Array.isArray(evt.rules) && evt.rules.length) || 0)} Rules
                                 </span>
                               </div>
                             </div>

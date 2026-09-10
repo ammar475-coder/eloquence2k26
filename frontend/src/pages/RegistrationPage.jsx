@@ -88,21 +88,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');
 
-  useEffect(() => {
-    if (!eventId) {
-      if (onNavigate) {
-        onNavigate('events');
-      } else {
-        window.location.hash = '/events';
-      }
-    } else if (eventsList.length > 0) {
-      const found = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase());
-      if (found) {
-        setSelectedEvent(found);
-      }
-    }
-  }, [eventId, eventsList, onNavigate]);
-
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
 
@@ -144,18 +129,17 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [ticketData, setTicketData] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // Sync when eventId prop changes from routing
+  // Sync when eventId prop or eventsList changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (eventId) {
-      const ev = events.find((e) => e.id === eventId || e.id.toLowerCase() === eventId.toLowerCase());
-      if (ev) {
-        setSelectedEvent(ev);
-        setStep('participant');
-        initTeamMembersForEvent(ev);
-      } else {
-        if (onNavigate) onNavigate('events');
-        else window.location.hash = '/events';
+      if (eventsList.length > 0) {
+        const ev = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId.toLowerCase());
+        if (ev) {
+          setSelectedEvent(ev);
+          setStep('participant');
+          initTeamMembersForEvent(ev);
+        }
       }
     } else {
       if (onNavigate) onNavigate('events');
@@ -164,7 +148,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     if (initialGame) {
       setSelectedGame(getValidGame(initialGame));
     }
-  }, [eventId, initialGame, onNavigate]);
+  }, [eventId, eventsList, initialGame, onNavigate]);
 
   // Helper to pre-populate team members based on event requirements
   const initTeamMembersForEvent = (event) => {
