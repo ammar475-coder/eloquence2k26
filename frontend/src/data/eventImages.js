@@ -28,16 +28,19 @@ export const defaultEventImages = {
 
 /**
  * Returns the resolved event banner picture URL or imported asset
- * Priority: 1. Custom uploaded image (event.image) -> 2. Default event image asset -> 3. Fallback
+ * Priority: 1. Custom uploaded image in DB (Base64 data URL or HTTP URL) -> 2. Default event image asset -> 3. Fallback
  */
 export function getEventBanner(eventOrId) {
   if (!eventOrId) return null;
-  const rawImage = typeof eventOrId === 'object' ? eventOrId.image : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http')) ? eventOrId : null);
   
-  if (rawImage && rawImage.trim()) {
+  const rawImage = typeof eventOrId === 'object' 
+    ? (eventOrId.image || eventOrId.img || eventOrId.poster || '') 
+    : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http')) ? eventOrId : null);
+  
+  if (rawImage && typeof rawImage === 'string' && rawImage.trim()) {
     const img = rawImage.trim();
-    // Do not return legacy local disk uploads paths
-    if (!img.startsWith('/uploads/')) {
+    // Valid DB image: Base64 data URL or external HTTP/HTTPS URL
+    if (img.startsWith('data:image/') || img.startsWith('http://') || img.startsWith('https://')) {
       return img;
     }
   }

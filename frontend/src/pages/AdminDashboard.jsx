@@ -49,12 +49,15 @@ import {
   FaCheckCircle,
   FaInfoCircle,
   FaUserPlus,
-  FaListOl
+  FaListOl,
+  FaQrcode
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
+import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
+
 
 const EXISTING_POSTER_PRESETS = [
   { id: 'tech-01', label: 'Slide Craft (PPT)', img: defaultEventImages['tech-01'] },
@@ -75,6 +78,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const loggedRole = String(user?.role || 'admin').toLowerCase();
   const isAdminOrSuper = loggedRole === 'admin' || loggedRole === 'superadmin';
   const isRegCoordinator = loggedRole.includes('registration') || loggedRole.includes('reg_coord') || loggedRole === 'registration coordinator';
+  const isLeadCoordinator = loggedRole.includes('lead') || loggedRole === 'lead coordinator' || loggedRole === 'lead_coordinator';
 
   const [activeTab, setActiveTab] = useState(() => {
     if (isRegCoordinator) return 'registration';
@@ -341,10 +345,18 @@ export default function AdminDashboard({ token, user, onLogout }) {
               <div>
                 <div class="label">Ticket Reference / Code</div>
                 <div class="code-val">#${reg.ticket_code || reg.registrationId || reg.id}</div>
+                <div style="margin-top: 4px;">
+                  <span class="label">Status: </span>
+                  <span style="color: #10b981; font-weight: 700; font-size: 13px;">${reg.is_verified || reg.isVerified ? 'VERIFIED & ADMITTED' : 'CONFIRMED'}</span>
+                </div>
               </div>
-              <div style="text-align: right;">
-                <div class="label">Status</div>
-                <div style="color: #10b981; font-weight: 700; font-size: 14px;">CONFIRMED</div>
+              <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <img 
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(reg.ticket_code || reg.registrationId || reg.id)}" 
+                  alt="QR Code" 
+                  style="width: 75px; height: 75px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 3px;"
+                />
+                <span style="font-size: 10px; color: #64748b; font-weight: 600;">Scan at Entry</span>
               </div>
             </div>
 
@@ -1175,6 +1187,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      return toast.error('Please select a valid image file (PNG, JPG, WEBP, SVG)');
+    }
+
     if (file.size > 5 * 1024 * 1024) {
       return toast.error('Image size exceeds 5MB limit');
     }
@@ -1186,7 +1202,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       setEventImage(base64);
 
       setIsUploadingEventImage(true);
-      const loadingToast = toast.loading('Uploading event picture...');
+      const loadingToast = toast.loading('Attaching event picture...');
 
       fetch(getApiUrl('/api/admin/upload'), {
         method: 'POST',
@@ -1204,7 +1220,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
         .then(result => {
           if (result.success) {
             setEventImage(result.url);
-            toast.success('Event picture uploaded successfully', { id: loadingToast });
+            setEventImagePreview(result.url);
+            toast.success('Event picture attached! Save to persist in DB.', { id: loadingToast });
           } else {
             toast.error(result.message || 'Upload failed', { id: loadingToast });
           }
@@ -1255,13 +1272,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
       .then(res => res.json())
       .then(result => {
         if (result.success) {
-          toast.success(editingEvent ? 'Event updated! Changes live on main events page.' : 'Event created successfully!', { id: loadingToast });
-          if (editingEvent) {
-            setEventsList(eventsList.map(item => item.id === editingEvent.id ? { ...item, ...result.data, rules: cleanedRules } : item));
-          } else {
-            setEventsList([...eventsList, { ...result.data, rules: cleanedRules }]);
-          }
+          toast.success(editingEvent ? 'Event updated! Changes live in database & events page.' : 'Event created successfully in database!', { id: loadingToast });
           resetEventEditModal();
+          fetchEvents();
         } else {
           toast.error(result.message || 'Failed to save event', { id: loadingToast });
         }
@@ -1273,7 +1286,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (!window.confirm(`Are you sure you want to permanently delete event "${name}"?`)) {
       return;
     }
-    const loadingToast = toast.loading(`Deleting event ${name}...`);
+    const loadingToast = toast.loading(`Deleting event ${name} from live database...`);
     fetch(getApiUrl(`/api/admin/events/${eventId}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
@@ -1281,8 +1294,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
       .then(res => res.json())
       .then(result => {
         if (result.success) {
-          toast.success('Event deleted successfully', { id: loadingToast });
-          setEventsList(eventsList.filter(e => e.id !== eventId));
+          toast.success('Event deleted successfully from live database', { id: loadingToast });
+          fetchEvents();
         } else {
           toast.error(result.message || 'Failed to delete event', { id: loadingToast });
         }
@@ -1812,8 +1825,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
               <FaUserShield size={22} />
             </div>
             <div>
-              <h2 style={S.sidebarTitle}>Admin Panel</h2>
-              <span style={S.sidebarSubtitle}>Eloquence 2026</span>
+              <h2 style={S.sidebarTitle}>{isLeadCoordinator ? 'Coordinator Panel' : 'Admin Panel'}</h2>
+              <span style={S.sidebarSubtitle}>{isLeadCoordinator ? 'Eloquence 2026 (View Only)' : 'Eloquence 2026'}</span>
             </div>
           </div>
           <button
@@ -1936,6 +1949,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
+          {/* Search & Verify Participant Tab */}
+          <button 
+            type="button"
+            style={activeTab === 'search-participant' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={(e) => { e.preventDefault(); setActiveTab('search-participant'); setMobileSidebarOpen(false); }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaQrcode style={S.navIcon} />
+                <span>Search & Verify</span>
+              </div>
+              <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857' }}>
+                QR
+              </span>
+            </div>
+          </button>
+
           {/* Participant List Tab */}
           <button 
             type="button"
@@ -1973,17 +2003,19 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-sponsors' && 'Sponsor Management'}
               {activeTab === 'manage-coordinators' && 'Student Coordinator Management'}
               {activeTab === 'registrations' && 'Participant Registrations & Verification'}
+              {activeTab === 'search-participant' && 'Search & Verify Participant (QR Check-in)'}
               {activeTab === 'participant-list' && 'Event-Wise Participant & Team List'}
             </h1>
             <p style={S.pageSubtitle}>
               {activeTab === 'dashboard' && 'Live event analytics, registrations, and entity metrics.'}
-              {activeTab === 'events' && 'Edit event details, venues, schedules, and entry fees in real-time.'}
+              {activeTab === 'events' && (isLeadCoordinator ? 'Browse symposium event details, schedules, venues, and competition rules.' : 'Edit event details, venues, schedules, and entry fees in real-time.')}
               {activeTab === 'manage-users' && 'Create, edit, assign roles, and remove system user accounts.'}
               {activeTab === 'manage-roles' && 'Configure custom access roles, permissions, and security hierarchy.'}
-              {activeTab === 'manage-sponsors' && 'Manage event partners, categories, logos, contact info, and public visibility.'}
-              {activeTab === 'manage-coordinators' && 'Assign student leads and coordinators dynamically to symposium events.'}
-              {activeTab === 'registrations' && 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.'}
-              {activeTab === 'participant-list' && 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.'}
+              {activeTab === 'manage-sponsors' && (isLeadCoordinator ? 'View event partners, sponsorship categories, and contact information.' : 'Manage event partners, categories, logos, contact info, and public visibility.')}
+              {activeTab === 'manage-coordinators' && (isLeadCoordinator ? 'View student coordinators assigned across symposium events.' : 'Assign student leads and coordinators dynamically to symposium events.')}
+              {activeTab === 'registrations' && (isLeadCoordinator ? 'View all registered participants, verify ticket codes, and audit payment status.' : 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.')}
+              {activeTab === 'search-participant' && 'Search by ticket code, name, phone, email, college or scan participant ticket QR code for live on-site verification & admission.'}
+              {activeTab === 'participant-list' && (isLeadCoordinator ? 'Filter participants by event, view team names, inspect members, and export PDF sheets.' : 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.')}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -2019,7 +2051,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   {user?.username || 'Admin'}
                 </span>
                 <span style={{ fontSize: '0.7rem', color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '700', marginTop: '1px', textTransform: 'uppercase' }}>
-                  {user?.role || 'Admin'}
+                  {user?.role || (isLeadCoordinator ? 'Lead Coordinator' : 'Admin')} {isLeadCoordinator ? '(View Only)' : ''}
                 </span>
               </div>
             </div>
@@ -2275,16 +2307,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     </button>
                   </div>
                 </div>
-                <button onClick={handleOpenCreateEventModal} style={S.createBtn}>
-                  <FaPlus style={{ marginRight: '8px' }} /> Add New Event
-                </button>
+                {!isLeadCoordinator && (
+                  <button onClick={handleOpenCreateEventModal} style={S.createBtn}>
+                    <FaPlus style={{ marginRight: '8px' }} /> Add New Event
+                  </button>
+                )}
               </div>
 
               <div style={S.card}>
                 <div style={S.cardHeaderFlex}>
                   <h3 style={S.cardTitle}>Symposium Events ({filteredEventsList.length})</h3>
                   <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                    Edits made here synchronize directly with the live events and registration pages.
+                    {isLeadCoordinator 
+                      ? 'Viewing symposium events, category breakdown, fees, venues, schedules, and competition rules.' 
+                      : 'Edits made here synchronize directly with the live events and registration pages.'}
                   </span>
                 </div>
                 <div style={S.tableResponsive}>
@@ -2297,7 +2333,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <th style={S.th}>Venue</th>
                         <th style={S.th}>Schedule</th>
                         <th style={S.th}>Fee & Size</th>
-                        <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+                        <th style={{ ...S.th, textAlign: isLeadCoordinator ? 'center' : 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2346,7 +2382,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                     cursor: 'pointer'
                                   }}
                                   onClick={(e) => { e.stopPropagation(); handleOpenEditEventModal(evt); }}
-                                  title="Click to view and edit rules"
+                                  title={isLeadCoordinator ? "Click to view rules" : "Click to view and edit rules"}
                                 >
                                   <FaListOl size={8} /> {((Array.isArray(evt.rules) && evt.rules.length) || rulesData[evt.id]?.rules?.length || 0)} Rules
                                 </span>
@@ -2380,21 +2416,33 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               {evt.teamSize && <div style={S.tableSubText}>{evt.teamSize}</div>}
                             </div>
                           </td>
-                          <td style={{ ...S.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <button
-                              onClick={() => handleOpenEditEventModal(evt)}
-                              style={S.actionBtnEdit}
-                              title="Edit Event Details & Poster"
-                            >
-                              <FaEdit style={{ marginRight: '4px' }} /> Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEvent(evt.id, evt.name)}
-                              style={S.actionBtnDelete}
-                              title="Delete Event"
-                            >
-                              <FaTrash style={{ marginRight: '4px' }} /> Delete
-                            </button>
+                          <td style={{ ...S.td, textAlign: isLeadCoordinator ? 'center' : 'right', whiteSpace: 'nowrap' }}>
+                            {isLeadCoordinator ? (
+                              <button
+                                onClick={() => handleOpenEditEventModal(evt)}
+                                style={S.actionBtnView}
+                                title="View Event Details & Rules"
+                              >
+                                <FaInfoCircle style={{ marginRight: '4px' }} /> Details
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleOpenEditEventModal(evt)}
+                                  style={S.actionBtnEdit}
+                                  title="Edit Event Details & Poster"
+                                >
+                                  <FaEdit style={{ marginRight: '4px' }} /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteEvent(evt.id, evt.name)}
+                                  style={S.actionBtnDelete}
+                                  title="Delete Event"
+                                >
+                                  <FaTrash style={{ marginRight: '4px' }} /> Delete
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                         );
@@ -2587,16 +2635,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     <option value="Standard">Standard</option>
                   </select>
                 </div>
-                <button onClick={handleOpenCreateSponsorForm} style={S.createBtn}>
-                  <FaPlus style={{ marginRight: '8px' }} /> Add New Sponsor
-                </button>
+                {!isLeadCoordinator && (
+                  <button onClick={handleOpenCreateSponsorForm} style={S.createBtn}>
+                    <FaPlus style={{ marginRight: '8px' }} /> Add New Sponsor
+                  </button>
+                )}
               </div>
 
               <div style={S.card}>
                 <div style={S.cardHeaderFlex}>
                   <h3 style={S.cardTitle}>Event Sponsors ({filteredSponsors.length})</h3>
                   <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                    Active sponsors appear on the public website marquee sorted by display order.
+                    {isLeadCoordinator 
+                      ? 'Symposium partners and sponsors registered for Eloquence 2026.'
+                      : 'Active sponsors appear on the public website marquee sorted by display order.'}
                   </span>
                 </div>
                 <div style={S.tableResponsive}>
@@ -2608,7 +2660,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <th style={S.th}>Contact</th>
                         <th style={S.th}>Status</th>
                         <th style={{ ...S.th, textAlign: 'center' }}>Display Order</th>
-                        <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+                        <th style={{ ...S.th, textAlign: isLeadCoordinator ? 'center' : 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2723,34 +2775,46 @@ export default function AdminDashboard({ token, user, onLogout }) {
                           <td style={{ ...S.td, textAlign: 'center' }}>
                             <span style={S.idBadge}>{sponsor.displayOrder || 1}</span>
                           </td>
-                          <td style={{ ...S.td, textAlign: 'right' }}>
-                            <button 
-                              onClick={() => handleToggleSponsor(sponsor)} 
-                              style={{ 
-                                background: sponsor.isActive !== false ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
-                                border: '1px solid ' + (sponsor.isActive !== false ? (isDark ? '#047857' : '#a7f3d0') : (isDark ? '#991b1b' : '#fecaca')),
-                                color: sponsor.isActive !== false ? '#10b981' : '#dc2626',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0.45rem 0.65rem',
-                                borderRadius: '6px',
-                                marginRight: '0.5rem'
-                              }}
-                              title={sponsor.isActive !== false ? 'Deactivate Sponsor' : 'Activate Sponsor'}
-                            >
-                              {sponsor.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
-                            </button>
-                            <button onClick={() => handleOpenEditSponsorForm(sponsor)} style={S.actionBtnEdit} title="Edit Sponsor">
-                              <FaEdit />
-                            </button>
-                            <button onClick={() => handleDeleteSponsor(sponsor.id, sponsor.name)} style={S.actionBtnDelete} title="Delete Sponsor">
-                              <FaTrash />
-                            </button>
+                          <td style={{ ...S.td, textAlign: isLeadCoordinator ? 'center' : 'right', whiteSpace: 'nowrap' }}>
+                            {isLeadCoordinator ? (
+                              <button 
+                                onClick={() => handleOpenEditSponsorForm(sponsor)} 
+                                style={S.actionBtnView} 
+                                title="View Sponsor Details"
+                              >
+                                <FaInfoCircle style={{ marginRight: '4px' }} /> Details
+                              </button>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={() => handleToggleSponsor(sponsor)} 
+                                  style={{ 
+                                    background: sponsor.isActive !== false ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
+                                    border: '1px solid ' + (sponsor.isActive !== false ? (isDark ? '#047857' : '#a7f3d0') : (isDark ? '#991b1b' : '#fecaca')),
+                                    color: sponsor.isActive !== false ? '#10b981' : '#dc2626',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    padding: '0.45rem 0.65rem',
+                                    borderRadius: '6px',
+                                    marginRight: '0.5rem'
+                                  }}
+                                  title={sponsor.isActive !== false ? 'Deactivate Sponsor' : 'Activate Sponsor'}
+                                >
+                                  {sponsor.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
+                                </button>
+                                <button onClick={() => handleOpenEditSponsorForm(sponsor)} style={S.actionBtnEdit} title="Edit Sponsor">
+                                  <FaEdit />
+                                </button>
+                                <button onClick={() => handleDeleteSponsor(sponsor.id, sponsor.name)} style={S.actionBtnDelete} title="Delete Sponsor">
+                                  <FaTrash />
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                       ))}
                       {!filteredSponsors.length && (
-                        <tr><td colSpan="6" style={S.emptyState}>No sponsors found matching your criteria.</td></tr>
+                        <tr><td colSpan={6} style={S.emptyState}>No sponsors found matching your criteria.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -2788,16 +2852,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     ))}
                   </select>
                 </div>
-                <button onClick={handleOpenCreateCoordForm} style={S.createBtn}>
-                  <FaPlus style={{ marginRight: '8px' }} /> Add Coordinator
-                </button>
+                {!isLeadCoordinator && (
+                  <button onClick={handleOpenCreateCoordForm} style={S.createBtn}>
+                    <FaPlus style={{ marginRight: '8px' }} /> Add Coordinator
+                  </button>
+                )}
               </div>
 
               <div style={S.card}>
                 <div style={S.cardHeaderFlex}>
                   <h3 style={S.cardTitle}>Student Coordinators ({filteredCoordinators.length})</h3>
                   <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                    Coordinators assigned here dynamically appear on the Registration page for their respective events.
+                    {isLeadCoordinator 
+                      ? 'Student coordinators and leads assigned across symposium events.'
+                      : 'Coordinators assigned here dynamically appear on the Registration page for their respective events.'}
                   </span>
                 </div>
                 <div style={S.tableResponsive}>
@@ -2809,7 +2877,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <th style={S.th}>Role</th>
                         <th style={S.th}>Assigned Events</th>
                         <th style={S.th}>Status</th>
-                        <th style={{ ...S.th, textAlign: 'right' }}>Actions</th>
+                        <th style={{ ...S.th, textAlign: isLeadCoordinator ? 'center' : 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2895,34 +2963,46 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               {coord.isActive !== false ? 'Active' : 'Inactive'}
                             </span>
                           </td>
-                          <td style={{ ...S.td, textAlign: 'right' }}>
-                            <button 
-                              onClick={() => handleToggleCoord(coord)} 
-                              style={{ 
-                                background: coord.isActive !== false ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
-                                border: '1px solid ' + (coord.isActive !== false ? (isDark ? '#047857' : '#a7f3d0') : (isDark ? '#991b1b' : '#fecaca')),
-                                color: coord.isActive !== false ? '#10b981' : '#dc2626',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                padding: '0.45rem 0.65rem',
-                                borderRadius: '6px',
-                                marginRight: '0.5rem'
-                              }}
-                              title={coord.isActive !== false ? 'Deactivate Coordinator' : 'Activate Coordinator'}
-                            >
-                              {coord.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
-                            </button>
-                            <button onClick={() => handleOpenEditCoordForm(coord)} style={S.actionBtnEdit} title="Edit Coordinator">
-                              <FaEdit />
-                            </button>
-                            <button onClick={() => handleDeleteCoord(coord.id, coord.name)} style={S.actionBtnDelete} title="Delete Coordinator">
-                              <FaTrash />
-                            </button>
+                          <td style={{ ...S.td, textAlign: isLeadCoordinator ? 'center' : 'right', whiteSpace: 'nowrap' }}>
+                            {isLeadCoordinator ? (
+                              <button 
+                                onClick={() => handleOpenEditCoordForm(coord)} 
+                                style={S.actionBtnView} 
+                                title="View Student Coordinator Details"
+                              >
+                                <FaInfoCircle style={{ marginRight: '4px' }} /> Details
+                              </button>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={() => handleToggleCoord(coord)} 
+                                  style={{ 
+                                    background: coord.isActive !== false ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
+                                    border: '1px solid ' + (coord.isActive !== false ? (isDark ? '#047857' : '#a7f3d0') : (isDark ? '#991b1b' : '#fecaca')),
+                                    color: coord.isActive !== false ? '#10b981' : '#dc2626',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    padding: '0.45rem 0.65rem',
+                                    borderRadius: '6px',
+                                    marginRight: '0.5rem'
+                                  }}
+                                  title={coord.isActive !== false ? 'Deactivate Coordinator' : 'Activate Coordinator'}
+                                >
+                                  {coord.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
+                                </button>
+                                <button onClick={() => handleOpenEditCoordForm(coord)} style={S.actionBtnEdit} title="Edit Coordinator">
+                                  <FaEdit />
+                                </button>
+                                <button onClick={() => handleDeleteCoord(coord.id, coord.name)} style={S.actionBtnDelete} title="Delete Coordinator">
+                                  <FaTrash />
+                                </button>
+                              </>
+                            )}
                           </td>
                         </tr>
                       ))}
                       {!filteredCoordinators.length && (
-                        <tr><td colSpan="6" style={S.emptyState}>No coordinators found.</td></tr>
+                        <tr><td colSpan={6} style={S.emptyState}>No coordinators found.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -2998,14 +3078,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       <span>Export CSV</span>
                     </button>
 
-                    <button
-                      onClick={() => setIsOnSiteRegisterModalOpen(true)}
-                      style={{ ...S.createBtn, padding: '0.55rem 1.1rem', fontSize: '0.86rem' }}
-                      title="Register walk-in participant at on-site desk"
-                    >
-                      <FaUserPlus style={{ marginRight: '6px' }} />
-                      <span>On-Site Desk Entry</span>
-                    </button>
+                    {!isLeadCoordinator && (
+                      <button
+                        onClick={() => setIsOnSiteRegisterModalOpen(true)}
+                        style={{ ...S.createBtn, padding: '0.55rem 1.1rem', fontSize: '0.86rem' }}
+                        title="Register walk-in participant at on-site desk"
+                      >
+                        <FaUserPlus style={{ marginRight: '6px' }} />
+                        <span>On-Site Desk Entry</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
@@ -3266,14 +3348,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 >
                                   <FaPrint size={11} />
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteRegistration(reg)}
-                                  disabled={isDeletingRegId === ticketId}
-                                  style={S.actionBtnDelete}
-                                  title="Delete Registration"
-                                >
-                                  <FaTrash size={11} />
-                                </button>
+                                {!isLeadCoordinator && (
+                                  <button
+                                    onClick={() => handleDeleteRegistration(reg)}
+                                    disabled={isDeletingRegId === ticketId}
+                                    style={S.actionBtnDelete}
+                                    title="Delete Registration"
+                                  >
+                                    <FaTrash size={11} />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -3311,6 +3395,21 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* SEARCH & VERIFY PARTICIPANT VIEW (QR SCAN & ADMISSION)    */}
+          {/* ======================================================== */}
+          {activeTab === 'search-participant' && (
+            <ParticipantVerifier 
+              token={token}
+              user={user}
+              isDark={isDark}
+              registrations={registrationsList}
+              events={eventsList}
+              onRefreshRegistrations={fetchRegistrations}
+              onPrintTicket={handlePrintTicket}
+            />
           )}
 
           {/* ======================================================== */}
@@ -3494,12 +3593,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                             >
                               <FaFilePdf size={13} /> Export PDF
                             </button>
-                            <button
-                              onClick={() => handleOpenSendModal(evt)}
-                              style={{ ...S.primaryBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem', padding: '0.55rem 0.85rem' }}
-                            >
-                              <FaPaperPlane size={12} /> Send
-                            </button>
+                            {!isLeadCoordinator && (
+                              <button
+                                onClick={() => handleOpenSendModal(evt)}
+                                style={{ ...S.primaryBtn, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem', padding: '0.55rem 0.85rem' }}
+                              >
+                                <FaPaperPlane size={12} /> Send
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -3622,14 +3723,18 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={S.cardHeaderFlex}>
                   <div>
                     <h3 style={S.cardTitle}>
-                      Sent Details & Dispatched Participant Lists ({dispatchesList.length})
+                      {isLeadCoordinator 
+                        ? `Dispatched Participant Lists History (${dispatchesList.length})` 
+                        : `Sent Details & Dispatched Participant Lists (${dispatchesList.length})`}
                     </h3>
                     <span style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                      History of event participant lists dispatched to Event Coordinators. Admin can edit assignments or delete/revoke lists.
+                      {isLeadCoordinator 
+                        ? 'Log of participant lists dispatched to symposium event coordinators.' 
+                        : 'History of event participant lists dispatched to Event Coordinators. Admin can edit assignments or delete/revoke lists.'}
                     </span>
                   </div>
                   <span style={S.idBadge}>
-                    Admin Control
+                    {isLeadCoordinator ? 'Dispatched Records' : 'Admin Control'}
                   </span>
                 </div>
 
@@ -3643,7 +3748,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <th style={S.th}>Participants Count</th>
                         <th style={S.th}>Dispatched Date & Time</th>
                         <th style={S.th}>Status</th>
-                        <th style={{ ...S.th, textAlign: 'right' }}>Admin Actions</th>
+                        {!isLeadCoordinator && <th style={{ ...S.th, textAlign: 'right' }}>Admin Actions</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -3687,29 +3792,31 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 Dispatched
                               </span>
                             </td>
-                            <td style={{ ...S.td, textAlign: 'right' }}>
-                              <button
-                                onClick={() => handleOpenEditDispatchModal(d)}
-                                style={S.actionBtnEdit}
-                                title="Edit / Re-assign Coordinator"
-                              >
-                                <FaEdit size={13} /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteDispatch(d.id, d.eventName, d.coordinatorName)}
-                                style={S.actionBtnDelete}
-                                title="Delete & Revoke List"
-                              >
-                                <FaTrash size={13} /> Delete
-                              </button>
-                            </td>
+                            {!isLeadCoordinator && (
+                              <td style={{ ...S.td, textAlign: 'right' }}>
+                                <button
+                                  onClick={() => handleOpenEditDispatchModal(d)}
+                                  style={S.actionBtnEdit}
+                                  title="Edit / Re-assign Coordinator"
+                                >
+                                  <FaEdit size={13} /> Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteDispatch(d.id, d.eventName, d.coordinatorName)}
+                                  style={S.actionBtnDelete}
+                                  title="Delete & Revoke List"
+                                >
+                                  <FaTrash size={13} /> Delete
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
                       {dispatchesList.length === 0 && (
                         <tr>
-                          <td colSpan="7" style={S.emptyState}>
-                            No dispatched participant lists found yet. Click "Send" on any Event Card above to dispatch a list.
+                          <td colSpan={isLeadCoordinator ? 6 : 7} style={S.emptyState}>
+                            No dispatched participant lists found yet.
                           </td>
                         </tr>
                       )}
@@ -3924,8 +4031,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <FaCalendarAlt size={18} />
                 </div>
                 <div>
-                  <h3 style={S.modalTitle}>{editingEvent ? `Edit Event: ${editingEvent.name || editingEvent.id.toUpperCase()}` : 'Add New Symposium Event'}</h3>
-                  <p style={S.modalSubtitle}>Updates made here synchronize directly with the live events and registration pages.</p>
+                  <h3 style={S.modalTitle}>
+                    {isLeadCoordinator 
+                      ? `Event Details: ${editingEvent ? (editingEvent.name || editingEvent.id.toUpperCase()) : 'Event'}` 
+                      : (editingEvent ? `Edit Event: ${editingEvent.name || editingEvent.id.toUpperCase()}` : 'Add New Symposium Event')}
+                  </h3>
+                  <p style={S.modalSubtitle}>
+                    {isLeadCoordinator 
+                      ? 'Viewing event specifications, category, venue, schedule, entry fees, and competition rules.' 
+                      : 'Updates made here synchronize directly with the live events and registration pages.'}
+                  </p>
                 </div>
               </div>
               <button onClick={resetEventEditModal} style={S.modalCloseBtn} title="Close (Esc)">
@@ -3933,7 +4048,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               </button>
             </div>
 
-            <form onSubmit={handleSubmitEventEdit} style={S.modalForm}>
+            <form onSubmit={isLeadCoordinator ? (e) => { e.preventDefault(); resetEventEditModal(); } : handleSubmitEventEdit} style={S.modalForm}>
               <div style={S.modalFormBody}>
                 {/* Event Poster / Picture Upload & Presets */}
                 <div style={S.modalInputGroup}>
@@ -3961,85 +4076,87 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <FaImage color="#94a3b8" size={26} />
                       )}
                     </div>
-                    <div style={{ flex: 1, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <input 
-                        type="file" 
-                        ref={eventFileInputRef} 
-                        onChange={handleEventImageFileSelect} 
-                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                        style={{ display: 'none' }}
-                      />
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button 
-                          type="button" 
-                          onClick={() => eventFileInputRef.current?.click()}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '0.55rem 1rem',
-                            background: isDark ? '#312e81' : '#eff6ff',
-                            border: isDark ? '1px solid #4338ca' : '1px solid #bfdbfe',
-                            color: isDark ? '#c7d2fe' : '#2563eb',
-                            borderRadius: '8px',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                          disabled={isUploadingEventImage}
-                        >
-                          <FaUpload size={12} /> {isUploadingEventImage ? 'Uploading Picture...' : 'Upload Custom Picture'}
-                        </button>
-                        {eventImagePreview && (
+                    {!isLeadCoordinator && (
+                      <div style={{ flex: 1, minWidth: '240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <input 
+                          type="file" 
+                          ref={eventFileInputRef} 
+                          onChange={handleEventImageFileSelect} 
+                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                          style={{ display: 'none' }}
+                        />
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button 
                             type="button" 
-                            onClick={() => { setEventImage(''); setEventImagePreview(''); }}
+                            onClick={() => eventFileInputRef.current?.click()}
                             style={{
-                              padding: '0.55rem 0.85rem',
-                              background: isDark ? '#1f2937' : '#f8fafc',
-                              border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
-                              color: isDark ? '#9ca3af' : '#64748b',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '0.55rem 1rem',
+                              background: isDark ? '#312e81' : '#eff6ff',
+                              border: isDark ? '1px solid #4338ca' : '1px solid #bfdbfe',
+                              color: isDark ? '#c7d2fe' : '#2563eb',
                               borderRadius: '8px',
                               fontSize: '0.85rem',
+                              fontWeight: '600',
                               cursor: 'pointer'
                             }}
+                            disabled={isUploadingEventImage}
                           >
-                            Reset to Default
+                            <FaUpload size={12} /> {isUploadingEventImage ? 'Uploading Picture...' : 'Upload Custom Picture'}
                           </button>
-                        )}
-                      </div>
-                      
-                      {/* Quick preset selector for existing artwork */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '500' }}>
-                          Or pick existing poster:
-                        </span>
-                        <select
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val && defaultEventImages[val]) {
-                              setEventImage(defaultEventImages[val]);
-                              setEventImagePreview(defaultEventImages[val]);
-                            }
-                          }}
-                          defaultValue=""
-                          style={{
-                            ...S.select,
-                            padding: '0.35rem 0.65rem',
-                            fontSize: '0.8rem',
-                            width: 'auto',
-                            maxWidth: '240px'
-                          }}
-                        >
-                          <option value="" disabled>Choose existing artwork...</option>
-                          {EXISTING_POSTER_PRESETS.map((p) => (
-                            <option key={p.id} value={p.id}>{p.label}</option>
-                          ))}
-                        </select>
-                      </div>
+                          {eventImagePreview && (
+                            <button 
+                              type="button" 
+                              onClick={() => { setEventImage(''); setEventImagePreview(''); }}
+                              style={{
+                                padding: '0.55rem 0.85rem',
+                                background: isDark ? '#1f2937' : '#f8fafc',
+                                border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+                                color: isDark ? '#9ca3af' : '#64748b',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Reset to Default
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Quick preset selector for existing artwork */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '500' }}>
+                            Or pick existing poster:
+                          </span>
+                          <select
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val && defaultEventImages[val]) {
+                                setEventImage(defaultEventImages[val]);
+                                setEventImagePreview(defaultEventImages[val]);
+                              }
+                            }}
+                            defaultValue=""
+                            style={{
+                              ...S.select,
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.8rem',
+                              width: 'auto',
+                              maxWidth: '240px'
+                            }}
+                          >
+                            <option value="" disabled>Choose existing artwork...</option>
+                            {EXISTING_POSTER_PRESETS.map((p) => (
+                              <option key={p.id} value={p.id}>{p.label}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <span style={S.inputHelper}>Upload new artwork (PNG, JPG, WEBP max 5MB) or select from existing event posters.</span>
-                    </div>
+                        <span style={S.inputHelper}>Upload new artwork (PNG, JPG, WEBP max 5MB) or select from existing event posters.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -4053,7 +4170,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       style={S.input}
                       placeholder="e.g. PPT PRESENTATION"
                       required 
-                      autoFocus
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
+                      autoFocus={!isLeadCoordinator}
                     />
                   </div>
 
@@ -4063,6 +4182,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       value={eventCategory} 
                       onChange={(e) => setEventCategory(e.target.value)}
                       style={S.select}
+                      disabled={isLeadCoordinator}
                       required
                     >
                       <option value="technical">Technical</option>
@@ -4080,6 +4200,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setEventSubtitle(e.target.value)}
                       style={S.input}
                       placeholder="e.g. PowerPoint & Idea Pitch Deck"
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
 
@@ -4091,6 +4213,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setEventTag(e.target.value)}
                       style={S.input}
                       placeholder="e.g. Technical Presentation"
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4104,6 +4228,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setEventVenue(e.target.value)}
                       style={S.input}
                       placeholder="e.g. CSE Seminar Hall / Drawing Hall"
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                       required 
                     />
                   </div>
@@ -4116,6 +4242,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setEventTiming(e.target.value)}
                       style={S.input}
                       placeholder="e.g. 10:00 AM – 01:00 PM"
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                       required 
                     />
                   </div>
@@ -4130,6 +4258,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setEventFee(e.target.value)}
                       style={S.input}
                       placeholder="e.g. ₹100 per head"
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                       required 
                     />
                   </div>
@@ -4142,6 +4272,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setEventTeamSize(e.target.value)}
                       style={S.input}
                       placeholder="e.g. Max of 3 members"
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4154,6 +4286,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     style={{ ...S.input, resize: 'vertical' }}
                     rows={3}
                     placeholder="Brief description of the event, objective, and format..."
+                    disabled={isLeadCoordinator}
+                    readOnly={isLeadCoordinator}
                   />
                 </div>
 
@@ -4185,59 +4319,63 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (rulesInputMode === 'list') {
-                            setBulkRulesText(eventRules.filter(r => r.trim()).join('\n'));
-                            setRulesInputMode('bulk');
-                          } else {
-                            const parsed = parseBulkRules(bulkRulesText);
-                            setEventRules(parsed.length > 0 ? parsed : ['']);
-                            setRulesInputMode('list');
-                          }
-                        }}
-                        style={{
-                          padding: '0.35rem 0.65rem',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          borderRadius: '6px',
-                          background: isDark ? '#374151' : '#f1f5f9',
-                          color: isDark ? '#e5e7eb' : '#475569',
-                          border: isDark ? '1px solid #4b5563' : '1px solid #cbd5e1',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {rulesInputMode === 'list' ? 'Switch to Bulk Paste' : 'Switch to List View'}
-                      </button>
-
-                      {rulesInputMode === 'list' && (
+                    {!isLeadCoordinator && (
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button
                           type="button"
-                          onClick={handleAddRule}
+                          onClick={() => {
+                            if (rulesInputMode === 'list') {
+                              setBulkRulesText(eventRules.filter(r => r.trim()).join('\n'));
+                              setRulesInputMode('bulk');
+                            } else {
+                              const parsed = parseBulkRules(bulkRulesText);
+                              setEventRules(parsed.length > 0 ? parsed : ['']);
+                              setRulesInputMode('list');
+                            }
+                          }}
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '0.35rem 0.75rem',
+                            padding: '0.35rem 0.65rem',
                             fontSize: '0.75rem',
                             fontWeight: '600',
                             borderRadius: '6px',
-                            background: isDark ? '#1e40af' : '#2563eb',
-                            color: '#ffffff',
-                            border: 'none',
+                            background: isDark ? '#374151' : '#f1f5f9',
+                            color: isDark ? '#e5e7eb' : '#475569',
+                            border: isDark ? '1px solid #4b5563' : '1px solid #cbd5e1',
                             cursor: 'pointer'
                           }}
                         >
-                          <FaPlus size={10} /> Add Rule
+                          {rulesInputMode === 'list' ? 'Switch to Bulk Paste' : 'Switch to List View'}
                         </button>
-                      )}
-                    </div>
+
+                        {rulesInputMode === 'list' && (
+                          <button
+                            type="button"
+                            onClick={handleAddRule}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '0.35rem 0.75rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              borderRadius: '6px',
+                              background: isDark ? '#1e40af' : '#2563eb',
+                              color: '#ffffff',
+                              border: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <FaPlus size={10} /> Add Rule
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <p style={{ ...S.inputHelper, marginBottom: '0.75rem' }}>
-                    Rules will appear dynamically with numbered badges on the public event rules page.
+                    {isLeadCoordinator 
+                      ? 'Rules configured for this event shown below:' 
+                      : 'Rules will appear dynamically with numbered badges on the public event rules page.'}
                   </p>
 
                   {rulesInputMode === 'list' ? (
@@ -4263,88 +4401,94 @@ export default function AdminDashboard({ token, user, onLogout }) {
                             type="text"
                             value={rule}
                             onChange={(e) => handleRuleChange(idx, e.target.value)}
-                            placeholder={`Rule #${idx + 1} (e.g. Teams must present PPT in PowerPoint or PDF format)`}
+                            placeholder={`Rule #${idx + 1}`}
+                            disabled={isLeadCoordinator}
+                            readOnly={isLeadCoordinator}
                             style={{ ...S.input, flex: 1, padding: '0.45rem 0.75rem', fontSize: '0.85rem' }}
                           />
-                          <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveRule(idx, 'up')}
-                              disabled={idx === 0}
-                              style={{
-                                padding: '4px 6px',
-                                background: 'transparent',
-                                border: 'none',
-                                color: idx === 0 ? '#6b7280' : (isDark ? '#9ca3af' : '#64748b'),
-                                cursor: idx === 0 ? 'default' : 'pointer',
-                                opacity: idx === 0 ? 0.3 : 1
-                              }}
-                              title="Move rule up"
-                            >
-                              ▲
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveRule(idx, 'down')}
-                              disabled={idx === eventRules.length - 1}
-                              style={{
-                                padding: '4px 6px',
-                                background: 'transparent',
-                                border: 'none',
-                                color: idx === eventRules.length - 1 ? '#6b7280' : (isDark ? '#9ca3af' : '#64748b'),
-                                cursor: idx === eventRules.length - 1 ? 'default' : 'pointer',
-                                opacity: idx === eventRules.length - 1 ? 0.3 : 1
-                              }}
-                              title="Move rule down"
-                            >
-                              ▼
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveRule(idx)}
-                              style={{
-                                padding: '4px 6px',
-                                background: isDark ? '#451a1a' : '#fee2e2',
-                                border: isDark ? '1px solid #7f1d1d' : '1px solid #fecaca',
-                                color: '#ef4444',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                              }}
-                              title="Delete rule"
-                            >
-                              <FaTrash size={11} />
-                            </button>
-                          </div>
+                          {!isLeadCoordinator && (
+                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveRule(idx, 'up')}
+                                disabled={idx === 0}
+                                style={{
+                                  padding: '4px 6px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: idx === 0 ? '#6b7280' : (isDark ? '#9ca3af' : '#64748b'),
+                                  cursor: idx === 0 ? 'default' : 'pointer',
+                                  opacity: idx === 0 ? 0.3 : 1
+                                }}
+                                title="Move rule up"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveRule(idx, 'down')}
+                                disabled={idx === eventRules.length - 1}
+                                style={{
+                                  padding: '4px 6px',
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: idx === eventRules.length - 1 ? '#6b7280' : (isDark ? '#9ca3af' : '#64748b'),
+                                  cursor: idx === eventRules.length - 1 ? 'default' : 'pointer',
+                                  opacity: idx === eventRules.length - 1 ? 0.3 : 1
+                                }}
+                                title="Move rule down"
+                              >
+                                ▼
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveRule(idx)}
+                                style={{
+                                  padding: '4px 6px',
+                                  background: isDark ? '#451a1a' : '#fee2e2',
+                                  border: isDark ? '1px solid #7f1d1d' : '1px solid #fecaca',
+                                  color: '#ef4444',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                                title="Delete rule"
+                              >
+                                <FaTrash size={11} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
 
                       {eventRules.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '1rem', color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.85rem' }}>
-                          No rules added yet. Click <strong>+ Add Rule</strong> or <strong>Switch to Bulk Paste</strong> to add rules.
+                          No rules listed for this event.
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={handleAddRule}
-                        style={{
-                          marginTop: '4px',
-                          alignSelf: 'flex-start',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '0.45rem 0.85rem',
-                          borderRadius: '6px',
-                          background: isDark ? '#1f2937' : '#f8fafc',
-                          border: isDark ? '1px dashed #4b5563' : '1px dashed #cbd5e1',
-                          color: isDark ? '#60a5fa' : '#2563eb',
-                          fontSize: '0.82rem',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <FaPlus size={10} /> Add Another Rule
-                      </button>
+                      {!isLeadCoordinator && (
+                        <button
+                          type="button"
+                          onClick={handleAddRule}
+                          style={{
+                            marginTop: '4px',
+                            alignSelf: 'flex-start',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '0.45rem 0.85rem',
+                            borderRadius: '6px',
+                            background: isDark ? '#1f2937' : '#f8fafc',
+                            border: isDark ? '1px dashed #4b5563' : '1px dashed #cbd5e1',
+                            color: isDark ? '#60a5fa' : '#2563eb',
+                            fontSize: '0.82rem',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <FaPlus size={10} /> Add Another Rule
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div>
@@ -4352,7 +4496,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         value={bulkRulesText}
                         onChange={(e) => setBulkRulesText(e.target.value)}
                         rows={6}
-                        placeholder="Paste or type one rule per line:&#10;1. Presentation must be prepared in PowerPoint or PDF format.&#10;2. Maximum of 7 slides per team.&#10;3. 5 minutes presentation and 2 minutes for Q&A."
+                        placeholder="Paste or type one rule per line..."
                         style={{
                           ...S.input,
                           width: '100%',
@@ -4392,13 +4536,21 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 </div>
               </div>
 
-              <div style={S.modalFooter}>
-                <button type="button" onClick={resetEventEditModal} style={S.cancelBtn}>
-                  Cancel
-                </button>
-                <button type="submit" style={S.primaryBtn}>
-                  {editingEvent ? 'Save Event Changes' : 'Create Event'}
-                </button>
+              <div style={isLeadCoordinator ? { ...S.modalFooter, justifyContent: 'flex-end' } : S.modalFooter}>
+                {isLeadCoordinator ? (
+                  <button type="button" onClick={resetEventEditModal} style={S.primaryBtn}>
+                    Close
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" onClick={resetEventEditModal} style={S.cancelBtn}>
+                      Cancel
+                    </button>
+                    <button type="submit" style={S.primaryBtn}>
+                      {editingEvent ? 'Save Event Changes' : 'Create Event'}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -4519,7 +4671,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: SPONSOR CREATE / EDIT                             */}
+      {/* MODAL: SPONSOR CREATE / EDIT / VIEW                      */}
       {/* ======================================================== */}
       {isSponsorFormVisible && (
         <div style={S.modalBackdrop} onClick={resetSponsorForm}>
@@ -4530,14 +4682,22 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <FaHandshake size={20} />
                 </div>
                 <div>
-                  <h3 style={S.modalTitle}>{editingSponsorId ? 'Edit Sponsor' : 'Add New Sponsor'}</h3>
-                  <p style={S.modalSubtitle}>Configure branding, category, contact info, and website link</p>
+                  <h3 style={S.modalTitle}>
+                    {isLeadCoordinator 
+                      ? `Sponsor Details: ${sponsorName || 'Sponsor'}` 
+                      : (editingSponsorId ? 'Edit Sponsor' : 'Add New Sponsor')}
+                  </h3>
+                  <p style={S.modalSubtitle}>
+                    {isLeadCoordinator 
+                      ? 'View sponsor branding, category, contact information, and public status' 
+                      : 'Configure branding, category, contact info, and website link'}
+                  </p>
                 </div>
               </div>
               <button onClick={resetSponsorForm} style={S.modalCloseBtn}>✕</button>
             </div>
             
-            <form onSubmit={handleSubmitSponsor} style={S.modalForm}>
+            <form onSubmit={isLeadCoordinator ? (e) => { e.preventDefault(); resetSponsorForm(); } : handleSubmitSponsor} style={S.modalForm}>
               <div style={S.modalFormBody}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={S.modalInputGroup}>
@@ -4548,6 +4708,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setSponsorName(e.target.value)} 
                       placeholder="e.g. APEX DYNAMICS"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                       required
                     />
                   </div>
@@ -4560,6 +4722,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCompanyName(e.target.value)} 
                       placeholder="e.g. Apex Dynamics Pvt Ltd"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4593,47 +4757,56 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         onChange={handleLogoFileSelect} 
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"
                         style={{ display: 'none' }}
+                        disabled={isLeadCoordinator}
                       />
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          type="button" 
-                          onClick={() => fileInputRef.current?.click()}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '0.5rem 0.9rem',
-                            background: isDark ? '#1e3a8a' : '#eff6ff',
-                            border: isDark ? '1px solid #1e40af' : '1px solid #bfdbfe',
-                            color: isDark ? '#93c5fd' : '#2563eb',
-                            borderRadius: '8px',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
-                          disabled={isUploadingLogo}
-                        >
-                          <FaUpload size={12} /> {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                        </button>
-                        {logoPreview && (
+                      {!isLeadCoordinator ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
                           <button 
                             type="button" 
-                            onClick={() => { setSponsorLogo(''); setLogoPreview(''); }}
+                            onClick={() => fileInputRef.current?.click()}
                             style={{
-                              padding: '0.5rem 0.8rem',
-                              background: isDark ? '#1f2937' : '#f8fafc',
-                              border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
-                              color: isDark ? '#9ca3af' : '#64748b',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '0.5rem 0.9rem',
+                              background: isDark ? '#1e3a8a' : '#eff6ff',
+                              border: isDark ? '1px solid #1e40af' : '1px solid #bfdbfe',
+                              color: isDark ? '#93c5fd' : '#2563eb',
                               borderRadius: '8px',
                               fontSize: '0.85rem',
+                              fontWeight: '600',
                               cursor: 'pointer'
                             }}
+                            disabled={isUploadingLogo}
                           >
-                            Remove
+                            <FaUpload size={12} /> {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
                           </button>
-                        )}
-                      </div>
-                      <span style={S.inputHelper}>Supported formats: PNG, JPG, WEBP, SVG (Max 5MB)</span>
+                          {logoPreview && (
+                            <button 
+                              type="button" 
+                              onClick={() => { setSponsorLogo(''); setLogoPreview(''); }}
+                              style={{
+                                padding: '0.5rem 0.8rem',
+                                background: isDark ? '#1f2937' : '#f8fafc',
+                                border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+                                color: isDark ? '#9ca3af' : '#64748b',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                          {logoPreview ? 'Sponsor brand logo is on file' : 'No logo uploaded for this sponsor'}
+                        </span>
+                      )}
+                      {!isLeadCoordinator && (
+                        <span style={S.inputHelper}>Supported formats: PNG, JPG, WEBP, SVG (Max 5MB)</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -4645,6 +4818,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       value={sponsorCategory} 
                       onChange={(e) => setSponsorCategory(e.target.value)}
                       style={S.select}
+                      disabled={isLeadCoordinator}
                       required
                     >
                       <option value="Elite">Elite</option>
@@ -4662,6 +4836,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setSponsorDisplayOrder(e.target.value)} 
                       placeholder="1"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4675,6 +4851,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setSponsorWebsite(e.target.value)} 
                       placeholder="https://example.com/partner"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                   <div>
@@ -4685,6 +4863,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setSponsorLocationUrl(e.target.value)} 
                       placeholder="https://maps.google.com/?q=..."
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4697,6 +4877,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     placeholder="Short description displayed on the flip card on the public website..."
                     rows={3}
                     style={{ ...S.input, resize: 'vertical' }}
+                    disabled={isLeadCoordinator}
+                    readOnly={isLeadCoordinator}
                   />
                 </div>
 
@@ -4714,6 +4896,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         onChange={(e) => setSponsorContactName(e.target.value)} 
                         placeholder="e.g. John Doe"
                         style={{ ...S.input, marginTop: '2px' }}
+                        disabled={isLeadCoordinator}
+                        readOnly={isLeadCoordinator}
                       />
                     </div>
                     <div>
@@ -4724,6 +4908,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         onChange={(e) => setSponsorContactPhone(e.target.value)} 
                         placeholder="e.g. 9876543210"
                         style={{ ...S.input, marginTop: '2px' }}
+                        disabled={isLeadCoordinator}
+                        readOnly={isLeadCoordinator}
                       />
                     </div>
                   </div>
@@ -4735,6 +4921,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setSponsorContactEmail(e.target.value)} 
                       placeholder="e.g. partner@company.com"
                       style={{ ...S.input, marginTop: '2px' }}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4745,19 +4933,28 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     id="sponsorActive"
                     checked={sponsorIsActive} 
                     onChange={(e) => setSponsorIsActive(e.target.checked)}
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    style={{ width: '18px', height: '18px', cursor: isLeadCoordinator ? 'default' : 'pointer' }}
+                    disabled={isLeadCoordinator}
                   />
-                  <label htmlFor="sponsorActive" style={{ fontSize: '0.9rem', fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', cursor: 'pointer' }}>
+                  <label htmlFor="sponsorActive" style={{ fontSize: '0.9rem', fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', cursor: isLeadCoordinator ? 'default' : 'pointer' }}>
                     Active Sponsor (Visible publicly on website marquee)
                   </label>
                 </div>
               </div>
 
-              <div style={S.modalFooter}>
-                <button type="button" onClick={resetSponsorForm} style={S.cancelBtn}>Cancel</button>
-                <button type="submit" style={S.primaryBtn}>
-                  {editingSponsorId ? 'Save Changes' : 'Create Sponsor'}
-                </button>
+              <div style={isLeadCoordinator ? { ...S.modalFooter, justifyContent: 'flex-end' } : S.modalFooter}>
+                {isLeadCoordinator ? (
+                  <button type="button" onClick={resetSponsorForm} style={S.primaryBtn}>
+                    Close
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" onClick={resetSponsorForm} style={S.cancelBtn}>Cancel</button>
+                    <button type="submit" style={S.primaryBtn}>
+                      {editingSponsorId ? 'Save Changes' : 'Create Sponsor'}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -4765,7 +4962,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       )}
 
       {/* ======================================================== */}
-      {/* MODAL: COORDINATOR CREATE / EDIT                         */}
+      {/* MODAL: COORDINATOR CREATE / EDIT / VIEW                  */}
       {/* ======================================================== */}
       {isCoordFormVisible && (
         <div style={S.modalBackdrop} onClick={resetCoordForm}>
@@ -4776,14 +4973,22 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <FaUserTie size={20} />
                 </div>
                 <div>
-                  <h3 style={S.modalTitle}>{editingCoordId ? 'Edit Student Coordinator' : 'Add Student Coordinator'}</h3>
-                  <p style={S.modalSubtitle}>Assign lead student coordinators to one or multiple symposium events</p>
+                  <h3 style={S.modalTitle}>
+                    {isLeadCoordinator 
+                      ? `Coordinator Details: ${coordName || 'Student Coordinator'}` 
+                      : (editingCoordId ? 'Edit Student Coordinator' : 'Add Student Coordinator')}
+                  </h3>
+                  <p style={S.modalSubtitle}>
+                    {isLeadCoordinator 
+                      ? 'View student coordinator assignment, contact info, and role' 
+                      : 'Assign lead student coordinators to one or multiple symposium events'}
+                  </p>
                 </div>
               </div>
               <button onClick={resetCoordForm} style={S.modalCloseBtn}>✕</button>
             </div>
             
-            <form onSubmit={handleSubmitCoord} style={S.modalForm}>
+            <form onSubmit={isLeadCoordinator ? (e) => { e.preventDefault(); resetCoordForm(); } : handleSubmitCoord} style={S.modalForm}>
               <div style={S.modalFormBody}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div style={S.modalInputGroup}>
@@ -4794,6 +4999,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCoordName(e.target.value)} 
                       placeholder="e.g. Mohammed Nabeel"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                       required
                     />
                   </div>
@@ -4806,6 +5013,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCoordPhone(e.target.value)} 
                       placeholder="e.g. 9994023366"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                       required
                     />
                   </div>
@@ -4820,6 +5029,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCoordWhatsapp(e.target.value)} 
                       placeholder="e.g. 9994023366"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
 
@@ -4831,6 +5042,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCoordEmail(e.target.value)} 
                       placeholder="e.g. nabeel@cahcet.edu.in"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
                 </div>
@@ -4844,6 +5057,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCoordDept(e.target.value)} 
                       placeholder="CSE / IT / ECE"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
 
@@ -4853,6 +5068,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       value={coordYear} 
                       onChange={(e) => setCoordYear(e.target.value)}
                       style={S.select}
+                      disabled={isLeadCoordinator}
                     >
                       <option value="1st Year">1st Year</option>
                       <option value="2nd Year">2nd Year</option>
@@ -4867,6 +5083,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       value={coordRole} 
                       onChange={(e) => setCoordRole(e.target.value)}
                       style={S.select}
+                      disabled={isLeadCoordinator}
                       required
                     >
                       <option value="Lead Coordinator">Lead Coordinator</option>
@@ -4879,7 +5096,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={S.modalInputGroup}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <label style={S.label}>Assigned Events * ({coordEvents.length} selected)</label>
-                    <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b' }}>Select one or more events</span>
+                    <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                      {isLeadCoordinator ? 'Events assigned to this coordinator' : 'Select one or more events'}
+                    </span>
                   </div>
 
                   <div style={{ 
@@ -4911,7 +5130,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               borderRadius: '6px',
                               background: isChecked ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#111827' : '#ffffff'),
                               border: isChecked ? (isDark ? '1px solid #2563eb' : '1px solid #bfdbfe') : (isDark ? '1px solid #374151' : '1px solid #e2e8f0'),
-                              cursor: 'pointer',
+                              cursor: isLeadCoordinator ? 'default' : 'pointer',
                               fontSize: '0.82rem',
                               fontWeight: isChecked ? '700' : '500',
                               color: isChecked ? (isDark ? '#bfdbfe' : '#1e40af') : (isDark ? '#e5e7eb' : '#334155')
@@ -4921,7 +5140,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               type="checkbox" 
                               checked={isChecked} 
                               onChange={() => toggleEventSelection(ev.id)}
-                              style={{ cursor: 'pointer' }}
+                              style={{ cursor: isLeadCoordinator ? 'default' : 'pointer' }}
+                              disabled={isLeadCoordinator}
                             />
                             <span>{ev.name}</span>
                           </label>
@@ -4947,7 +5167,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               borderRadius: '6px',
                               background: isChecked ? (isDark ? '#831843' : '#fdf2f8') : (isDark ? '#111827' : '#ffffff'),
                               border: isChecked ? (isDark ? '1px solid #db2777' : '1px solid #fbcfe8') : (isDark ? '1px solid #374151' : '1px solid #e2e8f0'),
-                              cursor: 'pointer',
+                              cursor: isLeadCoordinator ? 'default' : 'pointer',
                               fontSize: '0.82rem',
                               fontWeight: isChecked ? '700' : '500',
                               color: isChecked ? (isDark ? '#fbcfe8' : '#be185d') : (isDark ? '#e5e7eb' : '#334155')
@@ -4957,7 +5177,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               type="checkbox" 
                               checked={isChecked} 
                               onChange={() => toggleEventSelection(ev.id)}
-                              style={{ cursor: 'pointer' }}
+                              style={{ cursor: isLeadCoordinator ? 'default' : 'pointer' }}
+                              disabled={isLeadCoordinator}
                             />
                             <span>{ev.name}</span>
                           </label>
@@ -4977,6 +5198,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       onChange={(e) => setCoordDisplayOrder(e.target.value)} 
                       placeholder="1"
                       style={S.input}
+                      disabled={isLeadCoordinator}
+                      readOnly={isLeadCoordinator}
                     />
                   </div>
 
@@ -4986,20 +5209,29 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       id="coordActive"
                       checked={coordIsActive} 
                       onChange={(e) => setCoordIsActive(e.target.checked)}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      style={{ width: '18px', height: '18px', cursor: isLeadCoordinator ? 'default' : 'pointer' }}
+                      disabled={isLeadCoordinator}
                     />
-                    <label htmlFor="coordActive" style={{ fontSize: '0.9rem', fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', cursor: 'pointer' }}>
+                    <label htmlFor="coordActive" style={{ fontSize: '0.9rem', fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', cursor: isLeadCoordinator ? 'default' : 'pointer' }}>
                       Active Status
                     </label>
                   </div>
                 </div>
               </div>
 
-              <div style={S.modalFooter}>
-                <button type="button" onClick={resetCoordForm} style={S.cancelBtn}>Cancel</button>
-                <button type="submit" style={S.primaryBtn}>
-                  {editingCoordId ? 'Save Changes' : 'Add Coordinator'}
-                </button>
+              <div style={isLeadCoordinator ? { ...S.modalFooter, justifyContent: 'flex-end' } : S.modalFooter}>
+                {isLeadCoordinator ? (
+                  <button type="button" onClick={resetCoordForm} style={S.primaryBtn}>
+                    Close
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" onClick={resetCoordForm} style={S.cancelBtn}>Cancel</button>
+                    <button type="submit" style={S.primaryBtn}>
+                      {editingCoordId ? 'Save Changes' : 'Add Coordinator'}
+                    </button>
+                  </>
+                )}
               </div>
             </form>
           </div>
@@ -5209,15 +5441,17 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <FaPrint size={12} />
                   <span>Print Ticket</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteRegistration(selectedRegDetails)}
-                  disabled={isDeletingRegId === (selectedRegDetails.id || selectedRegDetails.registrationId || selectedRegDetails.ticket_code)}
-                  style={S.actionBtnDelete}
-                >
-                  <FaTrash size={12} style={{ marginRight: '4px' }} />
-                  <span>Delete</span>
-                </button>
+                {!isLeadCoordinator && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRegistration(selectedRegDetails)}
+                    disabled={isDeletingRegId === (selectedRegDetails.id || selectedRegDetails.registrationId || selectedRegDetails.ticket_code)}
+                    style={S.actionBtnDelete}
+                  >
+                    <FaTrash size={12} style={{ marginRight: '4px' }} />
+                    <span>Delete</span>
+                  </button>
+                )}
               </div>
               <button 
                 type="button" 

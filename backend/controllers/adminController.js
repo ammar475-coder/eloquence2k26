@@ -9,12 +9,7 @@ const eventsFilePath = path.join(__dirname, '../data/events.json');
 const sponsorsFilePath = path.join(__dirname, '../data/sponsors.json');
 const coordinatorsFilePath = path.join(__dirname, '../data/coordinators.json');
 const registrationsFilePath = path.join(__dirname, '../data/registrations.json');
-const uploadsDir = path.join(__dirname, '../uploads');
 
-// Ensure directories exist
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 // ==================== DATA MAPPER HELPERS ====================
 const dbToSponsor = (s) => {
@@ -290,6 +285,17 @@ exports.verifyToken = (req, res, next) => {
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
+};
+
+exports.requireWriteAccess = (req, res, next) => {
+  const role = String(req.user?.role || '').toLowerCase();
+  if (role.includes('lead') || role === 'lead coordinator' || role === 'lead_coordinator') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied: Lead Coordinator accounts have read-only view access. Add, edit, and delete actions are not allowed.'
+    });
+  }
+  next();
 };
 
 // ==================== DASHBOARD STATS ====================
@@ -691,6 +697,7 @@ exports.createEvent = async (req, res) => {
     venue: venue ? venue.trim() : 'CSE Department',
     timing: timing ? timing.trim() : '10:00 AM – 01:00 PM',
     description: description ? description.trim() : '',
+    image: image ? image.trim() : '',
     rules: Array.isArray(rules) && rules.length > 0 ? rules : [],
     rounds: Array.isArray(rounds) && rounds.length > 0 ? rounds : [],
     guidelines: Array.isArray(guidelines) && guidelines.length > 0 ? guidelines : [],
@@ -723,7 +730,7 @@ exports.createEvent = async (req, res) => {
       highlights: newEvent.highlights,
       updated_at: new Date().toISOString()
     };
-    const { error: dbErr } = await supabase.from('events').insert([dbPayload]);
+    const { error: dbErr } = await supabase.from('events').upsert([dbPayload], { onConflict: 'id' });
     if (dbErr) console.error('Supabase createEvent error:', dbErr.message);
   } catch (e) {
     console.error('Supabase createEvent exception:', e.message);
@@ -1049,7 +1056,7 @@ exports.deleteSponsor = async (req, res) => {
   res.json({ success: true, message: 'Sponsor deleted successfully from live database' });
 };
 
-// ==================== LOGO / EVENT IMAGE UPLOAD (SUPABASE ONLY) ====================
+// ==================== LOGO / EVENT IMAGE UPLOAD (DATABASE STORAGE ONLY) ====================
 exports.uploadLogo = async (req, res) => {
   try {
     const { imageBase64, fileName } = req.body;
@@ -1067,9 +1074,6 @@ exports.uploadLogo = async (req, res) => {
     }
 
     const mimeType = matches[1].toLowerCase();
-    const base64Data = matches[2];
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-
     const allowedMime = {
       'image/jpeg': 'jpg',
       'image/jpg': 'jpg',
@@ -1083,41 +1087,9 @@ exports.uploadLogo = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Unsupported file type. Use PNG, JPG, WEBP, or SVG.' });
     }
 
-    const ext = allowedMime[mimeType];
-    const safeName = `img-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
+    const safeName = fileName || `img-${Date.now()}.${allowedMime[mimeType]}`;
 
-    // 1. Try uploading to Supabase Storage bucket 'uploads'
-    try {
-      const { data: uploadData, error: uploadErr } = await supabase
-        .storage
-        .from('uploads')
-        .upload(safeName, imageBuffer, {
-          contentType: mimeType,
-          upsert: true
-        });
-
-      if (!uploadErr && uploadData) {
-        const { data: publicUrlData } = supabase
-          .storage
-          .from('uploads')
-          .getPublicUrl(safeName);
-
-        if (publicUrlData && publicUrlData.publicUrl) {
-          return res.json({
-            success: true,
-            message: 'Image uploaded to Supabase storage',
-            url: publicUrlData.publicUrl,
-            fileName: safeName
-          });
-        }
-      } else {
-        console.warn('Supabase storage upload fallback:', uploadErr ? uploadErr.message : 'No upload data');
-      }
-    } catch (storageErr) {
-      console.warn('Supabase storage exception fallback:', storageErr.message);
-    }
-
-    // 2. Fallback: Store Base64 Data URL directly in Database (Zero local disk file writing!)
+    // Store Base64 Data URL directly in Database (Zero local disk or file bucket storage!)
     return res.json({
       success: true,
       message: 'Image stored directly in database',
@@ -1364,3 +1336,78 @@ exports.deleteRegistration = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to delete registration' });
   }
 };
+
+// ==================== PARTICIPANT VERIFICATION ====================
+exports.verifyRegistration = async (req, res) => {
+  const { id } = req.params;
+  const { isVerified = true } = req.body;
+  const verifiedBy = req.user?.username || req.user?.role || 'Coordinator';
+  const verifiedAt = isVerified ? new Date().toISOString() : null;
+
+  try {
+    // 1. Update in Supabase if present
+    try {
+      await supabase
+        .from('registrations')
+        .update({
+          is_verified: Boolean(isVerified),
+          verified_at: verifiedAt,
+          verified_by: isVerified ? verifiedBy : null
+        })
+        .or(`id.eq.${id},ticket_code.eq.${id}`);
+    } catch (e) {
+      console.warn('Supabase verifyRegistration fallback:', e.message);
+    }
+
+    // 2. Update in local file
+    let registrations = getRegistrationsData();
+    let updatedRecord = null;
+    registrations = registrations.map(r => {
+      const match = (
+        r.id === id || 
+        r.registrationId === id || 
+        r.ticket_code === id ||
+        r.ticketCode === id
+      );
+      if (match) {
+        updatedRecord = {
+          ...r,
+          is_verified: Boolean(isVerified),
+          isVerified: Boolean(isVerified),
+          verified_at: verifiedAt,
+          verifiedAt: verifiedAt,
+          verified_by: isVerified ? verifiedBy : null,
+          verifiedBy: isVerified ? verifiedBy : null
+        };
+        return updatedRecord;
+      }
+      return r;
+    });
+
+    if (updatedRecord) {
+      saveRegistrationsData(registrations);
+      return res.json({
+        success: true,
+        message: isVerified ? 'Participant verified and confirmed successfully!' : 'Participant verification reset',
+        data: updatedRecord
+      });
+    }
+
+    // Fallback if record was in Supabase
+    return res.json({
+      success: true,
+      message: isVerified ? 'Participant verified and confirmed successfully!' : 'Participant verification reset',
+      data: {
+        id,
+        is_verified: Boolean(isVerified),
+        isVerified: Boolean(isVerified),
+        verified_at: verifiedAt,
+        verified_by: isVerified ? verifiedBy : null
+      }
+    });
+  } catch (err) {
+    console.error('Error in verifyRegistration:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update verification status' });
+  }
+};
+

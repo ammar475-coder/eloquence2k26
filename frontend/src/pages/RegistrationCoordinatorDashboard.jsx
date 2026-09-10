@@ -19,10 +19,13 @@ import {
   FaThLarge,
   FaTable,
   FaTimes,
-  FaBars
+  FaBars,
+  FaQrcode
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getApiUrl } from '../config/api';
+import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
+
 
 export default function RegistrationCoordinatorDashboard({ token, user, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -386,6 +389,129 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     return name.includes(q) || teamName.includes(q) || ticket.includes(q) || phone.includes(q) || college.includes(q) || members.includes(q);
   });
 
+  // Print Registration Ticket / Receipt
+  const handlePrintTicket = (reg) => {
+    if (!reg) return;
+    const isOnline = isOnlineRecord(reg);
+    const members = getTeamMembers(reg);
+    const win = window.open('', '_blank');
+    if (!win) return toast.error('Please allow popups to print ticket');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Eloquence 2026 - Ticket #${reg.ticket_code || reg.registrationId || reg.id}</title>
+        <style>
+          * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+          body { padding: 40px; background: #f8fafc; color: #0f172a; margin: 0; }
+          .ticket-card { max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 2px solid #059669; box-shadow: 0 10px 25px rgba(0,0,0,0.08); overflow: hidden; }
+          .header { background: #059669; color: #ffffff; padding: 24px 30px; display: flex; justify-content: space-between; align-items: center; }
+          .header h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+          .header p { margin: 4px 0 0 0; opacity: 0.9; font-size: 13px; }
+          .badge-mode { padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 12px; text-transform: uppercase; background: ${isOnline ? '#eff6ff' : '#ecfdf5'}; color: ${isOnline ? '#1d4ed8' : '#047857'}; }
+          .body { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+          .ticket-code { background: #f1f5f9; padding: 12px 18px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+          .code-val { font-size: 18px; font-weight: 800; color: #059669; letter-spacing: 0.5px; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          .info-box { background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+          .label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+          .val { font-size: 14px; font-weight: 600; color: #0f172a; }
+          .footer { padding: 16px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
+          @media print {
+            body { padding: 0; background: #ffffff; }
+            .ticket-card { box-shadow: none; border-color: #000; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ticket-card">
+          <div class="header">
+            <div>
+              <h1>ELOQUENCE 2026</h1>
+              <p>National Level Technical Symposium • C. Abdul Hakeem College of Engg & Tech</p>
+            </div>
+            <span class="badge-mode">${isOnline ? 'Online Registration' : 'Offline Desk Entry'}</span>
+          </div>
+          <div class="body">
+            <div class="ticket-code">
+              <div>
+                <div class="label">Ticket Reference / Code</div>
+                <div class="code-val">#${reg.ticket_code || reg.registrationId || reg.id}</div>
+                <div style="margin-top: 4px;">
+                  <span class="label">Status: </span>
+                  <span style="color: #10b981; font-weight: 700; font-size: 13px;">${reg.is_verified || reg.isVerified ? 'VERIFIED & ADMITTED' : 'CONFIRMED'}</span>
+                </div>
+              </div>
+              <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                <img 
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(reg.ticket_code || reg.registrationId || reg.id)}" 
+                  alt="QR Code" 
+                  style="width: 75px; height: 75px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; padding: 3px;"
+                />
+                <span style="font-size: 10px; color: #64748b; font-weight: 600;">Scan at Entry</span>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="info-box">
+                <div class="label">Participant Name</div>
+                <div class="val">${reg.full_name || reg.fullName}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Contact Phone</div>
+                <div class="val">${reg.phone || 'N/A'}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">College Name</div>
+                <div class="val">${reg.college || 'N/A'}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Department & Year</div>
+                <div class="val">${reg.department || ''} • ${reg.year || ''}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Event Enrolled</div>
+                <div class="val" style="color: #059669;">${getEventName(reg)}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Category</div>
+                <div class="val" style="text-transform: capitalize;">${getEventCategory(reg)} Event</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Total Fee Paid</div>
+                <div class="val" style="color: #10b981; font-size: 16px;">₹${getFee(reg)}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Payment Mode</div>
+                <div class="val">${isOnline ? 'Online Web Portal' : 'On-Site Registration Desk'}</div>
+              </div>
+            </div>
+
+            ${members.length > 0 ? `
+              <div class="info-box" style="margin-top: 4px;">
+                <div class="label">Team Details: ${reg.team_name || reg.teamName || 'Team'} (${members.length + 1} Members)</div>
+                <div class="val" style="font-size: 13px; line-height: 1.6;">
+                  1. ${reg.full_name || reg.fullName} (Lead)<br/>
+                  ${members.map((m, idx) => `${idx + 2}. ${m}`).join('<br/>')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+          <div class="footer">
+            Present this ticket at the registration desk on event day. Validated by Registration Coordinator Desk.
+          </div>
+        </div>
+        <script>
+          window.onload = () => { window.print(); };
+        </script>
+      </body>
+      </html>
+    `;
+    win.document.write(html);
+    win.document.close();
+  };
+
   const S = {
     container: { display: 'flex', height: '100vh', maxHeight: '100vh', overflow: 'hidden', background: isDark ? '#0b0f19' : '#f8fafc', color: isDark ? '#e2e8f0' : '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' },
     loadingContainer: { display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', background: isDark ? '#0b0f19' : '#f8fafc' },
@@ -490,6 +616,22 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
             <FaChartBar style={S.navIcon} /> Dashboard
           </button>
 
+          {/* Search & Verify Participant Tab */}
+          <button 
+            style={activeTab === 'search-participant' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={() => { setActiveTab('search-participant'); setMobileSidebarOpen(false); }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaQrcode style={S.navIcon} />
+                <span>Search & Verify</span>
+              </div>
+              <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#059669' }}>
+                QR
+              </span>
+            </div>
+          </button>
+
           <button 
             style={activeTab === 'registration' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
             onClick={() => { setActiveTab('registration'); setMobileSidebarOpen(false); }}
@@ -550,6 +692,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
           <div>
             <h1 style={S.pageTitle} className="admin-page-title">
               {activeTab === 'dashboard' && 'Registration Dashboard & Analytics'}
+              {activeTab === 'search-participant' && 'Search & Verify Participant (QR Check-in)'}
               {activeTab === 'registration' && 'On-Site Desk Registration'}
               {activeTab === 'register-list' && 'Complete Registrations List'}
               {activeTab === 'online-register-list' && 'Online Portal Registrations'}
@@ -557,6 +700,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
             </h1>
             <p style={S.pageSubtitle}>
               {activeTab === 'dashboard' && 'Live breakdown of online vs offline registration counts and revenue collection.'}
+              {activeTab === 'search-participant' && 'Search by ticket code, name, phone, email, college or scan participant ticket QR code for live on-site verification & admission.'}
               {activeTab === 'registration' && 'Register participants on-the-spot and generate ticket codes.'}
               {activeTab === 'register-list' && 'Search and filter all registered symposium participants.'}
               {activeTab === 'online-register-list' && 'View participants who registered online via website.'}
@@ -818,6 +962,19 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ==================== SEARCH & VERIFY PARTICIPANT (QR SCANNER) ==================== */}
+          {activeTab === 'search-participant' && (
+            <ParticipantVerifier 
+              token={token}
+              user={user}
+              isDark={isDark}
+              registrations={registrationsList}
+              events={eventsList}
+              onRefreshRegistrations={fetchRegistrations}
+              onPrintTicket={handlePrintTicket}
+            />
           )}
 
           {/* ==================== 2. REGISTRATION FORM TAB ==================== */}

@@ -26,9 +26,6 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static uploaded files (sponsor logos, assets)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 // API Routes
 const apiRoutes = require('./routes/api');
 app.use('/api', apiRoutes);
@@ -40,7 +37,7 @@ if (fs.existsSync(frontendDist)) {
   
   // SPA Catch-all middleware for client routing (Express 5 compatible)
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
       return res.sendFile(path.join(frontendDist, 'index.html'));
     }
     next();
