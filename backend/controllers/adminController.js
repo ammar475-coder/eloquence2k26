@@ -8,6 +8,8 @@ const rolesFilePath = path.join(__dirname, '../data/roles.json');
 const eventsFilePath = path.join(__dirname, '../data/events.json');
 const sponsorsFilePath = path.join(__dirname, '../data/sponsors.json');
 const coordinatorsFilePath = path.join(__dirname, '../data/coordinators.json');
+const homepageCoordinatorsFilePath = path.join(__dirname, '../data/homepage_coordinators.json');
+const frontendStudentCoordinatorsFilePath = path.join(__dirname, '../../frontend/src/data/studentCoordinators.json');
 const registrationsFilePath = path.join(__dirname, '../data/registrations.json');
 
 
@@ -129,6 +131,60 @@ const dbToEvent = (e) => ({
   updatedAt: e.updated_at || e.updatedAt
 });
 
+const dbToHomepageTeam = (t) => {
+  let members = [];
+  if (Array.isArray(t.members)) {
+    members = t.members;
+  } else if (typeof t.members === 'string') {
+    try {
+      members = JSON.parse(t.members);
+    } catch (e) {
+      members = [];
+    }
+  } else if (Array.isArray(t.names)) {
+    members = t.names.map(n => typeof n === 'string' ? { name: n, role: '', glow: false } : n);
+  }
+
+  const normalizedMembers = (members || []).map(m => {
+    if (typeof m === 'string') return { name: m, role: '', glow: false };
+    return {
+      name: m.name || '',
+      role: m.role || '',
+      glow: m.glow || false
+    };
+  });
+
+  return {
+    id: t.id,
+    role: t.role || '',
+    tag: t.tag || 'TEAM',
+    iconName: t.icon_name || t.iconName || 'Users',
+    tier: t.tier || 'emerald',
+    desc: t.description || t.desc || '',
+    members: normalizedMembers,
+    names: normalizedMembers.map(m => m.name),
+    displayOrder: Number(t.display_order ?? t.displayOrder ?? 999),
+    isActive: t.is_active !== false && t.isActive !== false,
+    createdAt: t.created_at || t.createdAt,
+    updatedAt: t.updated_at || t.updatedAt
+  };
+};
+
+const homepageTeamToDb = (t) => {
+  return {
+    id: t.id,
+    role: t.role,
+    tag: t.tag || 'TEAM',
+    icon_name: t.iconName || 'Users',
+    tier: t.tier || 'emerald',
+    description: t.desc || '',
+    members: t.members || [],
+    display_order: Number(t.displayOrder ?? 999),
+    is_active: t.isActive !== false,
+    updated_at: new Date().toISOString()
+  };
+};
+
 // ==================== LOCAL JSON FALLBACK HELPERS ====================
 const getUsersData = () => {
   try {
@@ -219,6 +275,44 @@ const saveCoordinatorsData = (coordinators) => {
   }
 };
 
+const getHomepageCoordinatorsData = () => {
+  try {
+    const data = fs.readFileSync(homepageCoordinatorsFilePath, 'utf8');
+    return JSON.parse(data || '[]');
+  } catch (err) {
+    return [];
+  }
+};
+
+const saveHomepageCoordinatorsData = (teams) => {
+  try {
+    fs.writeFileSync(homepageCoordinatorsFilePath, JSON.stringify(teams, null, 2), 'utf8');
+    if (fs.existsSync(frontendStudentCoordinatorsFilePath)) {
+      try {
+        const activeTeamsForFrontend = teams
+          .filter(t => t.isActive !== false)
+          .map(t => ({
+            id: t.id,
+            role: t.role,
+            tag: t.tag,
+            iconName: t.iconName,
+            tier: t.tier,
+            desc: t.desc,
+            names: (t.members || []).map(m => typeof m === 'string' ? m : m.name),
+            members: t.members || []
+          }));
+        fs.writeFileSync(frontendStudentCoordinatorsFilePath, JSON.stringify(activeTeamsForFrontend, null, 2), 'utf8');
+      } catch (fErr) {
+        console.warn('Sync to frontend studentCoordinators.json skipped:', fErr.message);
+      }
+    }
+    return true;
+  } catch (err) {
+    console.error('Error writing homepage_coordinators.json:', err);
+    return false;
+  }
+};
+
 const getRegistrationsData = () => {
   try {
     const data = fs.readFileSync(registrationsFilePath, 'utf8');
@@ -304,20 +398,23 @@ exports.getDashboardData = async (req, res) => {
     let registrations = getRegistrationsData();
     let sponsors = getSponsorsData();
     let coordinators = getCoordinatorsData();
+    let homepageTeams = getHomepageCoordinatorsData();
     let events = getEventsData();
 
     try {
-      const [regRes, spRes, coRes, evRes] = await Promise.all([
+      const [regRes, spRes, coRes, evRes, hpRes] = await Promise.all([
         supabase.from('registrations').select('*'),
         supabase.from('sponsors').select('*'),
         supabase.from('coordinators').select('*'),
-        supabase.from('events').select('*')
+        supabase.from('events').select('*'),
+        supabase.from('homepage_coordinators').select('*')
       ]);
 
       if (regRes.data && regRes.data.length > 0) registrations = regRes.data;
       if (spRes.data && spRes.data.length > 0) sponsors = spRes.data.map(dbToSponsor);
       if (coRes.data && coRes.data.length > 0) coordinators = coRes.data.map(dbToCoordinator);
       if (evRes.data && evRes.data.length > 0) events = evRes.data.map(dbToEvent);
+      if (hpRes.data && hpRes.data.length > 0) homepageTeams = hpRes.data.map(dbToHomepageTeam);
     } catch (dbErr) {
       console.warn('Dashboard live metrics query error fallback:', dbErr.message);
     }
@@ -331,6 +428,7 @@ exports.getDashboardData = async (req, res) => {
     const offlineRevenue = offlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
+    const activeHomepageTeams = homepageTeams.filter(t => t.isActive !== false);
 
     const recentRegistrations = [...registrations]
       .reverse()
@@ -361,7 +459,9 @@ exports.getDashboardData = async (req, res) => {
           totalSponsors: sponsors.length,
           activeSponsors: activeSponsors.length,
           totalCoordinators: coordinators.length,
-          activeCoordinators: activeCoordinators.length
+          activeCoordinators: activeCoordinators.length,
+          totalHomepageTeams: homepageTeams.length,
+          activeHomepageTeams: activeHomepageTeams.length
         },
         recentRegistrations
       }
@@ -636,6 +736,41 @@ exports.getEvents = async (req, res) => {
   res.json({ success: true, data: events });
 };
 
+const saveBase64ImageIfPresent = (imageStr, prefix = 'event') => {
+  if (!imageStr || typeof imageStr !== 'string') return imageStr || '';
+  const trimmed = imageStr.trim();
+  if (!trimmed.startsWith('data:image/')) return trimmed;
+
+  try {
+    const matches = trimmed.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return trimmed;
+    const mimeType = matches[1].toLowerCase();
+    const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : (mimeType.includes('webp') ? 'webp' : (mimeType.includes('svg') ? 'svg' : 'png'));
+    const safeName = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
+    const imageBuffer = Buffer.from(matches[2], 'base64');
+
+    const frontendPublicEventsDir = path.join(__dirname, '../../frontend/public/events');
+    const localUploadsDir = path.join(__dirname, '../uploads');
+
+    if (!fs.existsSync(frontendPublicEventsDir)) {
+      try { fs.mkdirSync(frontendPublicEventsDir, { recursive: true }); } catch (e) {}
+    }
+    if (fs.existsSync(frontendPublicEventsDir)) {
+      fs.writeFileSync(path.join(frontendPublicEventsDir, safeName), imageBuffer);
+    }
+    if (!fs.existsSync(localUploadsDir)) {
+      try { fs.mkdirSync(localUploadsDir, { recursive: true }); } catch (e) {}
+    }
+    if (fs.existsSync(localUploadsDir)) {
+      fs.writeFileSync(path.join(localUploadsDir, safeName), imageBuffer);
+    }
+    return `/events/${safeName}`;
+  } catch (e) {
+    console.error('Error saving base64 image:', e);
+    return trimmed;
+  }
+};
+
 exports.createEvent = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
@@ -677,7 +812,9 @@ exports.createEvent = async (req, res) => {
     eventId = `${catPrefix}-${nextNum}`;
   }
 
-  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' ? Number(feePerHead) : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
+  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' 
+    ? Number(feePerHead) 
+    : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
 
   const newEvent = {
     id: eventId,
@@ -688,11 +825,11 @@ exports.createEvent = async (req, res) => {
     category: cat,
     teamSize: teamSize ? teamSize.trim() : 'Individual',
     minMembers: 1,
-    maxMembers: teamSize && (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) ? 4 : 1,
+    maxMembers: teamSize && (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad')) ? 4 : 1,
     fee: fee ? fee.trim() : '₹50 per head',
     feePerHead: isNaN(parsedFeePerHead) ? 50 : parsedFeePerHead,
     feeType: feeType || 'per_head',
-    isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max')) : false,
+    isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad')) : false,
     tag: tag ? tag.trim() : (cat === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
     venue: venue ? venue.trim() : 'CSE Department',
     timing: timing ? timing.trim() : '10:00 AM – 01:00 PM',
@@ -731,17 +868,26 @@ exports.createEvent = async (req, res) => {
       updated_at: new Date().toISOString()
     };
     const { error: dbErr } = await supabase.from('events').upsert([dbPayload], { onConflict: 'id' });
-    if (dbErr) console.error('Supabase createEvent error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase createEvent error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase createEvent exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
-  events.push(newEvent);
+  const existingIdx = events.findIndex(e => e.id === newEvent.id);
+  if (existingIdx !== -1) {
+    events[existingIdx] = newEvent;
+  } else {
+    events.push(newEvent);
+  }
   saveEventsData(events);
 
   res.json({
     success: true,
-    message: 'Event created successfully',
+    message: 'Event created successfully in live database and storage',
     data: newEvent
   });
 };
@@ -775,6 +921,10 @@ exports.updateEvent = async (req, res) => {
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
 
+  const parsedFeePerHead = feePerHead !== undefined && feePerHead !== '' 
+    ? Number(feePerHead) 
+    : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : undefined);
+
   const updateFields = {
     updated_at: new Date().toISOString()
   };
@@ -782,51 +932,100 @@ exports.updateEvent = async (req, res) => {
   if (name) updateFields.name = name.trim();
   if (alias !== undefined) updateFields.alias = alias.trim();
   if (subtitle !== undefined) updateFields.subtitle = subtitle.trim();
-  if (category !== undefined) updateFields.category = category;
+  if (category !== undefined) updateFields.category = category.trim().toLowerCase();
   if (venue !== undefined) updateFields.venue = venue.trim();
   if (timing !== undefined) updateFields.timing = timing.trim();
   if (fee !== undefined) updateFields.fee = fee.trim();
-  if (feePerHead !== undefined && feePerHead !== '') updateFields.fee_per_head = Number(feePerHead);
+  if (parsedFeePerHead !== undefined) updateFields.fee_per_head = parsedFeePerHead;
   if (feeType !== undefined) updateFields.fee_type = feeType;
-  if (teamSize !== undefined) updateFields.team_size = teamSize.trim();
+  if (teamSize !== undefined) {
+    updateFields.team_size = teamSize.trim();
+    updateFields.is_team = (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad'));
+  }
   if (tag !== undefined) updateFields.tag = tag.trim();
   if (description !== undefined) updateFields.description = description.trim();
-  if (image !== undefined) updateFields.image = image.trim();
+  if (image !== undefined) updateFields.image = image ? image.trim() : '';
   if (rules !== undefined && Array.isArray(rules)) updateFields.rules = rules;
   if (rounds !== undefined && Array.isArray(rounds)) updateFields.rounds = rounds;
   if (guidelines !== undefined && Array.isArray(guidelines)) updateFields.guidelines = guidelines;
   if (highlights !== undefined && Array.isArray(highlights)) updateFields.highlights = highlights;
 
   try {
-    const { error: dbErr } = await supabase.from('events').update(updateFields).eq('id', id);
-    if (dbErr) console.error('Supabase updateEvent error:', dbErr.message);
+    const { data: existingDbEvent } = await supabase.from('events').select('*').eq('id', id).single();
+    const dbPayload = {
+      id,
+      number: (existingDbEvent && existingDbEvent.number) ? existingDbEvent.number : (events[eventIndex]?.number || '01'),
+      ...(existingDbEvent || {}),
+      ...updateFields
+    };
+    const { error: dbErr } = await supabase.from('events').upsert(dbPayload);
+    if (dbErr) {
+      console.error('Supabase updateEvent error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase updateEvent exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   if (eventIndex !== -1) {
     if (name) events[eventIndex].name = name.trim();
+    if (alias !== undefined) events[eventIndex].alias = alias.trim();
+    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
+    if (category !== undefined) events[eventIndex].category = category.trim().toLowerCase();
     if (venue !== undefined) events[eventIndex].venue = venue.trim();
     if (timing !== undefined) events[eventIndex].timing = timing.trim();
     if (fee !== undefined) events[eventIndex].fee = fee.trim();
-    if (feePerHead !== undefined) events[eventIndex].feePerHead = Number(feePerHead);
+    if (parsedFeePerHead !== undefined) events[eventIndex].feePerHead = parsedFeePerHead;
     if (feeType !== undefined) events[eventIndex].feeType = feeType;
-    if (teamSize !== undefined) events[eventIndex].teamSize = teamSize.trim();
-    if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
+    if (teamSize !== undefined) {
+      events[eventIndex].teamSize = teamSize.trim();
+      events[eventIndex].isTeam = (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad'));
+    }
     if (tag !== undefined) events[eventIndex].tag = tag.trim();
     if (description !== undefined) events[eventIndex].description = description.trim();
-    if (image !== undefined) events[eventIndex].image = image.trim();
+    if (cleanImage !== undefined) events[eventIndex].image = cleanImage;
     if (rules !== undefined && Array.isArray(rules)) events[eventIndex].rules = rules;
     if (rounds !== undefined && Array.isArray(rounds)) events[eventIndex].rounds = rounds;
     if (guidelines !== undefined && Array.isArray(guidelines)) events[eventIndex].guidelines = guidelines;
     if (highlights !== undefined && Array.isArray(highlights)) events[eventIndex].highlights = highlights;
     saveEventsData(events);
+  } else {
+    // If not in events.json, append it
+    const constructed = {
+      id,
+      number: String(events.length + 1).padStart(2, '0'),
+      name: name || id,
+      alias: alias || name || id,
+      subtitle: subtitle || '',
+      category: category ? category.trim().toLowerCase() : 'technical',
+      teamSize: teamSize || 'Individual',
+      minMembers: 1,
+      maxMembers: 1,
+      fee: fee || '₹50 per head',
+      feePerHead: parsedFeePerHead || 50,
+      feeType: feeType || 'per_head',
+      isTeam: false,
+      tag: tag || 'Technical Presentation',
+      venue: venue || 'CSE Department',
+      timing: timing || '10:00 AM – 01:00 PM',
+      description: description || '',
+      image: cleanImage || '',
+      rules: Array.isArray(rules) ? rules : [],
+      rounds: Array.isArray(rounds) ? rounds : [],
+      guidelines: Array.isArray(guidelines) ? guidelines : [],
+      highlights: Array.isArray(highlights) ? highlights : []
+    };
+    events.push(constructed);
+    saveEventsData(events);
   }
+
+  const updatedResult = eventIndex !== -1 ? events[eventIndex] : { id, ...req.body, image: cleanImage };
 
   res.json({ 
     success: true, 
-    message: 'Event updated successfully in live database', 
-    data: { id, ...req.body } 
+    message: 'Event updated successfully in live database and storage', 
+    data: updatedResult
   });
 };
 
@@ -839,19 +1038,23 @@ exports.deleteEvent = async (req, res) => {
   const events = getEventsData();
   const eventIndex = events.findIndex(e => e.id === id);
 
+  try {
+    const { error: dbErr } = await supabase.from('events').delete().eq('id', id);
+    if (dbErr) {
+      console.error('Supabase deleteEvent error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
+  } catch (e) {
+    console.error('Supabase deleteEvent exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
   if (eventIndex !== -1) {
     events.splice(eventIndex, 1);
     saveEventsData(events);
   }
 
-  try {
-    const { error: dbErr } = await supabase.from('events').delete().eq('id', id);
-    if (dbErr) console.error('Supabase deleteEvent error:', dbErr.message);
-  } catch (e) {
-    console.error('Supabase deleteEvent exception:', e.message);
-  }
-
-  res.json({ success: true, message: 'Event deleted successfully from live database' });
+  res.json({ success: true, message: 'Event deleted successfully from live database and storage' });
 };
 
 // ==================== SPONSOR MANAGEMENT ====================
@@ -937,9 +1140,13 @@ exports.createSponsor = async (req, res) => {
   try {
     const dbPayload = sponsorToDb(newSponsor);
     const { error: dbErr } = await supabase.from('sponsors').insert([dbPayload]);
-    if (dbErr) console.error('Supabase createSponsor error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase createSponsor error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase createSponsor exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   sponsors.push(newSponsor);
@@ -992,9 +1199,13 @@ exports.updateSponsor = async (req, res) => {
   try {
     const dbPayload = sponsorToDb(updatedSponsor);
     const { error: dbErr } = await supabase.from('sponsors').upsert([dbPayload], { onConflict: 'id' });
-    if (dbErr) console.error('Supabase updateSponsor error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase updateSponsor error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase updateSponsor exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   if (index !== -1) {
@@ -1011,22 +1222,27 @@ exports.toggleSponsorStatus = async (req, res) => {
   const sponsor = sponsors.find(s => s.id === id);
 
   let newStatus = true;
-  if (sponsor) {
-    sponsor.isActive = !sponsor.isActive;
-    sponsor.updatedAt = new Date().toISOString();
-    newStatus = sponsor.isActive;
-    saveSponsorsData(sponsors);
-  }
-
   try {
     const { data: dbSponsor } = await supabase.from('sponsors').select('is_active').eq('id', id).single();
     if (dbSponsor) {
       newStatus = !dbSponsor.is_active;
+    } else if (sponsor) {
+      newStatus = !sponsor.isActive;
     }
     const { error: dbErr } = await supabase.from('sponsors').update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
-    if (dbErr) console.error('Supabase toggleSponsorStatus error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase toggleSponsorStatus error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase toggleSponsorStatus exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
+  if (sponsor) {
+    sponsor.isActive = newStatus;
+    sponsor.updatedAt = new Date().toISOString();
+    saveSponsorsData(sponsors);
   }
 
   res.json({ 
@@ -1041,16 +1257,20 @@ exports.deleteSponsor = async (req, res) => {
   const sponsors = getSponsorsData();
   const index = sponsors.findIndex(s => s.id === id);
 
+  try {
+    const { error: dbErr } = await supabase.from('sponsors').delete().eq('id', id);
+    if (dbErr) {
+      console.error('Supabase deleteSponsor error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
+  } catch (e) {
+    console.error('Supabase deleteSponsor exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
   if (index !== -1) {
     sponsors.splice(index, 1);
     saveSponsorsData(sponsors);
-  }
-
-  try {
-    const { error: dbErr } = await supabase.from('sponsors').delete().eq('id', id);
-    if (dbErr) console.error('Supabase deleteSponsor error:', dbErr.message);
-  } catch (e) {
-    console.error('Supabase deleteSponsor exception:', e.message);
   }
 
   res.json({ success: true, message: 'Sponsor deleted successfully from live database' });
@@ -1089,10 +1309,10 @@ exports.uploadLogo = async (req, res) => {
 
     const safeName = fileName || `img-${Date.now()}.${allowedMime[mimeType]}`;
 
-    // Store Base64 Data URL directly in Database (Zero local disk or file bucket storage!)
+    // Return Base64 Data URL directly to be stored in Database (Zero local disk or file bucket storage!)
     return res.json({
       success: true,
-      message: 'Image stored directly in database',
+      message: 'Image processed successfully for database storage',
       url: imageBase64,
       fileName: safeName
     });
@@ -1188,9 +1408,13 @@ exports.createCoordinator = async (req, res) => {
   try {
     const dbPayload = coordinatorToDb(newCoordinator);
     const { error: dbErr } = await supabase.from('coordinators').insert([dbPayload]);
-    if (dbErr) console.error('Supabase createCoordinator error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase createCoordinator error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase createCoordinator exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   coordinators.push(newCoordinator);
@@ -1221,7 +1445,7 @@ exports.updateCoordinator = async (req, res) => {
   const coordinators = getCoordinatorsData();
   const index = coordinators.findIndex(c => c.id === id);
 
-  const cleanPhone = phone.trim().replace(/\s+/g, '');
+  const cleanPhone = phone ? phone.trim().replace(/\s+/g, '') : (coordinators[index]?.phone || '');
   const updatedCoordinator = {
     id,
     name: name.trim(),
@@ -1240,9 +1464,13 @@ exports.updateCoordinator = async (req, res) => {
   try {
     const dbPayload = coordinatorToDb(updatedCoordinator);
     const { error: dbErr } = await supabase.from('coordinators').upsert([dbPayload], { onConflict: 'id' });
-    if (dbErr) console.error('Supabase updateCoordinator error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase updateCoordinator error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase updateCoordinator exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
   }
 
   if (index !== -1) {
@@ -1259,22 +1487,27 @@ exports.toggleCoordinatorStatus = async (req, res) => {
   const coordinator = coordinators.find(c => c.id === id);
 
   let newStatus = true;
-  if (coordinator) {
-    coordinator.isActive = !coordinator.isActive;
-    coordinator.updatedAt = new Date().toISOString();
-    newStatus = coordinator.isActive;
-    saveCoordinatorsData(coordinators);
-  }
-
   try {
     const { data: dbCoord } = await supabase.from('coordinators').select('is_active').eq('id', id).single();
     if (dbCoord) {
       newStatus = !dbCoord.is_active;
+    } else if (coordinator) {
+      newStatus = !coordinator.isActive;
     }
     const { error: dbErr } = await supabase.from('coordinators').update({ is_active: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
-    if (dbErr) console.error('Supabase toggleCoordinatorStatus error:', dbErr.message);
+    if (dbErr) {
+      console.error('Supabase toggleCoordinatorStatus error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
   } catch (e) {
     console.error('Supabase toggleCoordinatorStatus exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
+  if (coordinator) {
+    coordinator.isActive = newStatus;
+    coordinator.updatedAt = new Date().toISOString();
+    saveCoordinatorsData(coordinators);
   }
 
   res.json({ 
@@ -1289,16 +1522,20 @@ exports.deleteCoordinator = async (req, res) => {
   const coordinators = getCoordinatorsData();
   const index = coordinators.findIndex(c => c.id === id);
 
+  try {
+    const { error: dbErr } = await supabase.from('coordinators').delete().eq('id', id);
+    if (dbErr) {
+      console.error('Supabase deleteCoordinator error:', dbErr.message);
+      return res.status(500).json({ success: false, message: 'Supabase database error: ' + dbErr.message });
+    }
+  } catch (e) {
+    console.error('Supabase deleteCoordinator exception:', e.message);
+    return res.status(500).json({ success: false, message: 'Database exception: ' + e.message });
+  }
+
   if (index !== -1) {
     coordinators.splice(index, 1);
     saveCoordinatorsData(coordinators);
-  }
-
-  try {
-    const { error: dbErr } = await supabase.from('coordinators').delete().eq('id', id);
-    if (dbErr) console.error('Supabase deleteCoordinator error:', dbErr.message);
-  } catch (e) {
-    console.error('Supabase deleteCoordinator exception:', e.message);
   }
 
   res.json({ success: true, message: 'Coordinator deleted successfully from live database' });
@@ -1408,6 +1645,219 @@ exports.verifyRegistration = async (req, res) => {
   } catch (err) {
     console.error('Error in verifyRegistration:', err);
     return res.status(500).json({ success: false, message: 'Failed to update verification status' });
+  }
+};
+
+// ==================== HOMEPAGE STUDENT COORDINATOR TEAMS ============================
+exports.getHomepageCoordinators = async (req, res) => {
+  try {
+    try {
+      const { data: dbTeams, error } = await supabase.from('homepage_coordinators').select('*').order('display_order', { ascending: true });
+      if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
+        return res.json({ success: true, data: dbTeams.map(dbToHomepageTeam) });
+      }
+    } catch (e) {
+      console.warn('Supabase getHomepageCoordinators fallback:', e.message);
+    }
+    const teams = getHomepageCoordinatorsData();
+    teams.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+    res.json({ success: true, data: teams });
+  } catch (err) {
+    console.error('Error in getHomepageCoordinators:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch homepage coordinator teams' });
+  }
+};
+
+exports.getHomepageCoordinatorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    try {
+      const { data: dbTeam, error } = await supabase.from('homepage_coordinators').select('*').eq('id', id).single();
+      if (!error && dbTeam) {
+        return res.json({ success: true, data: dbToHomepageTeam(dbTeam) });
+      }
+    } catch (e) {
+      console.warn('Supabase getHomepageCoordinatorById fallback:', e.message);
+    }
+    const teams = getHomepageCoordinatorsData();
+    const team = teams.find(t => t.id === id);
+    if (!team) return res.status(404).json({ success: false, message: 'Homepage team not found' });
+    res.json({ success: true, data: team });
+  } catch (err) {
+    console.error('Error in getHomepageCoordinatorById:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch team details' });
+  }
+};
+
+exports.createHomepageCoordinator = async (req, res) => {
+  try {
+    const { role, tag, iconName, tier, desc, members, names, displayOrder, isActive } = req.body;
+    if (!role || !role.trim()) {
+      return res.status(400).json({ success: false, message: 'Team title / role is required' });
+    }
+
+    const teams = getHomepageCoordinatorsData();
+    const id = req.body.id && req.body.id.trim()
+      ? req.body.id.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '-')
+      : `team-${Date.now()}`;
+
+    // Normalize members
+    let normalizedMembers = [];
+    if (Array.isArray(members) && members.length > 0) {
+      normalizedMembers = members
+        .map(m => typeof m === 'string' ? { name: m.trim() } : { name: m.name ? m.name.trim() : '' })
+        .filter(m => m.name.length > 0);
+    } else if (Array.isArray(names) && names.length > 0) {
+      normalizedMembers = names
+        .filter(n => typeof n === 'string' && n.trim().length > 0)
+        .map(n => ({ name: n.trim() }));
+    }
+
+    const newTeam = {
+      id,
+      role: role.trim(),
+      tag: (tag || 'TEAM').trim(),
+      iconName: iconName || 'Users',
+      tier: tier || 'emerald',
+      desc: (desc || '').trim(),
+      members: normalizedMembers,
+      names: normalizedMembers.map(m => m.name),
+      displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : teams.length + 1,
+      isActive: isActive !== false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Save to Supabase if available
+    try {
+      const dbPayload = homepageTeamToDb(newTeam);
+      const { error: dbErr } = await supabase.from('homepage_coordinators').insert([dbPayload]);
+      if (dbErr) console.error('Supabase createHomepageCoordinator error:', dbErr.message);
+    } catch (e) {
+      console.error('Supabase createHomepageCoordinator exception:', e.message);
+    }
+
+    // Save to local file & sync frontend
+    teams.push(newTeam);
+    saveHomepageCoordinatorsData(teams);
+
+    res.status(201).json({ success: true, message: 'Homepage coordinator team created successfully', data: newTeam });
+  } catch (err) {
+    console.error('Error in createHomepageCoordinator:', err);
+    res.status(500).json({ success: false, message: 'Failed to create homepage coordinator team' });
+  }
+};
+
+exports.updateHomepageCoordinator = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, tag, iconName, tier, desc, members, names, displayOrder, isActive } = req.body;
+
+    const teams = getHomepageCoordinatorsData();
+    const index = teams.findIndex(t => t.id === id);
+
+    let normalizedMembers = undefined;
+    if (Array.isArray(members)) {
+      normalizedMembers = members
+        .map(m => typeof m === 'string' ? { name: m.trim() } : { name: m.name ? m.name.trim() : '' })
+        .filter(m => m.name.length > 0);
+    } else if (Array.isArray(names)) {
+      normalizedMembers = names
+        .filter(n => typeof n === 'string' && n.trim().length > 0)
+        .map(n => ({ name: n.trim() }));
+    }
+
+    const existingTeam = index !== -1 ? teams[index] : {};
+    const updatedTeam = {
+      ...existingTeam,
+      id,
+      role: role !== undefined ? role.trim() : existingTeam.role,
+      tag: tag !== undefined ? tag.trim() : (existingTeam.tag || 'TEAM'),
+      iconName: iconName !== undefined ? iconName : (existingTeam.iconName || 'Users'),
+      tier: tier !== undefined ? tier : (existingTeam.tier || 'emerald'),
+      desc: desc !== undefined ? desc.trim() : (existingTeam.desc || ''),
+      members: normalizedMembers !== undefined ? normalizedMembers : (existingTeam.members || []),
+      names: normalizedMembers !== undefined ? normalizedMembers.map(m => m.name) : (existingTeam.names || []),
+      displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : (existingTeam.displayOrder || 999),
+      isActive: isActive !== undefined ? Boolean(isActive) : (existingTeam.isActive !== false),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Update in Supabase
+    try {
+      const dbPayload = homepageTeamToDb(updatedTeam);
+      const { error: dbErr } = await supabase.from('homepage_coordinators').upsert([dbPayload]);
+      if (dbErr) console.error('Supabase updateHomepageCoordinator error:', dbErr.message);
+    } catch (e) {
+      console.error('Supabase updateHomepageCoordinator exception:', e.message);
+    }
+
+    // Update in local file
+    if (index !== -1) {
+      teams[index] = updatedTeam;
+    } else {
+      teams.push(updatedTeam);
+    }
+    saveHomepageCoordinatorsData(teams);
+
+    res.json({ success: true, message: 'Homepage coordinator team updated successfully', data: updatedTeam });
+  } catch (err) {
+    console.error('Error in updateHomepageCoordinator:', err);
+    res.status(500).json({ success: false, message: 'Failed to update homepage coordinator team' });
+  }
+};
+
+exports.toggleHomepageCoordinatorStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const teams = getHomepageCoordinatorsData();
+    const index = teams.findIndex(t => t.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Homepage team not found' });
+    }
+
+    const newStatus = teams[index].isActive === false ? true : false;
+    teams[index].isActive = newStatus;
+    teams[index].updatedAt = new Date().toISOString();
+
+    try {
+      await supabase.from('homepage_coordinators').update({ is_active: newStatus, updated_at: teams[index].updatedAt }).eq('id', id);
+    } catch (e) {
+      console.error('Supabase toggle status error:', e.message);
+    }
+
+    saveHomepageCoordinatorsData(teams);
+    res.json({
+      success: true,
+      message: `Team "${teams[index].role}" is now ${newStatus ? 'visible on' : 'hidden from'} the homepage`,
+      data: teams[index]
+    });
+  } catch (err) {
+    console.error('Error in toggleHomepageCoordinatorStatus:', err);
+    res.status(500).json({ success: false, message: 'Failed to toggle homepage team status' });
+  }
+};
+
+exports.deleteHomepageCoordinator = async (req, res) => {
+  try {
+    const { id } = req.params;
+    try {
+      await supabase.from('homepage_coordinators').delete().eq('id', id);
+    } catch (e) {
+      console.warn('Supabase deleteHomepageCoordinator fallback:', e.message);
+    }
+
+    let teams = getHomepageCoordinatorsData();
+    const initialLen = teams.length;
+    teams = teams.filter(t => t.id !== id);
+    if (teams.length !== initialLen) {
+      saveHomepageCoordinatorsData(teams);
+    }
+
+    res.json({ success: true, message: 'Homepage coordinator team deleted successfully' });
+  } catch (err) {
+    console.error('Error in deleteHomepageCoordinator:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete homepage coordinator team' });
   }
 };
 

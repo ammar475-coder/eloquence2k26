@@ -5,13 +5,38 @@ import { getApiUrl } from '../config/api';
 
 function SponsorCard({ sponsor, tier }) {
   const [flipped, setFlipped] = useState(false);
+  const cardRef = useRef(null);
+
+  // Auto flip back to front when user clicks anywhere outside this card
+  useEffect(() => {
+    if (!flipped) return;
+
+    const handlePointerDownOutside = (e) => {
+      if (cardRef.current && !cardRef.current.contains(e.target)) {
+        setFlipped(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDownOutside);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDownOutside);
+    };
+  }, [flipped]);
 
   const handleCardClick = (e) => {
-    // If the click is inside a link or button, don't toggle flip
+    // If the click is inside an interactive action button, don't toggle flip
     if (e.target.closest('a') || e.target.closest('button')) {
       return;
     }
     setFlipped((f) => !f);
+  };
+
+  const handleMouseLeave = () => {
+    // When the mouse leaves the card, ensure it turns back to the front face
+    // so when it starts moving again, the front side is what moves!
+    if (flipped) {
+      setFlipped(false);
+    }
   };
 
   const tag = sponsor.tag || sponsor.category || 'PARTNER';
@@ -25,13 +50,31 @@ function SponsorCard({ sponsor, tier }) {
 
   const rawWebsite = sponsor.website && (!rawLocation || sponsor.website !== rawLocation) && !/maps|goo\.gl/i.test(sponsor.website) ? sponsor.website : '';
   const websiteLink = rawWebsite ? (rawWebsite.startsWith('http') ? rawWebsite : `https://${rawWebsite}`) : '';
-  const hasDetails = Boolean(sponsor.contactName || sponsor.contactPhone || locationLink);
+  const hasDetails = Boolean(sponsor.contactName || sponsor.contactPhone || locationLink || websiteLink);
   const hasActions = Boolean(cleanPhone || locationLink || websiteLink);
+
+  const resolveLogo = (logo) => {
+    if (!logo || typeof logo !== 'string' || !logo.trim()) return null;
+    const trimmed = logo.trim();
+    if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/sponsors/')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/uploads/')) {
+      return getApiUrl(trimmed);
+    }
+    return trimmed;
+  };
+  const logoSrc = resolveLogo(sponsor.logo);
+  const hasLogo = Boolean(logoSrc);
+
+  const websiteDisplay = websiteLink ? websiteLink.replace(/^https?:\/\//i, '').replace(/\/$/, '') : '';
 
   return (
     <div
-      className={`sponsor-card sponsor-card-${tier}`}
+      ref={cardRef}
+      className={`sponsor-card sponsor-card-${tier} ${flipped ? 'card-is-flipped' : ''}`}
       onClick={handleCardClick}
+      onMouseLeave={handleMouseLeave}
       role="button"
       tabIndex={0}
       aria-label={`${sponsor.name} — click or tap to view contact details`}
@@ -43,14 +86,22 @@ function SponsorCard({ sponsor, tier }) {
       }}
     >
       <div className={`sponsor-card-inner ${flipped ? 'sponsor-flipped' : ''}`}>
-        <div className="sponsor-face sponsor-front">
+        {/* Front Face: Premium Photo + Identity + Direct Quick Actions */}
+        <div className={`sponsor-face sponsor-front ${hasLogo ? 'has-sponsor-photo' : 'no-sponsor-photo'}`}>
           <span className="sponsor-tag">{tag}</span>
           <div className="sponsor-mark">
-            {sponsor.logo && sponsor.logo.trim() && !sponsor.logo.trim().startsWith('/uploads/') ? (
+            {hasLogo ? (
               <img 
-                src={sponsor.logo} 
+                src={logoSrc} 
                 alt={sponsor.name} 
                 className="sponsor-logo-img"
+                loading="lazy"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  if (e.target.parentElement) {
+                    e.target.parentElement.classList.add('sponsor-mark-fallback');
+                  }
+                }}
               />
             ) : (
               <div className="sponsor-initials-badge">
@@ -60,9 +111,43 @@ function SponsorCard({ sponsor, tier }) {
               </div>
             )}
           </div>
-          <h4 className="sponsor-name">{sponsor.name}</h4>
-          <span className="sponsor-flip-hint">CLICK FOR DETAILS</span>
+          <div className="sponsor-front-bottom">
+            <h4 className="sponsor-name">{sponsor.name}</h4>
+            <div className="sponsor-front-actions">
+              {cleanPhone && (
+                <a
+                  href={`tel:${cleanPhone}`}
+                  className="sponsor-front-btn sponsor-front-call"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Call ${sponsor.name} (${sponsor.contactPhone})`}
+                  aria-label={`Call ${sponsor.name}`}
+                >
+                  <FaPhoneAlt size={10} />
+                  <span>Call</span>
+                </a>
+              )}
+              {websiteLink && (
+                <a
+                  href={websiteLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sponsor-front-btn sponsor-front-web"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`Visit ${sponsor.name} official website (${websiteLink})`}
+                  aria-label={`Website of ${sponsor.name}`}
+                >
+                  <FaGlobe size={10} />
+                  <span>Website ↗</span>
+                </a>
+              )}
+              <span className="sponsor-flip-hint">
+                DETAILS ↻
+              </span>
+            </div>
+          </div>
         </div>
+
+        {/* Back Face: Detailed Overview + Contact Box + Action Buttons */}
         <div className="sponsor-face sponsor-back">
           <div className="sponsor-back-header">
             <span className="sponsor-back-tier-tag">{tag}</span>
@@ -99,6 +184,23 @@ function SponsorCard({ sponsor, tier }) {
                   </a>
                 </div>
               )}
+              {websiteLink && (
+                <div className="sponsor-contact-row">
+                  <span className="sponsor-contact-label">
+                    <FaGlobe className="sponsor-contact-icon" /> WEBSITE
+                  </span>
+                  <a
+                    href={websiteLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="sponsor-contact-location-link sponsor-contact-web-link"
+                    onClick={(e) => e.stopPropagation()}
+                    title={`Visit ${sponsor.name} official website (${websiteLink})`}
+                  >
+                    {websiteDisplay} ↗
+                  </a>
+                </div>
+              )}
               {locationLink && (
                 <div className="sponsor-contact-row">
                   <span className="sponsor-contact-label">
@@ -124,25 +226,13 @@ function SponsorCard({ sponsor, tier }) {
               {cleanPhone && (
                 <a
                   href={`tel:${cleanPhone}`}
-                  className="sponsor-action-icon-btn sponsor-icon-call"
+                  className="sponsor-action-pill-btn sponsor-btn-call"
                   onClick={(e) => e.stopPropagation()}
                   title={`Call ${sponsor.contactName || sponsor.name} (${sponsor.contactPhone})`}
                   aria-label={`Call ${sponsor.contactName || sponsor.name}`}
                 >
-                  <FaPhoneAlt />
-                </a>
-              )}
-              {locationLink && (
-                <a
-                  href={locationLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sponsor-action-icon-btn sponsor-icon-location"
-                  onClick={(e) => e.stopPropagation()}
-                  title={`View ${sponsor.name} on Map`}
-                  aria-label={`Location of ${sponsor.name}`}
-                >
-                  <FaMapMarkerAlt />
+                  <FaPhoneAlt size={12} />
+                  <span>Call</span>
                 </a>
               )}
               {websiteLink && (
@@ -150,18 +240,43 @@ function SponsorCard({ sponsor, tier }) {
                   href={websiteLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="sponsor-action-icon-btn sponsor-icon-website"
+                  className="sponsor-action-pill-btn sponsor-btn-website"
                   onClick={(e) => e.stopPropagation()}
-                  title={`Visit ${sponsor.name} Website`}
+                  title={`Visit ${sponsor.name} Website (${websiteLink})`}
                   aria-label={`Website of ${sponsor.name}`}
                 >
-                  <FaGlobe />
+                  <FaGlobe size={12} />
+                  <span>Website ↗</span>
+                </a>
+              )}
+              {locationLink && (
+                <a
+                  href={locationLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="sponsor-action-pill-btn sponsor-btn-map"
+                  onClick={(e) => e.stopPropagation()}
+                  title={`View ${sponsor.name} on Map`}
+                  aria-label={`Location of ${sponsor.name}`}
+                >
+                  <FaMapMarkerAlt size={12} />
+                  <span>Map ↗</span>
                 </a>
               )}
             </div>
           )}
 
-          <span className="sponsor-flip-hint sponsor-flip-back-hint">CLICK TO FLIP BACK</span>
+          <button
+            type="button"
+            className="sponsor-flip-hint sponsor-flip-back-hint"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFlipped(false);
+            }}
+            title="Return to front view"
+          >
+            CLICK TO FLIP BACK ↻
+          </button>
         </div>
       </div>
     </div>
@@ -221,14 +336,25 @@ export default function Sponsors() {
         if (!isMounted) return;
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           const list = result.data;
-          const elite = list.filter((s) => s.category?.toLowerCase() === 'elite' || s.category === 'Title Sponsor');
-          const premium = list.filter((s) => s.category?.toLowerCase() === 'premium' || s.category === 'Gold Sponsor' || s.category === 'Silver Sponsor');
-          const standard = list.filter((s) => s.category?.toLowerCase() === 'standard' || s.category === 'Bronze Sponsor' || s.category === 'Other');
+          const elite = [];
+          const premium = [];
+          const standard = [];
+
+          list.forEach((s) => {
+            const cat = (s.category || '').toLowerCase();
+            if (cat.includes('elite') || cat.includes('title')) {
+              elite.push(s);
+            } else if (cat.includes('premium') || cat.includes('gold') || cat.includes('silver')) {
+              premium.push(s);
+            } else {
+              standard.push(s);
+            }
+          });
 
           setLiveTiers({
-            elite: elite,
-            premium: premium,
-            standard: standard,
+            elite,
+            premium,
+            standard,
           });
         }
       })

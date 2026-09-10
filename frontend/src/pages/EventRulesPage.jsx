@@ -24,20 +24,48 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     ? event.rules
     : (rulesData[event.id]?.rules || []);
 
-  const coordsList = (Array.isArray(event.coordinators) && event.coordinators.length > 0)
-    ? event.coordinators
-    : (coordinatorsData[event.id]?.coordinators || []);
+  const [liveCoordinators, setLiveCoordinators] = useState(() => {
+    return event ? (coordinatorsData[event.id]?.coordinators || []) : [];
+  });
 
   useEffect(() => {
+    let isMounted = true;
     fetch(getApiUrl('/api/events'))
       .then((res) => res.json())
       .then((result) => {
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
           setEventsList(result.data);
         }
       })
       .catch(() => {});
-  }, []);
+    return () => { isMounted = false; };
+  }, [eventId]);
+
+  useEffect(() => {
+    if (!event?.id) return;
+    let isMounted = true;
+    const staticFallback = coordinatorsData[event.id]?.coordinators || [];
+    fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(event.id)}`))
+      .then((res) => res.json())
+      .then((result) => {
+        if (!isMounted) return;
+        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+          setLiveCoordinators(result.data);
+        } else {
+          setLiveCoordinators(staticFallback);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLiveCoordinators(staticFallback);
+      });
+    return () => { isMounted = false; };
+  }, [event?.id]);
+
+  const coordsList = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
+    ? liveCoordinators
+    : (Array.isArray(event.coordinators) && event.coordinators.length > 0
+        ? event.coordinators
+        : (coordinatorsData[event.id]?.coordinators || []));
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -200,71 +228,81 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
             )}
           </motion.div>
 
-          {/* Right Side: Single Unified Rules Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="rules-card-glass rules-right-rules-card"
-          >
-            <div className="rules-card-header">
-              <h2 className="rules-card-title">
-                <FaListOl className="rules-card-icon" /> Rules & Guidelines
-              </h2>
-              {rulesList.length > 0 && (
-                <span className="rules-count-badge">{rulesList.length} Rules</span>
+          {/* Right Side: Separate Rules Card and Coordinator Contact Card */}
+          <div className="rules-right-stack">
+            {/* Card 1: Rules & Guidelines */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="rules-card-glass rules-right-rules-card"
+            >
+              <div className="rules-card-header">
+                <h2 className="rules-card-title">
+                  <FaListOl className="rules-card-icon" /> Rules & Guidelines
+                </h2>
+                {rulesList.length > 0 && (
+                  <span className="rules-count-badge">{rulesList.length} Rules</span>
+                )}
+              </div>
+
+              {rulesList.length > 0 ? (
+                <ol className="rules-unified-list">
+                  {rulesList.map((rule, idx) => (
+                    <motion.li
+                      key={idx}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.15 + idx * 0.03 }}
+                      className="rules-unified-item"
+                    >
+                      <span className="rules-item-index">{idx + 1}.</span>
+                      <span className="rules-item-text">{rule}</span>
+                    </motion.li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="rules-empty-text">Standard event guidelines apply. Contact event coordinators for details.</p>
               )}
-            </div>
+            </motion.div>
 
-            {rulesList.length > 0 ? (
-              <ol className="rules-unified-list">
-                {rulesList.map((rule, idx) => (
-                  <motion.li
-                    key={idx}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.2 + idx * 0.04 }}
-                    className="rules-unified-item"
-                  >
-                    <span className="rules-item-index">{idx + 1}.</span>
-                    <span className="rules-item-text">{rule}</span>
-                  </motion.li>
-                ))}
-              </ol>
-            ) : (
-              <p className="rules-empty-text">Standard event guidelines apply. Contact event coordinators for details.</p>
-            )}
-          </motion.div>
-        </div>
-
-        {/* Down / Bottom Section: Compact Coordinator Cards */}
-        {coordsList.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 25 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.45 }}
-            className="rules-card-glass rules-bottom-contact-card"
-          >
-            <div className="rules-card-header">
-              <h2 className="rules-card-title">
-                <FaHeadset className="rules-card-icon" /> Student Coordinators & Contact
-              </h2>
-            </div>
-
-            <div className="rules-contact-grid">
-              {coordsList.map((coord, idx) => (
-                <div key={idx} className="rules-coord-card">
-                  <div className="coord-card-badge">{coord.role || `Coordinator ${idx + 1}`}</div>
-                  <h3 className="coord-card-name">{coord.name}</h3>
-                  <a href={`tel:${coord.phone}`} className="coord-call-btn">
-                    <FaPhoneAlt style={{ marginRight: '0.4rem', verticalAlign: '-1px' }} />
-                    {coord.displayPhone || coord.phone}
-                  </a>
+            {/* Card 2: Event Coordinators & Contact (Separate Card) */}
+            {coordsList.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+                className="rules-card-glass rules-coords-card"
+              >
+                <div className="rules-card-header">
+                  <h2 className="rules-card-title">
+                    <FaHeadset className="rules-card-icon" /> Event Coordinators & Contact
+                  </h2>
+                  <span className="rules-count-badge">{coordsList.length} Coordinators</span>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+
+                <div className="rules-coords-grid">
+                  {coordsList.map((coord, idx) => (
+                    <div key={idx} className="rules-embedded-coord-chip">
+                      <div className="coord-chip-info">
+                        <span className="coord-chip-badge">{coord.role || `Coordinator ${idx + 1}`}</span>
+                        <h4 className="coord-chip-name">{coord.name}</h4>
+                      </div>
+                      <a
+                        href={`tel:${coord.phone}`}
+                        className="coord-chip-call-btn"
+                        title={`Call ${coord.name}`}
+                      >
+                        <FaPhoneAlt size={11} style={{ marginRight: '6px' }} />
+                        <span>{coord.displayPhone || coord.phone}</span>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Mobile Sticky Action Bar */}
