@@ -37,6 +37,7 @@ import {
   FaPaperPlane,
   FaThLarge,
   FaTable,
+  
   FaBars,
   FaIdCard,
   FaClipboardList,
@@ -55,7 +56,8 @@ import {
   FaCode,
   FaTerminal,
   FaStar,
-  FaLayerGroup
+  FaLayerGroup,
+  FaCopy
 } from 'react-icons/fa';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
@@ -4192,10 +4194,35 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
                             {/* Registration Mode */}
                             <td style={S.td}>
-                              <span style={isOnline ? S.badgeOnline : S.badgeOffline}>
-                                {isOnline ? <FaGlobe size={11} /> : <FaCashRegister size={11} />}
-                                <span>{isOnline ? 'Online' : 'Offline Desk'}</span>
-                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                                <span style={isOnline ? S.badgeOnline : S.badgeOffline}>
+                                  {isOnline ? <FaGlobe size={11} /> : <FaCashRegister size={11} />}
+                                  <span>{isOnline ? 'Online' : 'Offline Desk'}</span>
+                                </span>
+                                {isOnline && (
+                                  <span style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: '700',
+                                    padding: '0.15rem 0.5rem',
+                                    borderRadius: '4px',
+                                    background: (reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI')
+                                      ? (isDark ? 'rgba(168, 85, 247, 0.2)' : '#f3e8ff')
+                                      : (isDark ? 'rgba(59, 130, 246, 0.2)' : '#eff6ff'),
+                                    color: (reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI')
+                                      ? (isDark ? '#d8b4fe' : '#7e22ce')
+                                      : (isDark ? '#93c5fd' : '#1d4ed8'),
+                                    border: (reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI')
+                                      ? '1px solid rgba(168, 85, 247, 0.3)'
+                                      : '1px solid rgba(59, 130, 246, 0.3)'
+                                  }}>
+                                    {(reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI')
+                                      ? '⚡ UPI (Razorpay)'
+                                      : (reg.payment_method === 'RAZORPAY' || reg.paymentMethod === 'RAZORPAY' || reg.razorpay_payment_id || reg.razorpayPaymentId)
+                                      ? '💳 Cards (Razorpay)'
+                                      : '🌐 Web Gateway'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
 
                             {/* Fee & Payment Status */}
@@ -4204,10 +4231,48 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 <span style={{ fontWeight: '700', color: '#10b981', fontSize: '0.95rem' }}>
                                   ₹{feeAmt}
                                 </span>
-                                <span style={S.badgePaid}>
-                                  <FaCheck size={8} style={{ marginRight: '3px' }} />
-                                  <span>{reg.payment_status || reg.paymentStatus || 'CONFIRMED'}</span>
-                                </span>
+                                {((reg.payment_status || reg.paymentStatus || '').toLowerCase() === 'paid') ? (
+                                  <span style={S.badgePaid}>
+                                    <FaCheck size={8} style={{ marginRight: '3px' }} />
+                                    <span>PAID</span>
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    padding: '0.2rem 0.5rem',
+                                    borderRadius: '999px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: '700',
+                                    background: isDark ? 'rgba(234, 179, 8, 0.15)' : '#fef9c3',
+                                    color: isDark ? '#fde047' : '#a16207',
+                                    border: isDark ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid #fef08a'
+                                  }}>
+                                    <span>PENDING</span>
+                                  </span>
+                                )}
+                                {(reg.razorpay_payment_id || reg.razorpayPaymentId) && (
+                                  <span 
+                                    style={{
+                                      fontSize: '0.68rem',
+                                      fontFamily: 'monospace',
+                                      color: isDark ? '#93c5fd' : '#2563eb',
+                                      cursor: 'pointer',
+                                      background: isDark ? '#1e293b' : '#f1f5f9',
+                                      padding: '1px 5px',
+                                      borderRadius: '3px',
+                                      fontWeight: '600'
+                                    }}
+                                    title="Click to copy Razorpay Payment ID"
+                                    onClick={() => {
+                                      const pid = reg.razorpay_payment_id || reg.razorpayPaymentId;
+                                      navigator.clipboard.writeText(pid);
+                                      toast.success(`Copied Payment ID: ${pid}`);
+                                    }}
+                                  >
+                                    ID: {(reg.razorpay_payment_id || reg.razorpayPaymentId).slice(0, 11)}...
+                                  </span>
+                                )}
                               </div>
                             </td>
 
@@ -6272,7 +6337,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <div>
                     <div style={S.label}>Payment Method</div>
                     <div style={{ fontWeight: '600', fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#334155', marginTop: '3px' }}>
-                      {isOnlineRecord(selectedRegDetails) ? 'Online Website Portal (Gateway/UPI)' : 'On-Site Registration Desk (Cash/Manual)'}
+                      {(selectedRegDetails.payment_method === 'RAZORPAY_UPI' || selectedRegDetails.paymentMethod === 'RAZORPAY_UPI')
+                        ? '⚡ UPI (Razorpay)'
+                        : (selectedRegDetails.payment_method === 'RAZORPAY' || selectedRegDetails.paymentMethod === 'RAZORPAY' || selectedRegDetails.razorpay_payment_id || selectedRegDetails.razorpayPaymentId)
+                        ? '💳 Online Cards / Netbanking (Razorpay)'
+                        : isOnlineRecord(selectedRegDetails) ? 'Online Web Gateway' : 'On-Site Registration Desk (Cash)'}
                     </div>
                   </div>
                   <div>
@@ -6289,6 +6358,64 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       {selectedRegDetails.event_id || selectedRegDetails.eventId || 'N/A'}
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Payment & Razorpay Transaction Audit */}
+              <div>
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: isDark ? '#34d399' : '#059669', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FaCheckCircle size={14} />
+                  Payment & Transaction Audit
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', background: isDark ? '#064e3b15' : '#f0fdf4', padding: '1.2rem', borderRadius: '12px', border: isDark ? '1px solid #05966940' : '1px solid #bbf7d0' }}>
+                  <div>
+                    <div style={S.label}>Payment Status</div>
+                    <div style={{ fontWeight: '800', fontSize: '0.95rem', color: ((selectedRegDetails.payment_status || selectedRegDetails.paymentStatus || '').toLowerCase() === 'paid') ? '#10b981' : '#f59e0b', marginTop: '3px' }}>
+                      {((selectedRegDetails.payment_status || selectedRegDetails.paymentStatus || '').toLowerCase() === 'paid') ? '✓ PAID / VERIFIED' : '⏳ PENDING'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={S.label}>Payment Provider / Mode</div>
+                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: isDark ? '#f9fafb' : '#0f172a', marginTop: '3px' }}>
+                      {(selectedRegDetails.payment_method === 'RAZORPAY_UPI' || selectedRegDetails.paymentMethod === 'RAZORPAY_UPI')
+                        ? '⚡ UPI (Razorpay)'
+                        : (selectedRegDetails.payment_method === 'RAZORPAY' || selectedRegDetails.paymentMethod === 'RAZORPAY' || selectedRegDetails.razorpay_payment_id || selectedRegDetails.razorpayPaymentId)
+                        ? '💳 Cards / Netbanking (Razorpay)'
+                        : isOnlineRecord(selectedRegDetails) ? '🌐 Online Portal' : '💵 On-Site Desk'}
+                    </div>
+                  </div>
+                  {(selectedRegDetails.razorpay_payment_id || selectedRegDetails.razorpayPaymentId) && (
+                    <div>
+                      <div style={S.label}>Razorpay Payment ID</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                        <code style={{ background: isDark ? '#111827' : '#ffffff', padding: '4px 8px', borderRadius: '6px', fontSize: '0.85rem', color: isDark ? '#93c5fd' : '#2563eb', border: isDark ? '1px solid #374151' : '1px solid #cbd5e1', fontWeight: '700' }}>
+                          {selectedRegDetails.razorpay_payment_id || selectedRegDetails.razorpayPaymentId}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const pid = selectedRegDetails.razorpay_payment_id || selectedRegDetails.razorpayPaymentId;
+                            navigator.clipboard.writeText(pid);
+                            toast.success(`Copied Razorpay Payment ID: ${pid}`);
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#93c5fd' : '#2563eb', padding: '2px' }}
+                          title="Copy Razorpay Payment ID"
+                        >
+                          <FaCopy size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {(selectedRegDetails.razorpay_order_id || selectedRegDetails.razorpayOrderId) && (
+                    <div>
+                      <div style={S.label}>Razorpay Order ID</div>
+                      <div style={{ marginTop: '3px' }}>
+                        <code style={{ background: isDark ? '#111827' : '#ffffff', padding: '4px 8px', borderRadius: '6px', fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b', border: isDark ? '1px solid #374151' : '1px solid #cbd5e1' }}>
+                          {selectedRegDetails.razorpay_order_id || selectedRegDetails.razorpayOrderId}
+                        </code>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

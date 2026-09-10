@@ -946,9 +946,24 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                             </td>
                             <td style={S.td}><span style={S.feeHighlight}>₹{fee}</span></td>
                             <td style={S.td}>
-                              <span style={isOnline ? S.badgeTech : S.badgeNonTech}>
-                                {isOnline ? 'Online' : 'Offline Desk'}
-                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                                <span style={isOnline ? S.badgeTech : S.badgeNonTech}>
+                                  {isOnline ? 'Online' : 'Offline Desk'}
+                                </span>
+                                {isOnline && (
+                                  <span style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: '700',
+                                    color: (reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI') ? '#c084fc' : '#60a5fa'
+                                  }}>
+                                    {(reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI')
+                                      ? '⚡ UPI (Razorpay)'
+                                      : (reg.payment_method === 'RAZORPAY' || reg.paymentMethod === 'RAZORPAY' || reg.razorpay_payment_id || reg.razorpayPaymentId)
+                                      ? '💳 Cards (Razorpay)'
+                                      : '🌐 Web Gateway'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
