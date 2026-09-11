@@ -9,7 +9,8 @@ import {
   FaUsers,
   FaListOl,
   FaHeadset,
-  FaSpinner
+  FaSpinner,
+  FaBolt
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { getApiUrl } from '../config/api';
@@ -104,11 +105,59 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
 
   if (loading) {
     return (
-      <div className="event-rules-page" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#00f0ff' }}>
-          <FaSpinner className="fa-spin" size={32} style={{ animation: 'spin 1s linear infinite' }} />
-          <p style={{ marginTop: '1rem', fontSize: '1rem', color: '#94a3b8', letterSpacing: '0.05em' }}>Loading event rules from database...</p>
-        </div>
+      <div className="event-rules-page" style={{ minHeight: '75vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="events-loading-container"
+          style={{ padding: '3rem 1.5rem', maxWidth: '480px' }}
+        >
+          {/* High-tech cyberpunk orbital radar loader */}
+          <div className="cyber-loader-wrap">
+            <motion.div
+              className="cyber-orbit-ring-outer"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+            />
+            <motion.div
+              className="cyber-orbit-ring-inner"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+            />
+            <motion.div
+              className="cyber-loader-core"
+              animate={{
+                scale: [0.92, 1.08, 0.92],
+                boxShadow: [
+                  '0 0 15px rgba(57, 255, 136, 0.4)',
+                  '0 0 28px rgba(0, 240, 255, 0.75)',
+                  '0 0 15px rgba(57, 255, 136, 0.4)',
+                ],
+              }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <FaBolt className="cyber-loader-icon" />
+            </motion.div>
+          </div>
+
+          <div className="cyber-loading-meta">
+            <h4 className="cyber-loading-title">LOADING EVENT RULES</h4>
+            <p className="cyber-loading-subtext">
+              Please wait while we fetch the rules and details
+              <span className="cyber-loading-dots">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </p>
+            <div className="cyber-loading-beam-wrap">
+              <motion.div
+                className="cyber-loading-beam"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }

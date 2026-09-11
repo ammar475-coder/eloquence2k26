@@ -85,9 +85,8 @@ function SponsorCard({ sponsor, tier }) {
       }}
     >
       <div className={`sponsor-card-inner ${flipped ? 'sponsor-flipped' : ''}`}>
-        {/* Front Face: Premium Photo + Identity + Direct Quick Actions */}
+        {/* Front Face: Sponsor Image/Logo + Sponsor Name Only */}
         <div className={`sponsor-face sponsor-front ${hasLogo ? 'has-sponsor-photo' : 'no-sponsor-photo'}`}>
-          <span className="sponsor-tag">{tag}</span>
           <div className="sponsor-mark">
             {hasLogo ? (
               <img 
@@ -112,37 +111,6 @@ function SponsorCard({ sponsor, tier }) {
           </div>
           <div className="sponsor-front-bottom">
             <h4 className="sponsor-name">{sponsor.name}</h4>
-            <div className="sponsor-front-actions">
-              {cleanPhone && (
-                <a
-                  href={`tel:${cleanPhone}`}
-                  className="sponsor-front-btn sponsor-front-call"
-                  onClick={(e) => e.stopPropagation()}
-                  title={`Call ${sponsor.name} (${sponsor.contactPhone})`}
-                  aria-label={`Call ${sponsor.name}`}
-                >
-                  <FaPhoneAlt size={10} />
-                  <span>Call</span>
-                </a>
-              )}
-              {websiteLink && (
-                <a
-                  href={websiteLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sponsor-front-btn sponsor-front-web"
-                  onClick={(e) => e.stopPropagation()}
-                  title={`Visit ${sponsor.name} official website (${websiteLink})`}
-                  aria-label={`Website of ${sponsor.name}`}
-                >
-                  <FaGlobe size={10} />
-                  <span>Website ↗</span>
-                </a>
-              )}
-              <span className="sponsor-flip-hint">
-                DETAILS ↻
-              </span>
-            </div>
           </div>
         </div>
 

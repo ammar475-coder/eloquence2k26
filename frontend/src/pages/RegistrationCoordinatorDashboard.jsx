@@ -22,12 +22,26 @@ import {
   FaBars,
   FaQrcode
 } from 'react-icons/fa';
-import { getApiUrl } from '../config/api';
+import { getApiUrl, getWsUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 
-
 export default function RegistrationCoordinatorDashboard({ token, user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      return localStorage.getItem('reg_coord_active_tab') || 'dashboard';
+    } catch (e) {
+      return 'dashboard';
+    }
+  });
+
+  useEffect(() => {
+    if (activeTab) {
+      try {
+        localStorage.setItem('reg_coord_active_tab', activeTab);
+      } catch (e) {}
+    }
+  }, [activeTab]);
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('coord_theme') || 'light');
   const isDark = theme === 'dark';
@@ -71,6 +85,70 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   const [onSiteTeamName, setOnSiteTeamName] = useState('');
   const [onSiteTeamMembers, setOnSiteTeamMembers] = useState(['']);
   const [isRegisteringOnSite, setIsRegisteringOnSite] = useState(false);
+
+  // ==================== REAL-TIME REGISTRATION WEBSOCKET ====================
+  useEffect(() => {
+    let ws = null;
+    let reconnectTimeout = null;
+    let isMounted = true;
+
+    const connectWS = () => {
+      try {
+        const wsUrl = getWsUrl('/ws/registrations');
+        ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'REGISTRATION_UPDATE') {
+              // Real-time auto-refresh of registrations data
+              fetchRegistrations();
+
+              const action = msg.action;
+              const rData = msg.data || {};
+              const ticket = rData.ticketCode || rData.ticket_code || rData.registrationId || rData.id || '';
+              const name = rData.fullName || rData.leadName || rData.full_name || 'Participant';
+              const evt = rData.eventName || 'Event';
+
+              if (action === 'CREATE') {
+                toast.success(`⚡ Live Registration: ${name} (${evt})!`, { icon: '🔔', duration: 5000 });
+              } else if (action === 'VERIFY') {
+                toast.success(`✅ Live Update: Registration #${ticket} verified!`, { duration: 4000 });
+              } else if (action === 'DELETE') {
+                toast(`🗑️ Live Update: Registration #${ticket} removed`, { icon: 'ℹ️', duration: 4000 });
+              }
+            }
+          } catch (e) {
+            console.warn('WS parse error:', e);
+          }
+        };
+
+        ws.onclose = () => {
+          if (!isMounted) return;
+          reconnectTimeout = setTimeout(connectWS, 3000);
+        };
+
+        ws.onerror = () => {
+          if (!isMounted) return;
+        };
+      } catch (err) {
+        if (isMounted) {
+          reconnectTimeout = setTimeout(connectWS, 5000);
+        }
+      }
+    };
+
+    connectWS();
+
+    return () => {
+      isMounted = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
+  }, []);
 
   useEffect(() => {
     fetchEvents();
@@ -946,9 +1024,24 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                             </td>
                             <td style={S.td}><span style={S.feeHighlight}>₹{fee}</span></td>
                             <td style={S.td}>
-                              <span style={isOnline ? S.badgeTech : S.badgeNonTech}>
-                                {isOnline ? 'Online' : 'Offline Desk'}
-                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                                <span style={isOnline ? S.badgeTech : S.badgeNonTech}>
+                                  {isOnline ? 'Online' : 'Offline Desk'}
+                                </span>
+                                {isOnline && (
+                                  <span style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: '700',
+                                    color: (reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI') ? '#c084fc' : '#60a5fa'
+                                  }}>
+                                    {(reg.payment_method === 'RAZORPAY_UPI' || reg.paymentMethod === 'RAZORPAY_UPI')
+                                      ? '⚡ UPI (Razorpay)'
+                                      : (reg.payment_method === 'RAZORPAY' || reg.paymentMethod === 'RAZORPAY' || reg.razorpay_payment_id || reg.razorpayPaymentId)
+                                      ? '💳 Cards (Razorpay)'
+                                      : '🌐 Web Gateway'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

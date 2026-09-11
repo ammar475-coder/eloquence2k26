@@ -1,5 +1,27 @@
 import { getApiUrl } from '../config/api';
 
+export async function createPaymentOrder(payload) {
+  const response = await fetch(getApiUrl('/api/payment/create-order'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+export async function verifyPaymentAndRegister(payload) {
+  const response = await fetch(getApiUrl('/api/payment/verify-and-register'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
 export async function submitRegistration(payload) {
   try {
     const response = await fetch(getApiUrl('/api/register'), {
