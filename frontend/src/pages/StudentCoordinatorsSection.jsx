@@ -244,9 +244,10 @@ export default function StudentCoordinatorsSection() {
     (t) => t.isActive !== false
   );
 
-  // Duplicate items dynamically for smooth infinite loop in marquee track (aim for at least 12 cards)
-  const repeatFactor = activeTeams.length > 0 ? Math.max(2, Math.ceil(12 / activeTeams.length)) : 0;
-  const loopItems = repeatFactor > 0 ? Array(repeatFactor).fill(activeTeams).flat() : [];
+  // Build 2 perfectly matched halves so 50% translation loop is always 100% seamless without jumps
+  const repeatPerHalf = activeTeams.length > 0 ? Math.max(1, Math.ceil(6 / activeTeams.length)) : 0;
+  const halfList = repeatPerHalf > 0 ? Array(repeatPerHalf).fill(activeTeams).flat() : [];
+  const loopItems = halfList.length > 0 ? [...halfList, ...halfList] : [];
 
   return (
     <section
