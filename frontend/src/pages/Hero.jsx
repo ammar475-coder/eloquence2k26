@@ -106,7 +106,7 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
     const initParticles = () => {
       particles = [];
       const isSmallScreen = window.innerWidth < 768;
-      const count = isSmallScreen ? 28 : Math.min(55, Math.floor((canvas.width * canvas.height) / 22000));
+      const count = isSmallScreen ? 18 : Math.min(46, Math.floor((canvas.width * canvas.height) / 24000));
       for (let i = 0; i < count; i++) {
         particles.push(new Particle());
       }
@@ -114,20 +114,24 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
 
     const drawConnections = () => {
       const isSmall = canvas.width < 768;
-      const maxDistance = isSmall ? 75 : 110;
+      const maxDistance = isSmall ? 70 : 105;
+      const maxDistanceSq = maxDistance * maxDistance;
       const len = particles.length;
 
       for (let a = 0; a < len; a++) {
+        const pa = particles[a];
         for (let b = a + 1; b < len; b++) {
-          const dx = particles[a].x - particles[b].x;
-          const dy = particles[a].y - particles[b].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+          const pb = particles[b];
+          const dx = pa.x - pb.x;
+          const dy = pa.y - pb.y;
+          const distSq = dx * dx + dy * dy;
 
-          if (dist < maxDistance) {
+          if (distSq < maxDistanceSq) {
+            const dist = Math.sqrt(distSq);
             const alpha = (1 - dist / maxDistance) * 0.22;
             ctx.beginPath();
-            ctx.moveTo(particles[a].x, particles[a].y);
-            ctx.lineTo(particles[b].x, particles[b].y);
+            ctx.moveTo(pa.x, pa.y);
+            ctx.lineTo(pb.x, pb.y);
             ctx.strokeStyle = '#39FF88';
             ctx.globalAlpha = alpha;
             ctx.lineWidth = 0.75;

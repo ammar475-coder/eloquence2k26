@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import Navbar from '../components/Navbar.jsx';
 import Footer from '../components/Footer.jsx';
 import Home from '../pages/Home.jsx';
 import EventsPage from '../pages/EventsPage.jsx';
 import EventRulesPage from '../pages/EventRulesPage.jsx';
 import RegistrationPage from '../pages/RegistrationPage.jsx';
-import Admin from '../pages/Admin.jsx';
+
+const Admin = lazy(() => import('../pages/Admin.jsx'));
 
 function parseHash(hash) {
   if (!hash || hash === '#' || hash === '#/') {
@@ -65,7 +66,13 @@ function parseHash(hash) {
 
 export default function AppRouter() {
   const [route, setRoute] = useState(() => parseHash(window.location.hash));
-  const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+  const [hasPlayedIntro, setHasPlayedIntro] = useState(() => {
+    try {
+      return sessionStorage.getItem('eloquence_intro_played') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
   const checkIsAdminOrCoordinator = () => {
     const path = window.location.pathname;
     return path.startsWith('/admin') || path.startsWith('/coordinators');
@@ -171,7 +178,11 @@ export default function AppRouter() {
 
   // If the path is /admin, render ONLY the Admin component (no Navbar/Footer)
   if (isAdminRoute) {
-    return <Admin />;
+    return (
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#050806', color: '#39ff88', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', letterSpacing: '0.1em' }}>INITIALIZING SECURE PORTAL...</div>}>
+        <Admin />
+      </Suspense>
+    );
   }
 
   return (
@@ -198,7 +209,12 @@ export default function AppRouter() {
           <Home
             onNavigate={navigateTo}
             hasPlayedIntro={hasPlayedIntro}
-            onIntroComplete={() => setHasPlayedIntro(true)}
+            onIntroComplete={() => {
+              try {
+                sessionStorage.setItem('eloquence_intro_played', 'true');
+              } catch (_) {}
+              setHasPlayedIntro(true);
+            }}
           />
         )}
       </main>
