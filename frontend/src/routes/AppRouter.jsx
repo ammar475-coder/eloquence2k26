@@ -30,9 +30,6 @@ function parseHash(hash) {
       if (g.includes('bgmi')) game = 'BGMI';
       else if (g.includes('free') || g.includes('fire')) game = 'FREE FIRE';
     }
-    if (!id) {
-      return { page: 'events', eventId: null, sectionId: null, from, categoryFilter, game: null };
-    }
     return {
       page: 'register',
       eventId: id,

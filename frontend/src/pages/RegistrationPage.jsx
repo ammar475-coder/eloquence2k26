@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { getApiUrl } from '../config/api';
+import { getApiUrl, getWsUrl } from '../config/api';
 import {
   FaBolt,
   FaGamepad,
@@ -27,7 +27,9 @@ import {
   FaSpinner,
   FaHeadset,
   FaBookOpen,
-  FaTimes
+  FaTimes,
+  FaLock,
+  FaHome
 } from 'react-icons/fa';
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
 
@@ -68,6 +70,105 @@ const createEmptyMember = (defaultCollege = '') => ({
 export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [eventsList, setEventsList] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
+
+  // Registration Closed Status State
+  const [isRegClosed, setIsRegClosed] = useState(false);
+  const [closedNotice, setClosedNotice] = useState('Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!');
+  const [regClosedAt, setRegClosedAt] = useState(null);
+  const [loadingRegStatus, setLoadingRegStatus] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    let ws = null;
+    let reconnectTimer = null;
+    let isExplicitlyClosed = false;
+
+    const checkStatus = () => {
+      fetch(getApiUrl('/api/registration-status'))
+        .then((res) => res.json())
+        .then((data) => {
+          if (!isMounted) return;
+          if (data.success) {
+            const nextClosed = Boolean(data.isRegistrationClosed);
+            setIsRegClosed((prev) => {
+              if (!prev && nextClosed) {
+                toast.error('Registrations have been closed by symposium administrators.', { id: 'reg-status-toast' });
+              } else if (prev && !nextClosed) {
+                toast.success('Registrations have been re-opened!', { id: 'reg-status-toast' });
+              }
+              return nextClosed;
+            });
+            if (data.closedReason) setClosedNotice(data.closedReason);
+            if (data.closedAt) setRegClosedAt(data.closedAt);
+          }
+        })
+        .catch((err) => console.warn('Failed to load registration status:', err))
+        .finally(() => {
+          if (isMounted) setLoadingRegStatus(false);
+        });
+    };
+
+    // Initial fetch
+    checkStatus();
+
+    // Re-check on tab focus / visibility change
+    window.addEventListener('focus', checkStatus);
+    document.addEventListener('visibilitychange', checkStatus);
+
+    // Auto-reconnecting real-time WebSocket connection
+    const connectWebSocket = () => {
+      if (isExplicitlyClosed || !isMounted) return;
+      try {
+        ws = new WebSocket(getWsUrl('/ws/registrations'));
+
+        ws.onmessage = (evt) => {
+          try {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
+              const nextClosed = Boolean(msg.data?.isRegistrationClosed);
+              setIsRegClosed((prev) => {
+                if (!prev && nextClosed) {
+                  toast.error('Registrations have been closed by symposium administrators.', { id: 'reg-status-toast' });
+                } else if (prev && !nextClosed) {
+                  toast.success('Registrations have been re-opened!', { id: 'reg-status-toast' });
+                }
+                return nextClosed;
+              });
+              if (msg.data?.closedReason) setClosedNotice(msg.data.closedReason);
+              if (msg.data?.closedAt) setRegClosedAt(msg.data.closedAt);
+            }
+          } catch (e) {}
+        };
+
+        ws.onclose = () => {
+          if (!isExplicitlyClosed && isMounted) {
+            reconnectTimer = setTimeout(connectWebSocket, 2000);
+          }
+        };
+
+        ws.onerror = () => {
+          try { ws.close(); } catch (_) {}
+        };
+      } catch (e) {
+        if (!isExplicitlyClosed && isMounted) {
+          reconnectTimer = setTimeout(connectWebSocket, 2000);
+        }
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      isMounted = false;
+      isExplicitlyClosed = true;
+      window.removeEventListener('focus', checkStatus);
+      document.removeEventListener('visibilitychange', checkStatus);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
+  }, []);
 
   useEffect(() => {
     fetch(getApiUrl('/api/events'))
@@ -197,8 +298,10 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         }
       }
     } else {
-      if (onNavigate) onNavigate('events');
-      else window.location.hash = '/events';
+      if (!isRegClosed && !loadingRegStatus) {
+        if (onNavigate) onNavigate('events');
+        else window.location.hash = '/events';
+      }
     }
     if (initialGame) {
       setSelectedGame(getValidGame(initialGame));
@@ -756,6 +859,230 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       window.location.hash = '/events';
     }
   };
+
+  // ========================================================
+  // REGISTRATIONS CLOSED VIEW (No form access allowed)
+  // Checked first so that even if eventId is null, visitors
+  // immediately see the official closed status screen.
+  // ========================================================
+  if (!loadingRegStatus && isRegClosed) {
+    return (
+      <div className="registration-page">
+        <div className="registration-page-container">
+          {/* Terminal Header */}
+          <div className="reg-terminal-header">
+            <div className="reg-terminal-brand">
+              <span className="reg-terminal-sys-id">// SECURE SYMPOSIUM GATEWAY //</span>
+              <h1 className="reg-terminal-title">ELOQUENCE'26 REGISTRATION TERMINAL</h1>
+              <p className="reg-terminal-meta">
+                9TH NATIONAL LEVEL TECHNICAL SYMPOSIUM • CAHCET MELVISHARAM • SEPTEMBER 26, 2026
+              </p>
+            </div>
+            <div
+              className="reg-terminal-status-badge"
+              style={{
+                borderColor: 'rgba(239, 68, 68, 0.5)',
+                color: '#ef4444',
+                background: 'rgba(239, 68, 68, 0.1)'
+              }}
+            >
+              <span
+                className="terminal-live-dot"
+                style={{ background: '#ef4444', boxShadow: '0 0 10px #ef4444' }}
+              />
+              <span>ADMISSIONS CLOSED</span>
+            </div>
+          </div>
+
+          {/* Cyber-Aesthetic Registrations Closed Panel */}
+          <div
+            className="reg-closed-panel"
+            style={{
+              background: 'linear-gradient(180deg, rgba(20, 10, 12, 0.85) 0%, rgba(10, 15, 12, 0.95) 100%)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(239, 68, 68, 0.12)',
+              borderRadius: '16px',
+              padding: 'clamp(1.75rem, 5vw, 3.5rem)',
+              textAlign: 'center',
+              margin: '1.5rem 0',
+              backdropFilter: 'blur(10px)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Top Glowing Accent Line */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, transparent, #ef4444, transparent)'
+              }}
+            />
+
+            {/* Glowing Lock Icon */}
+            <div
+              style={{
+                width: '76px',
+                height: '76px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '2px solid rgba(239, 68, 68, 0.5)',
+                boxShadow: '0 0 30px rgba(239, 68, 68, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.5rem',
+                color: '#ef4444'
+              }}
+            >
+              <FaLock size={32} />
+            </div>
+
+            {/* Status Pill */}
+            <div style={{ marginBottom: '0.75rem' }}>
+              <span
+                style={{
+                  background: 'rgba(239, 68, 68, 0.18)',
+                  color: '#fca5a5',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  padding: '0.35rem 1rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase'
+                }}
+              >
+                // PORTAL STATUS: REGISTRATIONS CLOSED //
+              </span>
+            </div>
+
+            {/* Main Headline */}
+            <h2
+              style={{
+                fontFamily: 'var(--font-display, monospace)',
+                fontSize: 'clamp(1.4rem, 4vw, 2.2rem)',
+                fontWeight: 900,
+                letterSpacing: '0.04em',
+                color: '#ffffff',
+                margin: '0 0 1rem',
+                textShadow: '0 0 20px rgba(239, 68, 68, 0.4)'
+              }}
+            >
+              REGISTRATIONS ARE OFFICIALLY CLOSED
+            </h2>
+
+            {/* Custom Announcement Message */}
+            <p
+              style={{
+                fontSize: 'clamp(0.92rem, 2.5vw, 1.08rem)',
+                color: '#cbd5e1',
+                lineHeight: 1.6,
+                maxWidth: '640px',
+                margin: '0 auto 2rem'
+              }}
+            >
+              {closedNotice ||
+                'Online registrations for ELOQUENCE 2026 have officially ended. We have reached maximum capacity across our competition events. Thank you to all participants for your tremendous response!'}
+            </p>
+
+            {/* Event Highlights & Venue Card */}
+            <div
+              style={{
+                background: 'rgba(15, 23, 18, 0.7)',
+                border: '1px solid rgba(57, 255, 136, 0.15)',
+                borderRadius: '12px',
+                padding: '1.25rem 1.5rem',
+                maxWidth: '600px',
+                margin: '0 auto 2rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '1rem',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <FaCalendarAlt style={{ color: 'var(--bright-green, #39ff88)', marginTop: '3px', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#8c9d91', fontWeight: 700, textTransform: 'uppercase' }}>Event Date</div>
+                  <div style={{ fontSize: '0.92rem', color: '#ffffff', fontWeight: 600 }}>September 26, 2026</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <FaMapMarkerAlt style={{ color: 'var(--bright-green, #39ff88)', marginTop: '3px', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#8c9d91', fontWeight: 700, textTransform: 'uppercase' }}>Venue</div>
+                  <div style={{ fontSize: '0.88rem', color: '#ffffff', fontWeight: 600 }}>CAHCET, Melvisharam, Ranipet</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Support Note */}
+            <p
+              style={{
+                fontSize: '0.84rem',
+                color: '#94a3b8',
+                margin: '0 auto 2rem',
+                maxWidth: '540px'
+              }}
+            >
+              Already registered? Make sure to save your ticket pass and email confirmation. For inquiries, please reach out to the respective event coordinators.
+            </p>
+
+            {/* Quick Action Navigation Buttons */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'center',
+                flexWrap: 'wrap'
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('events')}
+                className="btn btn-primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '0.85rem 1.6rem',
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
+                  borderRadius: '10px'
+                }}
+              >
+                <FaBookOpen />
+                <span>Explore Events & Rules</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('home')}
+                className="btn btn-secondary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '0.85rem 1.6rem',
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
+                  borderRadius: '10px'
+                }}
+              >
+                <FaHome />
+                <span>Return to Home</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!selectedEvent) {
     return (

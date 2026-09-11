@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -10,15 +11,80 @@ import {
   FaListOl,
   FaHeadset,
   FaSpinner,
-  FaBolt
+  FaBolt,
+  FaLock
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import { getApiUrl } from '../config/api';
+import { getApiUrl, getWsUrl } from '../config/api';
 
 export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
   const [eventsList, setEventsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [liveCoordinators, setLiveCoordinators] = useState([]);
+  const [isRegClosed, setIsRegClosed] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    let ws = null;
+    let reconnectTimer = null;
+    let isExplicitlyClosed = false;
+
+    const checkStatus = () => {
+      fetch(getApiUrl('/api/registration-status'))
+        .then((res) => res.json())
+        .then((data) => {
+          if (isMounted && data.success) {
+            setIsRegClosed(Boolean(data.isRegistrationClosed));
+          }
+        })
+        .catch(() => {});
+    };
+
+    checkStatus();
+
+    window.addEventListener('focus', checkStatus);
+    document.addEventListener('visibilitychange', checkStatus);
+
+    const connectWs = () => {
+      if (isExplicitlyClosed || !isMounted) return;
+      try {
+        ws = new WebSocket(getWsUrl('/ws/registrations'));
+        ws.onmessage = (evt) => {
+          try {
+            const msg = JSON.parse(evt.data);
+            if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
+              if (isMounted) setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+            }
+          } catch (_) {}
+        };
+        ws.onclose = () => {
+          if (!isExplicitlyClosed && isMounted) {
+            reconnectTimer = setTimeout(connectWs, 2000);
+          }
+        };
+        ws.onerror = () => {
+          try { ws.close(); } catch (_) {}
+        };
+      } catch (_) {
+        if (!isExplicitlyClosed && isMounted) {
+          reconnectTimer = setTimeout(connectWs, 2000);
+        }
+      }
+    };
+
+    connectWs();
+
+    return () => {
+      isMounted = false;
+      isExplicitlyClosed = true;
+      window.removeEventListener('focus', checkStatus);
+      document.removeEventListener('visibilitychange', checkStatus);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -75,18 +141,21 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
   const isEsports = event && (event.id === 'nontech-05' || event.name?.toLowerCase().includes('gaming') || event.name?.toLowerCase().includes('battle of champions'));
 
   const handleRegister = () => {
+    if (isRegClosed) return;
     if (onNavigate && event) {
       onNavigate('register', event.id);
     }
   };
 
   const handleRegisterGame = (game) => {
+    if (isRegClosed) return;
     if (onNavigate && event) {
       onNavigate('register', { eventId: event.id, game });
     }
   };
 
   const handleTopRegisterClick = () => {
+    if (isRegClosed) return;
     if (isEsports) {
       const el = document.querySelector('.esports-cta-wrap');
       if (el) {
@@ -190,8 +259,29 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
             <FaArrowLeft style={{ marginRight: '0.45rem', verticalAlign: '-1px' }} />
             Back to Events
           </button>
-          <button className="rules-register-top-btn" onClick={handleTopRegisterClick}>
-            Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+          <button
+            className="rules-register-top-btn"
+            onClick={isRegClosed ? undefined : handleTopRegisterClick}
+            disabled={isRegClosed}
+            style={isRegClosed ? {
+              background: 'rgba(239, 68, 68, 0.15)',
+              borderColor: 'rgba(239, 68, 68, 0.5)',
+              color: '#fca5a5',
+              cursor: 'not-allowed',
+              opacity: 0.9,
+              boxShadow: 'none',
+              transform: 'none'
+            } : {}}
+          >
+            {isRegClosed ? (
+              <>
+                <FaLock style={{ marginRight: '0.45rem', verticalAlign: '-1px' }} /> Registrations Closed
+              </>
+            ) : (
+              <>
+                Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+              </>
+            )}
           </button>
         </motion.div>
 
@@ -270,33 +360,74 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
             {isEsports ? (
               <div className="overview-card-cta-wrap esports-cta-wrap">
                 <div className="esports-cta-heading">
-                  REGISTRATION FOR THIS EVENT
+                  {isRegClosed ? 'REGISTRATIONS STATUS' : 'REGISTRATION FOR THIS EVENT'}
                 </div>
-                <div className="esports-buttons-grid">
+                {isRegClosed ? (
                   <button
                     type="button"
-                    className="esports-action-btn esports-btn-freefire"
-                    onClick={() => handleRegisterGame('FREE FIRE')}
-                    id="btn-register-freefire"
+                    className="btn btn-primary btn-full-width"
+                    disabled={true}
+                    style={{
+                      background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
+                      borderColor: '#ef4444',
+                      color: '#fca5a5',
+                      cursor: 'not-allowed',
+                      boxShadow: 'none',
+                      transform: 'none',
+                      opacity: 0.95
+                    }}
                   >
-                    <span>FREE FIRE</span>
-                    <FaArrowRight className="esports-btn-arrow" />
+                    <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
                   </button>
-                  <button
-                    type="button"
-                    className="esports-action-btn esports-btn-bgmi"
-                    onClick={() => handleRegisterGame('BGMI')}
-                    id="btn-register-bgmi"
-                  >
-                    <span>BGMI</span>
-                    <FaArrowRight className="esports-btn-arrow" />
-                  </button>
-                </div>
+                ) : (
+                  <div className="esports-buttons-grid">
+                    <button
+                      type="button"
+                      className="esports-action-btn esports-btn-freefire"
+                      onClick={() => handleRegisterGame('FREE FIRE')}
+                      id="btn-register-freefire"
+                    >
+                      <span>FREE FIRE</span>
+                      <FaArrowRight className="esports-btn-arrow" />
+                    </button>
+                    <button
+                      type="button"
+                      className="esports-action-btn esports-btn-bgmi"
+                      onClick={() => handleRegisterGame('BGMI')}
+                      id="btn-register-bgmi"
+                    >
+                      <span>BGMI</span>
+                      <FaArrowRight className="esports-btn-arrow" />
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="overview-card-cta-wrap">
-                <button className="btn btn-primary btn-full-width" onClick={handleRegister}>
-                  REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.4rem' }} />
+                <button
+                  type="button"
+                  className="btn btn-primary btn-full-width"
+                  onClick={isRegClosed ? undefined : handleRegister}
+                  disabled={isRegClosed}
+                  style={isRegClosed ? {
+                    background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
+                    borderColor: '#ef4444',
+                    color: '#fca5a5',
+                    cursor: 'not-allowed',
+                    boxShadow: 'none',
+                    transform: 'none',
+                    opacity: 0.95
+                  } : {}}
+                >
+                  {isRegClosed ? (
+                    <>
+                      <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
+                    </>
+                  ) : (
+                    <>
+                      REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.4rem' }} />
+                    </>
+                  )}
                 </button>
               </div>
             )}
