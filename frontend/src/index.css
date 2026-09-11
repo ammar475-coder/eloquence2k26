@@ -357,12 +357,7 @@ img {
   align-items: center;
   justify-content: center;
   padding: 5.8rem 1.5rem 2.8rem;
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.46) 1px, transparent 1px) 0 0 / 65px 65px,
-    linear-gradient(0deg, rgba(0, 0, 0, 0.4) 1px, transparent 1px) 0 0 / 65px 65px,
-    radial-gradient(ellipse at 50% 25%, rgba(30, 92, 57, 0.32), transparent 45%),
-    radial-gradient(ellipse at 50% 90%, rgba(0, 99, 46, 0.35), transparent 52%),
-    linear-gradient(135deg, #050806 0%, #101711 48%, #050705 100%);
+  background: #020603 url('./assets/hero_doomsday_backdrop.jpg') center center / cover no-repeat;
   overflow: hidden;
 }
 
@@ -371,9 +366,10 @@ img {
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 1;
+  z-index: 2;
   transform: translate3d(0, 0, 0);
   pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .hero-smoke-overlay {
@@ -381,9 +377,7 @@ img {
   inset: 0;
   z-index: 1;
   background:
-    radial-gradient(ellipse at 12% 40%, rgba(0, 168, 59, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 88% 40%, rgba(0, 168, 59, 0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 50%, rgba(4, 30, 18, 0.25) 0%, transparent 75%);
+    radial-gradient(circle at 50% 45%, rgba(2, 6, 3, 0.18) 0%, rgba(2, 6, 3, 0.55) 75%, rgba(2, 6, 3, 0.82) 100%);
   pointer-events: none;
 }
 
@@ -392,12 +386,12 @@ img {
   inset: 0;
   z-index: 1;
   background-image: 
-    linear-gradient(rgba(57, 255, 136, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(57, 255, 136, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(57, 255, 136, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 255, 136, 0.02) 1px, transparent 1px);
   background-size: 55px 55px;
   background-position: center center;
-  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.95) 20%, transparent 78%);
-  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.95) 20%, transparent 78%);
+  mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 20%, transparent 80%);
   pointer-events: none;
 }
 
@@ -408,7 +402,7 @@ img {
   transform: translate(-50%, -50%);
   width: min(90vw, 850px);
   height: min(90vw, 850px);
-  background: radial-gradient(circle, rgba(57, 255, 136, 0.12) 0%, rgba(0, 168, 59, 0.04) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(57, 255, 136, 0.1) 0%, rgba(0, 168, 59, 0.03) 45%, transparent 70%);
   z-index: 1;
   pointer-events: none;
   animation: ambientGlowPulse 6s ease-in-out infinite alternate;
@@ -428,9 +422,23 @@ img {
   border: 1px solid rgba(57, 255, 136, 0.08);
 }
 
+
+
+.hero-motto {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(0.75rem, 1.8vw, 0.92rem);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: #a3ffd6;
+  margin-top: 0.35rem;
+  margin-bottom: 0.45rem;
+  text-shadow: 0 0 12px rgba(57, 255, 136, 0.65);
+  text-transform: uppercase;
+}
+
 .hero-content {
   position: relative;
-  z-index: 3;
+  z-index: 5;
   width: min(100%, 960px);
   text-align: center;
   padding: 0 1rem;
@@ -571,12 +579,13 @@ img {
 .countdown {
   width: min(100%, 460px);
   margin: 0 auto 0.65rem;
-  padding: 0.62rem 1rem 0.58rem;
-  border-top: 1px solid rgba(185, 147, 88, 0.6);
-  border-bottom: 1px solid rgba(57, 255, 136, 0.4);
-  background: linear-gradient(90deg, rgba(3, 11, 7, 0.72), rgba(21, 42, 27, 0.62), rgba(3, 11, 7, 0.72));
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 168, 59, 0.12);
-  border-radius: 8px;
+  padding: 0.75rem 1.2rem 0.65rem;
+  border: 1px solid rgba(57, 255, 136, 0.35);
+  background: rgba(2, 12, 6, 0.82);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.85), 0 0 25px rgba(57, 255, 136, 0.2);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   animation: countdownPulse 4s ease-in-out infinite;
 }
 
@@ -585,45 +594,45 @@ img {
   align-items: baseline;
   justify-content: center;
   gap: clamp(0.25rem, 1vw, 0.8rem);
-  color: #ebfaee;
+  color: #c8ffea;
   font-family: var(--font-display);
   font-size: clamp(1.4rem, 3.4vw, 2.5rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   line-height: 1;
-  text-shadow: 0 0 16px rgba(57, 255, 136, 0.3);
+  text-shadow: 0 0 18px rgba(57, 255, 136, 0.5), 0 0 32px rgba(0, 255, 102, 0.25);
 }
 
 .colon {
-  color: #b99358;
+  color: #39ff88;
   margin: 0 0.15rem;
   font-weight: 400;
-  text-shadow: 0 0 10px rgba(185, 147, 88, 0.5);
+  text-shadow: 0 0 12px rgba(57, 255, 136, 0.6);
 }
 
 .countdown-labels {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   margin-top: 0.4rem;
-  color: rgba(214, 219, 213, 0.68);
+  color: rgba(163, 255, 214, 0.75);
   font-family: var(--font-display);
   font-size: clamp(0.42rem, 0.72vw, 0.56rem);
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   text-align: center;
 }
 
 .hero-date {
   margin-bottom: 0.85rem;
-  color: #e2c58a;
+  color: #d6c19a;
   font-family: var(--font-display);
   font-size: clamp(0.72rem, 1.05vw, 0.88rem);
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(226, 197, 138, 0.25);
+  text-shadow: 0 0 12px rgba(214, 193, 154, 0.4), 0 0 20px rgba(57, 255, 136, 0.2);
 }
 
 .hero-buttons {
