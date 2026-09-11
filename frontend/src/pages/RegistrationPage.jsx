@@ -19,13 +19,11 @@ import {
   FaEdit,
   FaExclamationTriangle,
   FaExchangeAlt,
-  FaPhoneAlt,
   FaEnvelope,
   FaGraduationCap,
   FaBuilding,
   FaCheckCircle,
   FaSpinner,
-  FaHeadset,
   FaBookOpen,
   FaTimes,
   FaLock,
@@ -189,40 +187,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       });
   }, [eventId]);
 
-  // Event-specific student coordinators (live from backend DB)
-  const [liveCoordinators, setLiveCoordinators] = useState([]);
-
-  useEffect(() => {
-    if (!selectedEvent?.id) {
-      setLiveCoordinators([]);
-      return;
-    }
-
-    let isMounted = true;
-    fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(selectedEvent.id)}`))
-      .then((res) => res.json())
-      .then((result) => {
-        if (!isMounted) return;
-        if (result.success && Array.isArray(result.data)) {
-          setLiveCoordinators(result.data);
-        } else {
-          setLiveCoordinators([]);
-        }
-      })
-      .catch(() => {
-        if (isMounted) setLiveCoordinators([]);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedEvent?.id]);
-
-  const eventCoordinators = liveCoordinators;
-
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi'); // 'upi' | 'all'
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
@@ -714,9 +680,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         return;
       }
 
-      // 3. Configure and Launch Razorpay Checkout Popup
-      const isUpiPreferred = selectedPaymentMethod === 'upi';
-
+      // 3. Configure and Launch Razorpay Checkout Popup (Direct UPI)
       const options = {
         key: orderData.keyId,
         amount: orderData.amount,
@@ -728,13 +692,13 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           name: fields.fullName?.trim() || '',
           email: fields.email?.trim() || '',
           contact: formattedContact,
-          ...(isUpiPreferred ? { method: 'upi' } : {})
+          method: 'upi'
         },
         readonly: {
           contact: true,
           email: true
         },
-        config: isUpiPreferred ? {
+        config: {
           display: {
             blocks: {
               upi: {
@@ -744,28 +708,14 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     method: "upi"
                   }
                 ]
-              },
-              other: {
-                name: "Cards, Netbanking & Other Modes",
-                instruments: [
-                  {
-                    method: "card"
-                  },
-                  {
-                    method: "netbanking"
-                  },
-                  {
-                    method: "wallet"
-                  }
-                ]
               }
             },
-            sequence: ["block.upi", "block.other"],
+            sequence: ["block.upi"],
             preferences: {
               show_default_blocks: true
             }
           }
-        } : undefined,
+        },
         notes: {
           event: activeEventPayload.name,
           category: selectedEvent.category,
@@ -774,7 +724,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           contact: formattedContact,
           whatsapp: formattedContact,
           phone: formattedContact,
-          chosenPaymentMethod: isUpiPreferred ? 'UPI' : 'CARDS_NETBANKING'
+          chosenPaymentMethod: 'UPI'
         },
         theme: {
           color: '#00f5ff'
@@ -804,7 +754,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
               },
               totalFee: totalPayable,
               game: isEsports ? selectedGame : null,
-              paymentMethod: isUpiPreferred ? 'RAZORPAY_UPI' : 'RAZORPAY'
+              paymentMethod: 'RAZORPAY_UPI'
             });
 
             if (verifyRes.success && verifyRes.ticketData) {
@@ -1683,41 +1633,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 <div className="summary-desk-note">
                   <div className="desk-note-icon">🔒</div>
                   <p>
-                    <strong>Secure Razorpay Checkout:</strong> Instant online verification via UPI, Cards, Netbanking & Wallets with official E-Pass ticket generation.
+                    <strong>Secure UPI Checkout:</strong> Instant online verification via UPI (Google Pay, PhonePe, Paytm, QR) powered by Razorpay with official E-Pass ticket generation.
                   </p>
-                </div>
-
-                {/* Event-Specific Student Coordinators & Contact */}
-                <div className="reg-coordinators-section">
-                  <div className="summary-card-header coord-header">
-                    <span className="summary-title-tag">STUDENT COORDINATORS</span>
-                    <h4 className="summary-card-heading">
-                      <FaHeadset style={{ marginRight: '0.45rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
-                      CONTACT & ASSISTANCE
-                    </h4>
-                  </div>
-
-                  {eventCoordinators.length > 0 ? (
-                    <div className="reg-coord-list">
-                      {eventCoordinators.map((coord, idx) => (
-                        <div key={idx} className="reg-coord-item">
-                          <div className="reg-coord-top">
-                            <span className="reg-coord-role">{coord.role || 'Lead Coordinator'}</span>
-                            {coord.slot && <span className="reg-coord-slot">SLOT {coord.slot}</span>}
-                          </div>
-                          <div className="reg-coord-name">{coord.name}</div>
-                          <a href={`tel:${coord.phone}`} className="reg-coord-phone">
-                            <FaPhoneAlt style={{ marginRight: '0.4rem', fontSize: '0.75rem' }} />
-                            {coord.displayPhone || coord.phone}
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ padding: '0.85rem 1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px dashed rgba(255, 255, 255, 0.15)', color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.82rem', textAlign: 'center' }}>
-                      Coordinator details will be updated soon.
-                    </div>
-                  )}
                 </div>
               </div>
             </aside>
@@ -1903,126 +1820,22 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     </div>
                   </div>
 
-                  {/* UPI & Payment Mode Selection (Inside Razorpay Gateway) */}
                   {feeInfo.total > 0 && (
-                    <div className="payment-selection-container" style={{ marginTop: '1.35rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                        <span style={{ fontSize: '0.78rem', fontWeight: '700', letterSpacing: '0.08em', color: '#00f5ff', textTransform: 'uppercase' }}>
-                          CHOOSE PAYMENT MODE (POWERED BY RAZORPAY)
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
-                          <FaShieldAlt style={{ marginRight: '0.3rem', color: '#00f5ff' }} /> 100% Encrypted & Secure
-                        </span>
-                      </div>
-
-                      <div className="payment-options-grid">
-                        {/* Option 1: UPI */}
-                        <div
-                          className={`payment-option-card ${selectedPaymentMethod === 'upi' ? 'selected-payment-card' : ''}`}
-                          onClick={() => setSelectedPaymentMethod('upi')}
-                          style={{
-                            cursor: 'pointer',
-                            padding: '1.1rem 1.25rem',
-                            borderRadius: '8px',
-                            border: selectedPaymentMethod === 'upi' ? '2px solid #00f5ff' : '1px solid rgba(255, 255, 255, 0.12)',
-                            background: selectedPaymentMethod === 'upi' ? 'rgba(0, 245, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-                            boxShadow: selectedPaymentMethod === 'upi' ? '0 0 20px rgba(0, 245, 255, 0.22)' : 'none',
-                            transition: 'all 0.2s ease',
-                            position: 'relative'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '1.25rem' }}>⚡</span>
-                              <strong style={{ fontSize: '0.95rem', color: '#ffffff', letterSpacing: '0.04em' }}>UPI PAYMENT</strong>
-                            </div>
-                            <span style={{ fontSize: '0.62rem', fontWeight: '800', background: 'linear-gradient(90deg, #00f5ff, #3b82f6)', color: '#000', padding: '0.2rem 0.55rem', borderRadius: '4px' }}>
-                              POPULAR / INSTANT
-                            </span>
-                          </div>
-                          <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.4' }}>
-                            Pay instantly using Google Pay, PhonePe, Paytm, BHIM, or by scanning UPI QR.
-                          </p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                            {['Google Pay', 'PhonePe', 'Paytm', 'BHIM / UPI QR'].map((app, i) => (
-                              <span key={i} style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', background: selectedPaymentMethod === 'upi' ? 'rgba(0, 245, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)', borderRadius: '4px', border: selectedPaymentMethod === 'upi' ? '1px solid rgba(0, 245, 255, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)', color: selectedPaymentMethod === 'upi' ? '#00f5ff' : 'rgba(255, 255, 255, 0.8)' }}>
-                                {app}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Option 2: Cards & Netbanking */}
-                        <div
-                          className={`payment-option-card ${selectedPaymentMethod === 'all' ? 'selected-payment-card' : ''}`}
-                          onClick={() => setSelectedPaymentMethod('all')}
-                          style={{
-                            cursor: 'pointer',
-                            padding: '1.1rem 1.25rem',
-                            borderRadius: '8px',
-                            border: selectedPaymentMethod === 'all' ? '2px solid #00f5ff' : '1px solid rgba(255, 255, 255, 0.12)',
-                            background: selectedPaymentMethod === 'all' ? 'rgba(0, 245, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
-                            boxShadow: selectedPaymentMethod === 'all' ? '0 0 20px rgba(0, 245, 255, 0.22)' : 'none',
-                            transition: 'all 0.2s ease',
-                            position: 'relative'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <span style={{ fontSize: '1.25rem' }}>💳</span>
-                              <strong style={{ fontSize: '0.95rem', color: '#ffffff', letterSpacing: '0.04em' }}>CARDS & NETBANKING</strong>
-                            </div>
-                          </div>
-                          <p style={{ margin: '0.35rem 0 0.75rem', fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.4' }}>
-                            Pay with Debit / Credit Cards (Visa, MasterCard, RuPay), Netbanking or Wallets.
-                          </p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                            {['Debit Cards', 'Credit Cards', 'Net Banking', 'Wallets'].map((item, i) => (
-                              <span key={i} style={{ fontSize: '0.7rem', fontWeight: '600', padding: '0.2rem 0.5rem', background: selectedPaymentMethod === 'all' ? 'rgba(0, 245, 255, 0.15)' : 'rgba(255, 255, 255, 0.06)', borderRadius: '4px', border: selectedPaymentMethod === 'all' ? '1px solid rgba(0, 245, 255, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)', color: selectedPaymentMethod === 'all' ? '#00f5ff' : 'rgba(255, 255, 255, 0.8)' }}>
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                    <div style={{ marginTop: '1.15rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#00f5ff', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem', letterSpacing: '0.04em' }}>
+                        <span>⚡</span> DIRECT UPI CHECKOUT (GOOGLE PAY, PHONEPE, PAYTM, QR)
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
+                        <FaShieldAlt style={{ marginRight: '0.3rem', color: '#00f5ff' }} /> 100% Encrypted & Secure
+                      </span>
                     </div>
                   )}
 
                   <p className="fin-desk-reminder">
                     {feeInfo.total === 0
                       ? '* Free event entry. Registration will be confirmed immediately.'
-                      : selectedPaymentMethod === 'upi'
-                      ? '* Fast UPI checkout: Opens directly with Google Pay, PhonePe, Paytm or UPI QR Code scan.'
-                      : '* Secured by Razorpay. Supports all major bank Credit/Debit Cards, Netbanking & Wallets.'}
+                      : '* Fast UPI checkout: Directly opens Razorpay with Google Pay, PhonePe, Paytm or UPI QR Code scan.'}
                   </p>
-                </div>
-
-                {/* 5. Student Coordinators & Contact in Review */}
-                <div className="review-section-box review-full-col">
-                  <div className="review-sec-header">
-                    <h4>
-                      <FaHeadset style={{ marginRight: '0.45rem', color: 'var(--bright-green)', verticalAlign: '-1px' }} />
-                      STUDENT COORDINATORS & CONTACT ({selectedEvent.name})
-                    </h4>
-                  </div>
-                  {eventCoordinators.length > 0 ? (
-                    <div className="review-coord-grid">
-                      {eventCoordinators.map((c, idx) => (
-                        <div key={idx} className="review-coord-entry">
-                          <span className="review-coord-role">{c.role || `Coordinator ${idx + 1}`}</span>
-                          <strong className="review-coord-name">{c.name}</strong>
-                          <a href={`tel:${c.phone}`} className="review-coord-phone">
-                            <FaPhoneAlt style={{ marginRight: '0.35rem', fontSize: '0.75rem' }} />
-                            {c.displayPhone || c.phone}
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ padding: '1rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', border: '1px dashed rgba(255, 255, 255, 0.15)', color: 'rgba(255, 255, 255, 0.65)', fontSize: '0.85rem', textAlign: 'center' }}>
-                      Coordinator details will be updated soon.
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -2041,7 +1854,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   className="btn btn-primary btn-confirm-submit"
                   onClick={handleFinalSubmit}
                   disabled={isSubmitting}
-                  style={feeInfo.total > 0 ? { background: selectedPaymentMethod === 'upi' ? 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)', boxShadow: '0 0 22px rgba(0, 245, 255, 0.45)', color: '#000', fontWeight: '800' } : {}}
+                  style={feeInfo.total > 0 ? { background: 'linear-gradient(135deg, #00f5ff 0%, #0284c7 100%)', boxShadow: '0 0 22px rgba(0, 245, 255, 0.45)', color: '#000', fontWeight: '800' } : {}}
                 >
                   {isSubmitting ? (
                     <>
@@ -2050,15 +1863,10 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     </>
                   ) : feeInfo.total === 0 ? (
                     <>CONFIRM REGISTRATION (FREE) →</>
-                  ) : selectedPaymentMethod === 'upi' ? (
+                  ) : (
                     <>
                       <span style={{ marginRight: '0.45rem', fontSize: '1.05rem' }}>⚡</span>
                       PAY ₹{feeInfo.total} VIA UPI (RAZORPAY) →
-                    </>
-                  ) : (
-                    <>
-                      <FaShieldAlt style={{ marginRight: '0.45rem' }} />
-                      PROCEED TO PAY ₹{feeInfo.total} VIA RAZORPAY →
                     </>
                   )}
                 </button>
