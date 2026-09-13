@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FaArrowRight, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { getEventBanner } from '../data/eventImages.js';
 import rulesData from '../data/rules.js';
+import { getEventSticker } from '../data/eventStickers.js';
 
 function getEventIllustration(event) {
   const bannerSrc = getEventBanner(event);
@@ -88,6 +89,8 @@ export default function EventCard({ event, onRegister, onViewRules }) {
   };
 
   const isTech = event.category === 'technical';
+  const eventSticker = getEventSticker(event);
+
   const eventRules = (Array.isArray(event.rules) && event.rules.length > 0)
     ? event.rules
     : (rulesData[event.id]?.rules || [
@@ -103,15 +106,33 @@ export default function EventCard({ event, onRegister, onViewRules }) {
       </div>
 
       {/* Bottom Content Block */}
-      <div className="event-card-bottom-content">
-        <div className="event-header-row">
-          <span className="event-header-icon">{getEventIcon(event.id)}</span>
-          <h3 className="event-card-title">{event.name}</h3>
-        </div>
+      <div className={`event-card-bottom-content ${eventSticker ? 'has-event-sticker' : ''}`}>
+        <div className="event-card-top-content-row">
+          <div className="event-card-info-col">
+            <div className="event-header-row">
+              <span className="event-header-icon">{getEventIcon(event.id)}</span>
+              <h3 className="event-card-title">{event.name}</h3>
+            </div>
 
-        <p className="event-card-desc">
-          {event.subtitle || event.description}
-        </p>
+            <p className="event-card-desc">
+              {event.subtitle || event.description}
+            </p>
+          </div>
+
+          {eventSticker && (
+            <div className="event-card-sticker-box" title={eventSticker.title}>
+              <img
+                src={eventSticker.src}
+                alt={eventSticker.alt}
+                className="event-name-sticker"
+                style={{
+                  '--sticker-scale': eventSticker.scale || 1,
+                  '--sticker-origin': eventSticker.cropPosition === 'top' ? 'top center' : 'center center'
+                }}
+              />
+            </div>
+          )}
+        </div>
 
         <div className="event-card-meta-list">
           <div className="meta-line">

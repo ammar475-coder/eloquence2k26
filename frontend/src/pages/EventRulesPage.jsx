@@ -25,6 +25,7 @@ import {
 import { motion } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
 import { getCachedEvents, fetchEventsData } from '../services/api.js';
+import { getEventSticker } from '../data/eventStickers.js';
 
 function VenueImageModal({ isOpen, onClose, event }) {
   useEffect(() => {
@@ -245,6 +246,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
   }, [eventId]);
 
   const isEsports = event && (event.id === 'nontech-05' || event.name?.toLowerCase().includes('gaming') || event.name?.toLowerCase().includes('battle of champions'));
+  const eventSticker = getEventSticker(event);
 
   const handleRegister = () => {
     if (isRegClosed) return;
@@ -392,7 +394,22 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
               <span className="rules-sub-tag-badge">{event.tag}</span>
             )}
           </div>
-          <h1 className="rules-clean-main-title">{event.name}</h1>
+          <h1 className="rules-clean-main-title">
+            {event.name}
+            {eventSticker && (
+              <span className="rules-title-sticker-wrap" title={eventSticker.title}>
+                <img
+                  src={eventSticker.src}
+                  alt={eventSticker.alt}
+                  className="rules-title-sticker-img"
+                  style={{
+                    '--rules-sticker-scale': eventSticker.scale || 1,
+                    '--rules-sticker-origin': eventSticker.cropPosition === 'top' ? 'top center' : 'center center'
+                  }}
+                />
+              </span>
+            )}
+          </h1>
           {event.alias && event.alias.toLowerCase() !== event.name.toLowerCase() && (
             <p className="rules-alias-sub">// {event.alias}</p>
           )}
