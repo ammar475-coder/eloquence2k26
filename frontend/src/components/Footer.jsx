@@ -1,11 +1,26 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FaBolt, FaGamepad, FaCompass } from 'react-icons/fa';
 import logoImg from '../assets/logo.png';
-import events from '../data/events.js';
+import staticEvents from '../data/events.js';
+import { getCachedEvents } from '../services/api.js';
 
 export default function Footer({ onNavigate }) {
   const [clickCount, setClickCount] = useState(0);
   const timerRef = useRef(null);
+  const [eventList, setEventList] = useState(() => {
+    const cached = getCachedEvents();
+    if (Array.isArray(cached) && cached.length > 0) {
+      return cached.filter((e) => e.id !== 'tech-05' && e.id !== 'tech-07');
+    }
+    return staticEvents;
+  });
+
+  useEffect(() => {
+    const cached = getCachedEvents();
+    if (Array.isArray(cached) && cached.length > 0) {
+      setEventList(cached.filter((e) => e.id !== 'tech-05' && e.id !== 'tech-07'));
+    }
+  }, []);
 
   const handleTripleClick = () => {
     setClickCount((prev) => {
@@ -34,8 +49,8 @@ export default function Footer({ onNavigate }) {
     }
   };
 
-  const techEvents = events.filter((e) => e.category === 'technical');
-  const nonTechEvents = events.filter((e) => e.category === 'non-technical');
+  const techEvents = eventList.filter((e) => e.category === 'technical' && e.id !== 'tech-05' && e.id !== 'tech-07');
+  const nonTechEvents = eventList.filter((e) => e.category === 'non-technical');
 
   return (
     <footer className="footer">
@@ -114,6 +129,7 @@ export default function Footer({ onNavigate }) {
           <ul className="footer-nav-list">
             <li>
               <a
+                href="#hero"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('home', 'hero');
@@ -124,6 +140,7 @@ export default function Footer({ onNavigate }) {
             </li>
             <li>
               <a
+                href="#/events"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('events');
@@ -134,6 +151,7 @@ export default function Footer({ onNavigate }) {
             </li>
             <li>
               <a
+                href="#intro"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('home', 'intro');
@@ -144,6 +162,7 @@ export default function Footer({ onNavigate }) {
             </li>
             <li>
               <a
+                href="#patrons"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('home', 'patrons');
@@ -154,6 +173,7 @@ export default function Footer({ onNavigate }) {
             </li>
             <li>
               <a
+                href="#location"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNav('home', 'location');

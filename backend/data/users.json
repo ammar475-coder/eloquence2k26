@@ -38,5 +38,25 @@
       "tech-02"
     ],
     "eventId": "tech-02"
+  },
+  {
+    "id": 1789207567321,
+    "username": "shahid_event",
+    "password": "coordinator123",
+    "role": "Event Coordinator",
+    "assignedEvents": [
+      "nontech-02"
+    ],
+    "eventId": "nontech-02"
+  },
+  {
+    "id": 1789109931245,
+    "username": "Musthafa",
+    "password": "coordinator123",
+    "role": "Event Coordinator",
+    "assignedEvents": [
+      "nontech-02"
+    ],
+    "eventId": "nontech-02"
   }
 ]

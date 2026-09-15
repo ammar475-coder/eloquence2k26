@@ -186,67 +186,6 @@
     "image": "/events/img-1788936520321-7906.jpg"
   },
   {
-    "id": "tech-05",
-    "number": "05",
-    "name": "CHART CANVAS",
-    "alias": "Poster Design",
-    "subtitle": "Manual Chart & Visual Design",
-    "category": "technical",
-    "teamSize": "Team (Max 3 members)",
-    "minMembers": 1,
-    "maxMembers": 3,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Creative Graphics",
-    "venue": "Computer Labs 1 & 2",
-    "timing": "10:30 AM – 1:00 PM",
-    "description": "Express engineering concepts, sustainability themes, and digital innovations through creative chart artwork and impactful visual posters.",
-    "rules": [
-      "Participants will be provided with chart paper; bring your own coloring materials, pencils, and markers.",
-      "Theme will be announced on the spot at the start of the event.",
-      "Time duration: 1 hour for design + 3 minutes presentation before the judges.",
-      "Maximum of 3 members per team.",
-      "Pre-drawn materials or use of mobile phones for tracing is strictly prohibited."
-    ],
-    "rounds": [
-      {
-        "name": "Design Phase",
-        "time": "60 Mins",
-        "desc": "Brainstorm and draft your chart poster on the announced technical topic."
-      },
-      {
-        "name": "Concept Presentation",
-        "time": "3 Mins / Team",
-        "desc": "Explain the visual message, symbolism, and technical depth to the jury."
-      }
-    ],
-    "guidelines": [
-      "Originality, neatness, clarity of message, and visual impact are the primary judging criteria.",
-      "Decision of the evaluation panel is final."
-    ],
-    "coordinators": [
-      {
-        "name": "Imran B.",
-        "role": "Lead Coordinator",
-        "phone": "6369954082"
-      },
-      {
-        "name": "Preethi R.",
-        "role": "Lead Coordinator",
-        "phone": "9344114553"
-      }
-    ],
-    "highlights": [
-      "Topics on spot",
-      "1 hour designing",
-      "3 mins presentation",
-      "Materials provided"
-    ],
-    "image": ""
-  },
-  {
     "id": "tech-06",
     "number": "06",
     "name": "UI/UX",
@@ -292,66 +231,6 @@
       "Round 2: Dashboard"
     ],
     "image": "/events/img-1788936536890-4163.jpg"
-  },
-  {
-    "id": "tech-07",
-    "number": "07",
-    "name": "The Roborange Botathon",
-    "alias": "The Roborange Botathon",
-    "subtitle": "Line-Follower Robot Competition",
-    "category": "technical",
-    "teamSize": "Max of 4 members",
-    "minMembers": 1,
-    "maxMembers": 4,
-    "fee": "₹150 per head",
-    "feePerHead": 150,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Robotics",
-    "venue": "CSE Seminar Hall",
-    "timing": "10:00 AM – 01:00 PM",
-    "description": "Watch autonomous robots race to follow a track using their own sensors — no remote control allowed. Fastest clean run wins, with penalty points for going off-track or any manual intervention.",
-    "rules": [
-      "Each team must have 2–4 members and register one robot with a unique team name.",
-      "The robot must be a line-follower that runs fully autonomously — no manual or remote control during the run.",
-      "Ranking is based on the fastest successful completion time across the given attempts.",
-      "Penalty points apply for leaving the track, skipping checkpoints, or touching/moving the robot during a run.",
-      "The judges' decision on time, penalties, and qualification is final."
-    ],
-    "rounds": [
-      {
-        "name": "Round 1: Track Qualification Run",
-        "time": "10 Mins",
-        "desc": "Autonomous run through the qualification line path."
-      },
-      {
-        "name": "Round 2: Championship Speed Trials",
-        "time": "15 Mins",
-        "desc": "Complex obstacle and curve track run for fastest clean time."
-      }
-    ],
-    "guidelines": [
-      "Robots must be fully autonomous with onboard power supply."
-    ],
-    "highlights": [
-      "Autonomous line follower",
-      "Max 4 members",
-      "Clean fastest run wins",
-      "₹150/head"
-    ],
-    "image": "/events/img-1788936555010-2407.png",
-    "coordinators": [
-      {
-        "name": "MD Faazil Ammar P.",
-        "role": "Lead Coordinator",
-        "phone": "9025184611"
-      },
-      {
-        "name": "Mohammed Saad V.",
-        "role": "Lead Coordinator",
-        "phone": "8643033733"
-      }
-    ]
   },
   {
     "id": "nontech-01",
@@ -441,7 +320,9 @@
       "Fast buzzer mechanics",
       "Max 3 per squad"
     ],
-    "image": "/events/img-1788936728593-6703.png"
+    "image": "",
+    "venueImage": "",
+    "sticker": "https://res.cloudinary.com/dtz0urit6/image/upload/q_auto:best,f_jpg/cloudinary-tools-uploads/mcp0wmdi2hqtauutpt27"
   },
   {
     "id": "nontech-03",
