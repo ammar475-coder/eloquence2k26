@@ -2011,21 +2011,27 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                           <div style={S.winnerPlacesList}>
                             {w.firstPlace && (
                               <div style={S.winnerPlaceItem}>
-                                <span style={{ color: '#eab308', fontWeight: '800' }}>🥇 1st Place:</span>
+                                <span style={{ color: '#eab308', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <FaTrophy style={{ color: '#eab308' }} /> 1st Place:
+                                </span>
                                 <span style={{ fontWeight: '700' }}>{w.firstPlace.name}</span>
                                 <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>({w.firstPlace.college})</span>
                               </div>
                             )}
                             {w.secondPlace && (
                               <div style={S.winnerPlaceItem}>
-                                <span style={{ color: '#94a3b8', fontWeight: '800' }}>🥈 2nd Place:</span>
+                                <span style={{ color: '#94a3b8', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <FaMedal style={{ color: '#94a3b8' }} /> 2nd Place:
+                                </span>
                                 <span style={{ fontWeight: '700' }}>{w.secondPlace.name}</span>
                                 <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>({w.secondPlace.college})</span>
                               </div>
                             )}
                             {w.thirdPlace && (
                               <div style={S.winnerPlaceItem}>
-                                <span style={{ color: '#b45309', fontWeight: '800' }}>🥉 3rd Place:</span>
+                                <span style={{ color: '#b45309', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <FaMedal style={{ color: '#b45309' }} /> 3rd Place:
+                                </span>
                                 <span style={{ fontWeight: '700' }}>{w.thirdPlace.name}</span>
                                 <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>({w.thirdPlace.college})</span>
                               </div>

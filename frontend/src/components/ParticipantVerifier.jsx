@@ -21,7 +21,16 @@ import {
   FaSyncAlt,
   FaFileImage,
   FaCheck,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaHourglassHalf,
+  FaBolt,
+  FaHandPaper,
+  FaVideo,
+  FaImage,
+  FaInfoCircle,
+  FaBullseye,
+  FaSpinner,
+  FaClock
 } from 'react-icons/fa';
 import { Html5Qrcode } from 'html5-qrcode';
 import jsQR from 'jsqr';
@@ -345,21 +354,21 @@ export default function ParticipantVerifier({
 
       if (isAlreadyVerified) {
         toast.success(
-          `ℹ️ ${getParticipantName(matched)} is ALREADY VERIFIED & ADMITTED!`,
-          { id: 'scan-verify-toast', duration: 4500, icon: '✅' }
+          `${getParticipantName(matched)} is ALREADY VERIFIED & ADMITTED!`,
+          { id: 'scan-verify-toast', duration: 4500 }
         );
       } else if (autoVerifyOnScan) {
         // Automatically verify and admit in database
         await handleToggleVerification(matched, true);
       } else {
         toast.success(
-          `🎯 Participant Found: ${getParticipantName(matched)}`,
-          { id: 'scan-verify-toast', duration: 4000, icon: '🎯' }
+          `Participant Found: ${getParticipantName(matched)}`,
+          { id: 'scan-verify-toast', duration: 4000 }
         );
       }
     } else {
       setSearchTerm(lookupKey);
-      toast.error(`No registration matched: "${lookupKey}"`, { id: 'scan-verify-toast', icon: '🔍' });
+      toast.error(`No registration matched: "${lookupKey}"`, { id: 'scan-verify-toast' });
     }
 
     // Release scan debounce lock after 1.5s
@@ -469,7 +478,7 @@ export default function ParticipantVerifier({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const loadingToast = toast.loading('🔍 Scanning image for QR code...');
+    const loadingToast = toast.loading('Scanning image for QR code...');
     setIsProcessingImage(true);
 
     try {
@@ -526,7 +535,7 @@ export default function ParticipantVerifier({
       if (data.success) {
         toast.success(
           desiredStatus 
-            ? `🎉 ${getParticipantName(participant)} verified & admitted!`
+            ? `${getParticipantName(participant)} verified & admitted!`
             : `Verification reset for ${getParticipantName(participant)}`,
           { id: `verify-status-${code}`, duration: 4000 }
         );
@@ -1004,16 +1013,16 @@ export default function ParticipantVerifier({
         <div style={S.statCard}>
           <span style={S.statLabel}>Verified & Confirmed</span>
           <span style={{ ...S.statNumber, color: '#10b981' }}>{verifiedCount}</span>
-          <span style={{ ...S.statBadge, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857' }}>
-            ✓ {verifiedPercent}% Checked-in
+          <span style={{ ...S.statBadge, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <FaCheck /> {verifiedPercent}% Checked-in
           </span>
         </div>
 
         <div style={S.statCard}>
           <span style={S.statLabel}>Pending Verification</span>
           <span style={{ ...S.statNumber, color: '#f59e0b' }}>{unverifiedCount}</span>
-          <span style={{ ...S.statBadge, background: isDark ? '#451a03' : '#fffbeb', color: isDark ? '#fcd34d' : '#b45309' }}>
-            ⏳ Awaiting Desk Entry
+          <span style={{ ...S.statBadge, background: isDark ? '#451a03' : '#fffbeb', color: isDark ? '#fcd34d' : '#b45309', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <FaHourglassHalf /> Awaiting Desk Entry
           </span>
         </div>
 
@@ -1067,7 +1076,7 @@ export default function ParticipantVerifier({
               const next = !autoVerifyOnScan;
               setAutoVerifyOnScan(next);
               try { localStorage.setItem('auto_verify_on_scan', JSON.stringify(next)); } catch (e) {}
-              toast.success(next ? '⚡ Auto-Admit on Scan ENABLED' : '✋ Auto-Admit DISABLED (Inspect Mode)', { id: 'auto-verify-toggle-toast' });
+              toast.success(next ? 'Auto-Admit on Scan ENABLED' : 'Auto-Admit DISABLED (Inspect Mode)', { id: 'auto-verify-toggle-toast' });
             }}
             style={{
               display: 'flex',
@@ -1092,8 +1101,8 @@ export default function ParticipantVerifier({
             }}
             title="When ON, scanning a QR code automatically admits & verifies the participant in the database."
           >
-            <FaCheckCircle size={14} color={autoVerifyOnScan ? '#10b981' : '#9ca3af'} />
-            <span>{autoVerifyOnScan ? '⚡ Auto-Admit: ON' : '✋ Auto-Admit: OFF'}</span>
+            {autoVerifyOnScan ? <FaBolt size={14} color="#10b981" /> : <FaHandPaper size={14} color="#9ca3af" />}
+            <span>{autoVerifyOnScan ? 'Auto-Admit: ON' : 'Auto-Admit: OFF'}</span>
           </button>
         </div>
 
@@ -1190,10 +1199,13 @@ export default function ParticipantVerifier({
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: '700',
-                fontSize: '0.85rem'
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              📹 Use Camera
+              <FaVideo /> Use Camera
             </button>
             <button 
               type="button"
@@ -1217,7 +1229,15 @@ export default function ParticipantVerifier({
                 gap: '6px'
               }}
             >
-              {isProcessingImage ? '⏳ Analyzing QR Image...' : '🖼️ Upload QR Image'}
+              {isProcessingImage ? (
+                <>
+                  <FaSpinner className="spinner-rotate" /> Analyzing QR Image...
+                </>
+              ) : (
+                <>
+                  <FaImage /> Upload QR Image
+                </>
+              )}
             </button>
             <input 
               ref={fileInputRef}
@@ -1249,8 +1269,8 @@ export default function ParticipantVerifier({
               <div id="qr-reader-target" style={S.cameraFrame}></div>
 
               {scannerError ? (
-                <div style={{ color: '#f87171', fontSize: '0.88rem', textAlign: 'center', padding: '0.5rem' }}>
-                  ⚠️ {scannerError}
+                <div style={{ color: '#f87171', fontSize: '0.88rem', textAlign: 'center', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                  <FaExclamationTriangle /> {scannerError}
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
@@ -1572,7 +1592,7 @@ export default function ParticipantVerifier({
                             background: isDark ? '#064e3b' : '#ecfdf5',
                             color: isDark ? '#6ee7b7' : '#047857'
                           }}>
-                            ✓ VERIFIED
+                            <FaCheck /> VERIFIED
                           </span>
                         ) : (
                           <span style={{
@@ -1586,7 +1606,7 @@ export default function ParticipantVerifier({
                             background: isDark ? '#451a03' : '#fffbeb',
                             color: isDark ? '#fcd34d' : '#b45309'
                           }}>
-                            ⏳ PENDING
+                            <FaHourglassHalf /> PENDING
                           </span>
                         )}
                       </td>

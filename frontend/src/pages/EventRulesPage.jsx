@@ -20,7 +20,9 @@ import {
   FaCamera,
   FaImage,
   FaLayerGroup,
-  FaCheckCircle
+  FaCheckCircle,
+  FaGamepad,
+  FaStar
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
@@ -74,7 +76,9 @@ function VenueImageModal({ isOpen, onClose, event }) {
         </button>
 
         <div className="venue-modal-header">
-          <span className="venue-modal-badge">✦ VENUE PHOTO</span>
+          <span className="venue-modal-badge">
+            <FaCamera style={{ marginRight: '0.35rem' }} /> VENUE PHOTO
+          </span>
           <h2 id="venue-modal-title" className="venue-modal-title">{venueName}</h2>
           <p className="venue-modal-college-name">
             {event?.name ? `Designated hall & arena for ${event.name}` : 'Symposium Venue'}
@@ -395,7 +399,15 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
         >
           <div className="rules-category-tags-row">
             <span className="rules-category-tag">
-              {event.category === 'technical' ? '⚡ TECHNICAL EVENT' : '🎮 NON-TECHNICAL EVENT'}
+              {event.category === 'technical' ? (
+                <>
+                  <FaBolt style={{ marginRight: '0.35rem' }} /> TECHNICAL EVENT
+                </>
+              ) : (
+                <>
+                  <FaGamepad style={{ marginRight: '0.35rem' }} /> NON-TECHNICAL EVENT
+                </>
+              )}
             </span>
             {event.tag && (
               <span className="rules-sub-tag-badge">{event.tag}</span>
@@ -450,7 +462,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
                 <div className="rules-box-top">
                   <span className="rules-box-icon"><FaBuilding /></span>
                   <span className="rules-box-label">VENUE</span>
-                  <span className="rules-box-corner-indicator" title="Click to view picture">↗</span>
+                  <span className="rules-box-corner-indicator" title="Click to view picture"><FaExternalLinkAlt style={{ fontSize: '0.75rem' }} /></span>
                 </div>
                 <div className="rules-box-value">{event.venue || 'CSE Department Labs'}</div>
                 <span className="rules-box-subhint">Click to view photo</span>
@@ -504,9 +516,9 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
                 <p className="diagonal-desc-text">
                   {event.description || event.subtitle}
                 </p>
-                {event.subtitle && event.description && event.subtitle !== event.description && (
-                  <div className="diagonal-subtitle-tag">
-                    <span>✦ {event.subtitle}</span>
+                {event.subtitle && (
+                  <div className="rules-subtitle-banner">
+                    <span><FaStar style={{ marginRight: '0.35rem', fontSize: '0.75rem' }} /> {event.subtitle}</span>
                   </div>
                 )}
               </div>
@@ -521,7 +533,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
                 <div className="rules-highlights-tags">
                   {highlights.map((h, idx) => (
                     <span key={idx} className="rules-highlight-pill">
-                      ⚡ {h}
+                      <FaBolt style={{ marginRight: '0.3rem', fontSize: '0.75rem' }} /> {h}
                     </span>
                   ))}
                 </div>
