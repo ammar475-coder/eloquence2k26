@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { FaVolumeMute, FaVolumeUp } from 'react-icons/fa';
 import desktopVideoSrc from '../assets/lv_0_20260830212552.mp4';
 import portraitVideoSrc from '../assets/lv_0_20260830212104.mp4';
 import logoImg from '../assets/logo.png';
@@ -138,7 +139,15 @@ export default function OpeningVideo({ onComplete }) {
           onClick={toggleSound}
           title="Toggle Sound"
         >
-          {isMuted ? '🔊 TAP FOR SOUND' : '🔊 SOUND ON'}
+          {isMuted ? (
+            <>
+              <FaVolumeMute style={{ marginRight: '0.45rem' }} /> TAP FOR SOUND
+            </>
+          ) : (
+            <>
+              <FaVolumeUp style={{ marginRight: '0.45rem' }} /> SOUND ON
+            </>
+          )}
         </button>
         <button
           type="button"

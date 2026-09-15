@@ -21,10 +21,128 @@ import {
   FaSyncAlt,
   FaFileImage,
   FaCheck,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaHourglassHalf,
+  FaBolt,
+  FaHandPaper,
+  FaVideo,
+  FaImage,
+  FaInfoCircle,
+  FaBullseye,
+  FaSpinner,
+  FaClock
 } from 'react-icons/fa';
 import { Html5Qrcode } from 'html5-qrcode';
+import jsQR from 'jsqr';
 import { getApiUrl } from '../config/api';
+
+/**
+ * Robust Multi-Pass QR Code Decoder for Uploaded Images
+ * Supports BarcodeDetector API, jsQR with contrast/binarization enhancements, and Html5Qrcode fallback.
+ */
+async function decodeQRFromImage(file) {
+  // Method 1: Hardware-Accelerated BarcodeDetector (Modern Chrome/Edge/Safari/Android)
+  if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+    try {
+      const barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      const imgBitmap = await createImageBitmap(file);
+      const barcodes = await barcodeDetector.detect(imgBitmap);
+      if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+        return barcodes[0].rawValue;
+      }
+    } catch (e) {
+      // Continue to canvas-based jsQR
+    }
+  }
+
+  // Method 2: Load Image onto Canvas for Multi-Pass jsQR Detection
+  const img = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error('Failed to load image file'));
+      image.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+
+  const maxDim = Math.max(img.width, img.height);
+  const targetScales = [
+    maxDim > 1000 ? 1000 / maxDim : 1.0, // normalized max 1000px
+    1.0,                                 // native resolution
+    0.6,                                 // downscaled for large phone captures
+    1.4                                  // zoomed for small ticket codes
+  ];
+
+  const uniqueScales = [...new Set(targetScales)];
+
+  for (const scale of uniqueScales) {
+    const width = Math.max(10, Math.round(img.width * scale));
+    const height = Math.max(10, Math.round(img.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) continue;
+
+    ctx.drawImage(img, 0, 0, width, height);
+    const imgData = ctx.getImageData(0, 0, width, height);
+
+    // Pass A: Direct raw scan with inverted attempt
+    let code = jsQR(imgData.data, width, height, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) return code.data;
+
+    // Pass B: Grayscale & Contrast Boost (factor 1.6)
+    const grayData = new Uint8ClampedArray(imgData.data);
+    let totalBrightness = 0;
+    for (let i = 0; i < grayData.length; i += 4) {
+      const lum = grayData[i] * 0.299 + grayData[i + 1] * 0.587 + grayData[i + 2] * 0.114;
+      totalBrightness += lum;
+      const enhanced = Math.min(255, Math.max(0, (lum - 128) * 1.6 + 128));
+      grayData[i] = enhanced;
+      grayData[i + 1] = enhanced;
+      grayData[i + 2] = enhanced;
+    }
+    code = jsQR(grayData, width, height, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) return code.data;
+
+    // Pass C: Adaptive Binarization (Otsu-style thresholding)
+    const threshold = totalBrightness / (width * height);
+    const binarizedData = new Uint8ClampedArray(imgData.data);
+    for (let i = 0; i < binarizedData.length; i += 4) {
+      const lum = binarizedData[i] * 0.299 + binarizedData[i + 1] * 0.587 + binarizedData[i + 2] * 0.114;
+      const v = lum >= threshold ? 255 : 0;
+      binarizedData[i] = v;
+      binarizedData[i + 1] = v;
+      binarizedData[i + 2] = v;
+    }
+    code = jsQR(binarizedData, width, height, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) return code.data;
+  }
+
+  // Method 3: html5-qrcode isolated fallback
+  if (typeof document !== 'undefined') {
+    const tempDiv = document.createElement('div');
+    const tempId = 'temp-qr-eval-' + Math.random().toString(36).substring(2, 9);
+    tempDiv.id = tempId;
+    tempDiv.style.display = 'none';
+    document.body.appendChild(tempDiv);
+    try {
+      const html5Qr = new Html5Qrcode(tempId);
+      const res = await html5Qr.scanFile(file, false);
+      try { await html5Qr.clear(); } catch (e) {}
+      document.body.removeChild(tempDiv);
+      if (res) return res;
+    } catch (e) {
+      if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+    }
+  }
+
+  throw new Error('Could not detect QR code in this image');
+}
 
 export default function ParticipantVerifier({ 
   token, 
@@ -50,8 +168,21 @@ export default function ParticipantVerifier({
   const [selectedCameraId, setSelectedCameraId] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
   const [scannerError, setScannerError] = useState('');
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [autoVerifyOnScan, setAutoVerifyOnScan] = useState(() => {
+    try {
+      const saved = localStorage.getItem('auto_verify_on_scan');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch (e) {
+      return true;
+    }
+  });
 
   const html5QrCodeRef = useRef(null);
+  const isStartingScannerRef = useRef(false);
+  const lastScannedKeyRef = useRef('');
+  const lastScannedTimeRef = useRef(0);
+  const isScanDebounceRef = useRef(false);
   const fileInputRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -126,17 +257,45 @@ export default function ParticipantVerifier({
       const currentCode = getTicketCode(selectedParticipant);
       const updated = registrations.find(r => getTicketCode(r) === currentCode || (r.id && r.id === selectedParticipant.id));
       if (updated) {
-        setSelectedParticipant(updated);
+        // Prevent regression if currently marked verified locally
+        if (isVerifiedRecord(selectedParticipant) && !isVerifiedRecord(updated)) {
+          setSelectedParticipant(prev => ({
+            ...updated,
+            is_verified: true,
+            isVerified: true,
+            attendance_status: 'verified',
+            attendanceStatus: 'verified',
+            verified_at: prev?.verified_at || prev?.verifiedAt || new Date().toISOString(),
+            verified_by: prev?.verified_by || prev?.verifiedBy || 'Coordinator'
+          }));
+        } else {
+          setSelectedParticipant(updated);
+        }
       }
     }
   }, [registrations]);
 
   // Handle scanned ticket or input string
-  const handleProcessScanCode = (decodedText) => {
+  const handleProcessScanCode = async (decodedText) => {
     if (!decodedText) return;
-    const cleanText = decodedText.trim();
-    
-    // Extract ticket code if embedded in URL or json
+    const cleanText = String(decodedText).trim();
+    if (!cleanText) return;
+
+    const now = Date.now();
+    // Scan Debounce: ignore duplicate scan bursts within 2.5s
+    if (isScanDebounceRef.current || (lastScannedKeyRef.current === cleanText && (now - lastScannedTimeRef.current < 2500))) {
+      return;
+    }
+
+    isScanDebounceRef.current = true;
+    lastScannedKeyRef.current = cleanText;
+    lastScannedTimeRef.current = now;
+
+    // Immediately stop camera scanner so continuous frame loop halts
+    await stopScanner();
+    setIsScannerOpen(false);
+
+    // Extract ticket code if embedded in URL or JSON
     let lookupKey = cleanText;
     if (cleanText.includes('code=')) {
       const match = cleanText.match(/code=([^&]+)/);
@@ -155,7 +314,7 @@ export default function ParticipantVerifier({
 
     const keyLower = lookupKey.toLowerCase();
 
-    // Look for match
+    // Look for match in registrations list
     const matched = registrations.find(r => {
       const ticket = getTicketCode(r).toLowerCase();
       const id = String(r.id || '').toLowerCase();
@@ -174,8 +333,8 @@ export default function ParticipantVerifier({
     if (matched) {
       setSelectedParticipant(matched);
       setSearchTerm(getTicketCode(matched));
-      toast.success(`Participant Found: ${getParticipantName(matched)}`, { icon: '🎯' });
-      // Play audio chime if possible
+
+      // Play audio chime
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -191,78 +350,127 @@ export default function ParticipantVerifier({
         osc.stop(audioCtx.currentTime + 0.3);
       } catch (e) {}
 
-      // Stop camera if scanner was open
-      if (isScannerOpen) {
-        stopScanner();
-        setIsScannerOpen(false);
+      const isAlreadyVerified = isVerifiedRecord(matched);
+
+      if (isAlreadyVerified) {
+        toast.success(
+          `${getParticipantName(matched)} is ALREADY VERIFIED & ADMITTED!`,
+          { id: 'scan-verify-toast', duration: 4500 }
+        );
+      } else if (autoVerifyOnScan) {
+        // Automatically verify and admit in database
+        await handleToggleVerification(matched, true);
+      } else {
+        toast.success(
+          `Participant Found: ${getParticipantName(matched)}`,
+          { id: 'scan-verify-toast', duration: 4000 }
+        );
       }
     } else {
       setSearchTerm(lookupKey);
-      toast.error(`No registration matched: "${lookupKey}"`, { icon: '🔍' });
+      toast.error(`No registration matched: "${lookupKey}"`, { id: 'scan-verify-toast' });
     }
+
+    // Release scan debounce lock after 1.5s
+    setTimeout(() => {
+      isScanDebounceRef.current = false;
+    }, 1500);
   };
 
   // Camera Scanner Lifecycle
   useEffect(() => {
+    let isMounted = true;
     if (isScannerOpen && scannerMode === 'camera') {
       startScanner();
     } else {
       stopScanner();
     }
     return () => {
+      isMounted = false;
       stopScanner();
     };
   }, [isScannerOpen, scannerMode, selectedCameraId]);
 
-  const startScanner = async () => {
-    setScannerError('');
+  const stopScanner = async () => {
     try {
-      if (!html5QrCodeRef.current) {
-        html5QrCodeRef.current = new Html5Qrcode('qr-reader-target');
-      }
-
-      // Get available cameras
-      const devices = await Html5Qrcode.getCameras();
-      if (devices && devices.length > 0) {
-        setCameras(devices);
-        const camId = selectedCameraId || devices[devices.length - 1].id; // default to back camera
-        if (!selectedCameraId) setSelectedCameraId(camId);
-
-        if (html5QrCodeRef.current && !scannerActive) {
-          await html5QrCodeRef.current.start(
-            camId,
-            {
-              fps: 15,
-              qrbox: { width: 250, height: 250 },
-              aspectRatio: 1.0
-            },
-            (decodedText) => {
-              handleProcessScanCode(decodedText);
-            },
-            (errorMessage) => {
-              // scanning frames...
-            }
-          );
-          setScannerActive(true);
+      if (html5QrCodeRef.current) {
+        const instance = html5QrCodeRef.current;
+        html5QrCodeRef.current = null;
+        if (instance.isScanning) {
+          await instance.stop();
         }
-      } else {
-        setScannerError('No cameras found on this device');
+        try {
+          await instance.clear();
+        } catch (e) {}
       }
-    } catch (err) {
-      console.warn('QR Scanner Start Error:', err);
-      setScannerError('Camera access denied or unavailable. You can use image upload or enter code.');
+    } catch (e) {
+      console.warn('Error stopping scanner:', e);
+    } finally {
       setScannerActive(false);
     }
   };
 
-  const stopScanner = async () => {
+  const startScanner = async () => {
+    if (isStartingScannerRef.current) return;
+    isStartingScannerRef.current = true;
+    setScannerError('');
+
     try {
-      if (html5QrCodeRef.current && scannerActive) {
-        await html5QrCodeRef.current.stop();
-        setScannerActive(false);
+      // First ensure previous scanner instance is fully stopped and cleared
+      await stopScanner();
+
+      // Allow 120ms for DOM element '#qr-reader-target' to mount cleanly
+      await new Promise(r => setTimeout(r, 120));
+
+      const targetEl = document.getElementById('qr-reader-target');
+      if (!targetEl) {
+        isStartingScannerRef.current = false;
+        return;
       }
-    } catch (e) {
-      // ignore
+
+      // Query available camera devices
+      const devices = await Html5Qrcode.getCameras();
+      if (!devices || devices.length === 0) {
+        setScannerError('No camera devices found on this device');
+        isStartingScannerRef.current = false;
+        return;
+      }
+
+      setCameras(devices);
+      const camId = selectedCameraId || devices[devices.length - 1].id; // default to back camera
+      if (!selectedCameraId) setSelectedCameraId(camId);
+
+      const html5Qr = new Html5Qrcode('qr-reader-target');
+      html5QrCodeRef.current = html5Qr;
+
+      await html5Qr.start(
+        camId,
+        {
+          fps: 15,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        },
+        (decodedText) => {
+          handleProcessScanCode(decodedText);
+        },
+        () => {
+          // scanning frames
+        }
+      );
+      setScannerActive(true);
+    } catch (err) {
+      console.warn('QR Scanner Start Error:', err);
+      const errMsg = String(err?.message || err);
+      if (errMsg.includes('Permission') || errMsg.includes('denied') || errMsg.includes('NotAllowedError')) {
+        setScannerError('Camera access denied. Please allow camera permission in your browser or use "Upload QR Image".');
+      } else if (errMsg.includes('NotFound') || errMsg.includes('DevicesNotFoundError')) {
+        setScannerError('No camera found. Please use the "Upload QR Image" option or enter ticket code manually.');
+      } else {
+        setScannerError('Camera initialized or busy. You can also upload a QR photo or enter code manually.');
+      }
+      setScannerActive(false);
+    } finally {
+      isStartingScannerRef.current = false;
     }
   };
 
@@ -270,13 +478,19 @@ export default function ParticipantVerifier({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const loadingToast = toast.loading('Scanning image for QR code...');
+    setIsProcessingImage(true);
+
     try {
-      const html5QrCode = new Html5Qrcode('qr-reader-target');
-      const result = await html5QrCode.scanFile(file, true);
-      handleProcessScanCode(result);
+      const decodedText = await decodeQRFromImage(file);
+      toast.dismiss(loadingToast);
+      handleProcessScanCode(decodedText);
     } catch (err) {
-      toast.error('Could not detect QR code in this image. Try another photo or enter code manually.');
+      toast.dismiss(loadingToast);
+      console.warn('QR Code Image Scan Error:', err);
+      toast.error('Could not detect QR code in this image. Try another photo or enter code manually.', { duration: 4500 });
     } finally {
+      setIsProcessingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -285,10 +499,28 @@ export default function ParticipantVerifier({
   const handleToggleVerification = async (participant, desiredStatus = true) => {
     if (!participant) return;
     const participantId = participant.id || getTicketCode(participant);
+    const code = getTicketCode(participant);
     setIsVerifying(true);
 
+    const verifiedAt = desiredStatus ? new Date().toISOString() : null;
+    const verifiedBy = desiredStatus ? (user?.username || user?.role || 'Coordinator') : null;
+
+    // 1. Optimistic Update immediately so the badge flips to VERIFIED without any lag
+    const updatedObj = {
+      ...participant,
+      is_verified: desiredStatus,
+      isVerified: desiredStatus,
+      attendance_status: desiredStatus ? 'verified' : 'pending',
+      attendanceStatus: desiredStatus ? 'verified' : 'pending',
+      verified_at: verifiedAt,
+      verifiedAt: verifiedAt,
+      verified_by: verifiedBy,
+      verifiedBy: verifiedBy
+    };
+    setSelectedParticipant(updatedObj);
+
     try {
-      const res = await fetch(getApiUrl(`/api/admin/registrations/${participantId}/verify`), {
+      const res = await fetch(getApiUrl(`/api/admin/registrations/${encodeURIComponent(participantId)}/verify`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -303,33 +535,24 @@ export default function ParticipantVerifier({
       if (data.success) {
         toast.success(
           desiredStatus 
-            ? `🎉 ${getParticipantName(participant)} verified & admitted!`
+            ? `${getParticipantName(participant)} verified & admitted!`
             : `Verification reset for ${getParticipantName(participant)}`,
-          { duration: 4000 }
+          { id: `verify-status-${code}`, duration: 4000 }
         );
 
-        // Update local object immediately
-        const updatedObj = {
-          ...participant,
-          is_verified: desiredStatus,
-          isVerified: desiredStatus,
-          verified_at: desiredStatus ? new Date().toISOString() : null,
-          verifiedAt: desiredStatus ? new Date().toISOString() : null,
-          verified_by: desiredStatus ? (user?.username || user?.role || 'Coordinator') : null,
-          verifiedBy: desiredStatus ? (user?.username || user?.role || 'Coordinator') : null
-        };
-        setSelectedParticipant(updatedObj);
+        const finalRecord = data.data ? { ...updatedObj, ...data.data } : updatedObj;
+        setSelectedParticipant(finalRecord);
 
         // Trigger global dashboard refresh if provided
         if (typeof onRefreshRegistrations === 'function') {
           onRefreshRegistrations();
         }
       } else {
-        toast.error(data.message || 'Failed to update verification status');
+        toast.error(data.message || 'Failed to update verification status', { id: `verify-err-${code}` });
       }
     } catch (err) {
       console.error('Verification request error:', err);
-      toast.error('Server error updating verification');
+      toast.error('Server error updating verification', { id: `verify-err-${code}` });
     } finally {
       setIsVerifying(false);
     }
@@ -790,16 +1013,16 @@ export default function ParticipantVerifier({
         <div style={S.statCard}>
           <span style={S.statLabel}>Verified & Confirmed</span>
           <span style={{ ...S.statNumber, color: '#10b981' }}>{verifiedCount}</span>
-          <span style={{ ...S.statBadge, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857' }}>
-            ✓ {verifiedPercent}% Checked-in
+          <span style={{ ...S.statBadge, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <FaCheck /> {verifiedPercent}% Checked-in
           </span>
         </div>
 
         <div style={S.statCard}>
           <span style={S.statLabel}>Pending Verification</span>
           <span style={{ ...S.statNumber, color: '#f59e0b' }}>{unverifiedCount}</span>
-          <span style={{ ...S.statBadge, background: isDark ? '#451a03' : '#fffbeb', color: isDark ? '#fcd34d' : '#b45309' }}>
-            ⏳ Awaiting Desk Entry
+          <span style={{ ...S.statBadge, background: isDark ? '#451a03' : '#fffbeb', color: isDark ? '#fcd34d' : '#b45309', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <FaHourglassHalf /> Awaiting Desk Entry
           </span>
         </div>
 
@@ -845,6 +1068,41 @@ export default function ParticipantVerifier({
           >
             <FaQrcode size={18} />
             {isScannerOpen ? 'Close QR Scanner' : 'Scan Ticket QR Code'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const next = !autoVerifyOnScan;
+              setAutoVerifyOnScan(next);
+              try { localStorage.setItem('auto_verify_on_scan', JSON.stringify(next)); } catch (e) {}
+              toast.success(next ? 'Auto-Admit on Scan ENABLED' : 'Auto-Admit DISABLED (Inspect Mode)', { id: 'auto-verify-toggle-toast' });
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '0.65rem 1rem',
+              borderRadius: '10px',
+              background: autoVerifyOnScan 
+                ? (isDark ? '#064e3b' : '#ecfdf5') 
+                : (isDark ? '#1f2937' : '#f1f5f9'),
+              color: autoVerifyOnScan 
+                ? (isDark ? '#6ee7b7' : '#047857') 
+                : (isDark ? '#9ca3af' : '#64748b'),
+              border: autoVerifyOnScan 
+                ? '1px solid #10b981' 
+                : `1px solid ${isDark ? '#374151' : '#cbd5e1'}`,
+              fontSize: '0.82rem',
+              fontWeight: '800',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
+            }}
+            title="When ON, scanning a QR code automatically admits & verifies the participant in the database."
+          >
+            {autoVerifyOnScan ? <FaBolt size={14} color="#10b981" /> : <FaHandPaper size={14} color="#9ca3af" />}
+            <span>{autoVerifyOnScan ? 'Auto-Admit: ON' : 'Auto-Admit: OFF'}</span>
           </button>
         </div>
 
@@ -941,13 +1199,17 @@ export default function ParticipantVerifier({
                 border: 'none',
                 cursor: 'pointer',
                 fontWeight: '700',
-                fontSize: '0.85rem'
+                fontSize: '0.85rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              📹 Use Camera
+              <FaVideo /> Use Camera
             </button>
             <button 
               type="button"
+              disabled={isProcessingImage}
               onClick={() => {
                 setScannerMode('file');
                 fileInputRef.current?.click();
@@ -958,12 +1220,24 @@ export default function ParticipantVerifier({
                 background: scannerMode === 'file' ? '#2563eb' : '#334155',
                 color: '#ffffff',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: isProcessingImage ? 'wait' : 'pointer',
                 fontWeight: '700',
-                fontSize: '0.85rem'
+                fontSize: '0.85rem',
+                opacity: isProcessingImage ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              🖼️ Upload QR Image
+              {isProcessingImage ? (
+                <>
+                  <FaSpinner className="spinner-rotate" /> Analyzing QR Image...
+                </>
+              ) : (
+                <>
+                  <FaImage /> Upload QR Image
+                </>
+              )}
             </button>
             <input 
               ref={fileInputRef}
@@ -995,8 +1269,8 @@ export default function ParticipantVerifier({
               <div id="qr-reader-target" style={S.cameraFrame}></div>
 
               {scannerError ? (
-                <div style={{ color: '#f87171', fontSize: '0.88rem', textAlign: 'center', padding: '0.5rem' }}>
-                  ⚠️ {scannerError}
+                <div style={{ color: '#f87171', fontSize: '0.88rem', textAlign: 'center', padding: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
+                  <FaExclamationTriangle /> {scannerError}
                 </div>
               ) : (
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8' }}>
@@ -1318,7 +1592,7 @@ export default function ParticipantVerifier({
                             background: isDark ? '#064e3b' : '#ecfdf5',
                             color: isDark ? '#6ee7b7' : '#047857'
                           }}>
-                            ✓ VERIFIED
+                            <FaCheck /> VERIFIED
                           </span>
                         ) : (
                           <span style={{
@@ -1332,7 +1606,7 @@ export default function ParticipantVerifier({
                             background: isDark ? '#451a03' : '#fffbeb',
                             color: isDark ? '#fcd34d' : '#b45309'
                           }}>
-                            ⏳ PENDING
+                            <FaHourglassHalf /> PENDING
                           </span>
                         )}
                       </td>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
 import cahcetLogo from '../assets/cahcet.png';
+import { getApiUrl, getWsUrl } from '../config/api';
 
 const EVENT_START = new Date('2026-09-26T00:00:00+05:30').getTime();
 
@@ -23,11 +24,63 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
   const heroRef = useRef(null);
   const canvasRef = useRef(null);
   const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining);
+  const [isRegClosed, setIsRegClosed] = useState(false);
+  const [closedReason, setClosedReason] = useState('ONLINE REGISTRATIONS ARE CLOSED');
+  const [onSpotNotice, setOnSpotNotice] = useState('ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM');
 
   // Countdown timer interval
   useEffect(() => {
     const timer = window.setInterval(() => setTimeRemaining(getTimeRemaining()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  // Fetch real-time registration status & WebSocket listener
+  useEffect(() => {
+    let isMounted = true;
+    let ws = null;
+
+    const checkStatus = () => {
+      fetch(getApiUrl('/api/registration-status'))
+        .then((res) => res.json())
+        .then((data) => {
+          if (!isMounted) return;
+          if (data.success) {
+            setIsRegClosed(Boolean(data.isRegistrationClosed));
+            if (data.closedReason) setClosedReason(data.closedReason);
+            if (data.onSpotNotice) setOnSpotNotice(data.onSpotNotice);
+          }
+        })
+        .catch(() => {});
+    };
+
+    checkStatus();
+    window.addEventListener('focus', checkStatus);
+    document.addEventListener('visibilitychange', checkStatus);
+
+    try {
+      ws = new WebSocket(getWsUrl('/ws/registrations'));
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
+            if (isMounted) {
+              setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+              if (msg.data?.closedReason) setClosedReason(msg.data.closedReason);
+              if (msg.data?.onSpotNotice) setOnSpotNotice(msg.data.onSpotNotice);
+            }
+          }
+        } catch (e) {}
+      };
+    } catch (e) {}
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('focus', checkStatus);
+      document.removeEventListener('visibilitychange', checkStatus);
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
   }, []);
 
   // Advanced Doomsday Animation: Continuous, 1-sec gap random thunders with bright flash, aligned with background
@@ -736,12 +789,44 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
         {/* Event Date */}
         <p className="hero-date">&#128197; SEPTEMBER 26, 2026</p>
 
-        {/* Explore / Register Action Button */}
-        <div className="hero-buttons">
-          <button className="btn btn-primary btn-large hero-explore-btn" onClick={onExplore || onRegister}>
-            EXPLORE EVENTS <span aria-hidden="true">&rarr;</span>
-          </button>
-        </div>
+        {/* Dynamic Registration Status Banner: Red Marquee Capsule Pill when CLOSED */}
+        {isRegClosed ? (
+          <div className="hero-closed-banner-container">
+            {/* 1. Red Capsule Marquee Ticker */}
+            <div className="hero-closed-marquee-pill" aria-live="polite" title={closedReason}>
+              <div className="hero-marquee-track">
+                <span className="marquee-text-block">
+                  {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp; {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp; {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp; {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp;
+                </span>
+                <span className="marquee-text-block" aria-hidden="true">
+                  {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp; {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp; {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp; {closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'} &nbsp;&bull;&nbsp;&nbsp;
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Down: Bold On-Spot Subtitle Text */}
+            <p className="hero-closed-spot-subtitle">
+              {onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM'}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="hero-buttons hero-buttons-closed">
+              <button 
+                className="btn btn-primary btn-large hero-explore-btn" 
+                onClick={onExplore || onRegister}
+              >
+                EXPLORE EVENTS &amp; RULES <span aria-hidden="true">&rarr;</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Normal State: Explore / Register Action Button */
+          <div className="hero-buttons">
+            <button className="btn btn-primary btn-large hero-explore-btn" onClick={onExplore || onRegister}>
+              EXPLORE EVENTS <span aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

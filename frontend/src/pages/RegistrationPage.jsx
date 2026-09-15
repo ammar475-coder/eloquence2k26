@@ -27,7 +27,14 @@ import {
   FaBookOpen,
   FaTimes,
   FaLock,
-  FaHome
+  FaHome,
+  FaCamera,
+  FaDownload,
+  FaQrcode,
+  FaFire,
+  FaCreditCard,
+  FaChevronRight,
+  FaInfoCircle
 } from 'react-icons/fa';
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
 
@@ -189,6 +196,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');
+  const [showSaveModal, setShowSaveModal] = useState(true);
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
@@ -626,6 +634,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             paymentMethod: 'FREE_EVENT',
             game: isEsports ? selectedGame : null
           });
+          setShowSaveModal(true);
           setStep('success');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
@@ -733,7 +742,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           ondismiss: () => {
             setIsSubmitting(false);
             toast('Payment window closed. You can review your details and retry payment anytime.', {
-              icon: 'ℹ️'
+              icon: <FaInfoCircle />
             });
           }
         },
@@ -760,6 +769,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             if (verifyRes.success && verifyRes.ticketData) {
               toast.success('Payment verified! Registration successfully confirmed.');
               setTicketData(verifyRes.ticketData);
+              setShowSaveModal(true);
               setStep('success');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
@@ -1096,20 +1106,22 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   return (
     <div className="registration-page">
       <div className="registration-page-container" ref={formRef}>
-        {/* Terminal Header */}
-        <div className="reg-terminal-header">
-          <div className="reg-terminal-brand">
-            <span className="reg-terminal-sys-id">// SECURE SYMPOSIUM GATEWAY //</span>
-            <h1 className="reg-terminal-title">ELOQUENCE'26 REGISTRATION TERMINAL</h1>
-            <p className="reg-terminal-meta">
-              9TH NATIONAL LEVEL TECHNICAL SYMPOSIUM • CAHCET MELVISHARAM • SEPTEMBER 26, 2026
-            </p>
+        {/* Terminal Header (Shown during form steps; omitted on success screen to keep page clean) */}
+        {step !== 'success' && (
+          <div className="reg-terminal-header">
+            <div className="reg-terminal-brand">
+              <span className="reg-terminal-sys-id">// SECURE SYMPOSIUM GATEWAY //</span>
+              <h1 className="reg-terminal-title">ELOQUENCE'26 REGISTRATION TERMINAL</h1>
+              <p className="reg-terminal-meta">
+                9TH NATIONAL LEVEL TECHNICAL SYMPOSIUM • CAHCET MELVISHARAM • SEPTEMBER 26, 2026
+              </p>
+            </div>
+            <div className="reg-terminal-status-badge">
+              <span className="terminal-live-dot" />
+              <span>ADMISSIONS ACTIVE</span>
+            </div>
           </div>
-          <div className="reg-terminal-status-badge">
-            <span className="terminal-live-dot" />
-            <span>ADMISSIONS ACTIVE</span>
-          </div>
-        </div>
+        )}
 
         {/* Stepper Navigation with Cyberpunk Energy Beam Connections */}
         {step !== 'success' && (
@@ -1134,7 +1146,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 <div className="connector-fill" />
                 <div className="connector-laser-glow" />
               </div>
-              <span className="connector-chevron">▶</span>
+              <span className="connector-chevron"><FaChevronRight style={{ fontSize: '0.65rem' }} /></span>
             </div>
 
             {/* Step 2: Team Details (if team event) */}
@@ -1159,7 +1171,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     <div className="connector-fill" />
                     <div className="connector-laser-glow" />
                   </div>
-                  <span className="connector-chevron">▶</span>
+                  <span className="connector-chevron"><FaChevronRight style={{ fontSize: '0.65rem' }} /></span>
                 </div>
               </>
             )}
@@ -1669,7 +1681,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 </div>
 
                 <div className="summary-desk-note">
-                  <div className="desk-note-icon">🔒</div>
+                  <div className="desk-note-icon"><FaLock /></div>
                   <p>
                     <strong>Secure UPI Checkout:</strong> Instant online verification via UPI (Google Pay, PhonePe, Paytm, QR) powered by Razorpay with official E-Pass ticket generation.
                   </p>
@@ -1763,7 +1775,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     {isEsports && (
                       <div className="review-row">
                         <span className="r-label">Game Arena:</span>
-                        <span className="r-val font-accent">🔥 {selectedGame}</span>
+                        <span className="r-val font-accent"><FaFire style={{ marginRight: '0.35rem' }} /> {selectedGame}</span>
                       </div>
                     )}
                     <div className="review-row">
@@ -1861,7 +1873,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   {feeInfo.total > 0 && (
                     <div style={{ marginTop: '1.15rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <span style={{ fontSize: '0.82rem', color: '#00f5ff', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem', letterSpacing: '0.04em' }}>
-                        <span>⚡</span> DIRECT UPI CHECKOUT (GOOGLE PAY, PHONEPE, PAYTM, QR)
+                        <FaBolt /> DIRECT UPI CHECKOUT (GOOGLE PAY, PHONEPE, PAYTM, QR)
                       </span>
                       <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
                         <FaShieldAlt style={{ marginRight: '0.3rem', color: '#00f5ff' }} /> 100% Encrypted & Secure
@@ -1903,7 +1915,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     <>CONFIRM REGISTRATION (FREE) →</>
                   ) : (
                     <>
-                      <span style={{ marginRight: '0.45rem', fontSize: '1.05rem' }}>⚡</span>
+                      <FaBolt style={{ marginRight: '0.45rem', fontSize: '1.05rem' }} />
                       PAY ₹{feeInfo.total} VIA UPI (RAZORPAY) →
                     </>
                   )}
@@ -1916,151 +1928,289 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         {/* STEP 05: SUCCESS SCREEN */}
         {step === 'success' && ticketData && (
           <div className="reg-success-view">
+            {/* Pop-up Modal to prompt user to take screenshot or download */}
+            {showSaveModal && (
+              <div className="save-pass-modal-overlay" onClick={() => setShowSaveModal(false)}>
+                <div className="save-pass-modal" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="save-modal-close"
+                    onClick={() => setShowSaveModal(false)}
+                    aria-label="Close modal"
+                  >
+                    <FaTimes />
+                  </button>
+
+                  <div className="save-modal-icon-badge">
+                    <FaCamera />
+                  </div>
+
+                  <span className="save-modal-tag">// CRITICAL CHECK-IN REQUIREMENT //</span>
+                  <h3 className="save-modal-title">SAVE YOUR REGISTRATION PASS!</h3>
+                  <p className="save-modal-desc">
+                    Please <strong>take a screenshot</strong> or <strong>download</strong> your registration card right now. You must present this card and its official <strong>QR Code</strong> at the venue check-in desk for entry and event participation.
+                  </p>
+
+                  <div className="save-modal-tips">
+                    <div className="save-tip-item">
+                      <span className="save-tip-bullet"><FaCamera style={{ fontSize: '0.9rem' }} /></span>
+                      <span><strong>On Mobile:</strong> Press <em>Power + Volume Down</em> to save an instant screenshot to your gallery.</span>
+                    </div>
+                    <div className="save-tip-item">
+                      <span className="save-tip-bullet"><FaDownload style={{ fontSize: '0.9rem' }} /></span>
+                      <span><strong>Download / PDF:</strong> Tap the download button below to save a high-res PDF or print copy.</span>
+                    </div>
+                  </div>
+
+                  <div className="save-modal-actions">
+                    <button
+                      type="button"
+                      className="btn-save-download"
+                      onClick={() => {
+                        setShowSaveModal(false);
+                        setTimeout(() => window.print(), 200);
+                      }}
+                    >
+                      <FaDownload style={{ marginRight: '0.5rem' }} /> DOWNLOAD / SAVE PASS (PDF)
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-save-dismiss"
+                      onClick={() => setShowSaveModal(false)}
+                    >
+                      <FaCheck style={{ marginRight: '0.45rem' }} /> I'VE SAVED IT — VIEW MY PASS
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="success-badge-icon">
               <FaCheck />
             </div>
 
-            <span className="success-pre-title">// TRANSMISSION COMPLETE //</span>
+            <span className="success-pre-title">// AVENGERS INITIATIVE //</span>
             <h2 className="success-card-title">REGISTRATION SUCCESSFUL</h2>
+            <p className="success-avenger-quote">
+              Congratulations, you are an Avenger now!
+            </p>
             <p className="success-card-sub">
-              Your registration for <strong>{ticketData.eventName}</strong> has been officially confirmed and logged in the symposium database.
+              Your official symposium credential for <strong>{ticketData.eventName}</strong> is confirmed. Keep this pass ready for check-in.
             </p>
 
-            {/* Official Cyber Ticket Pass */}
-            <div className="ticket-pass">
-              <div className="ticket-pass-header">
-                <div>
-                  <span className="ticket-fest-tag">ELOQUENCE'26 SYMPOSIUM PASS</span>
-                  <h3 className="ticket-event-name">{ticketData.eventName}</h3>
-                  <span className={`ticket-cat-badge ${ticketData.eventCategory === 'technical' ? 'badge-tech' : 'badge-nontech'}`}>
-                    {ticketData.eventCategory.toUpperCase()} SHOWDOWN
-                  </span>
+            {/* Official Cyber Credential Pass (Horizontal Landscape Pass with Live QR) */}
+            <div className="ticket-pass ticket-pass-horizontal" id="official-symposium-pass">
+              {/* Card Lanyard Hole Accent */}
+              <div className="ticket-card-lanyard-notch" />
+
+              <div className="ticket-pass-main-horizontal">
+                {/* Left Stub: Event Branding, QR Code & Registration ID */}
+                <div className="ticket-stub-left">
+                  <div className="ticket-stub-brand">
+                    <span className="ticket-fest-tag">ELOQUENCE'26 OFFICIAL PASS</span>
+                    <h3 className="ticket-event-name">{ticketData.eventName}</h3>
+                    <span className={`ticket-cat-badge ${ticketData.eventCategory === 'technical' ? 'badge-tech' : 'badge-nontech'}`}>
+                      {ticketData.eventCategory === 'technical' ? <FaBolt style={{ marginRight: '0.3rem' }} /> : <FaGamepad style={{ marginRight: '0.3rem' }} />}
+                      {ticketData.eventCategory.toUpperCase()} SHOWDOWN
+                    </span>
+                  </div>
+
+                  {/* QR Code Frame */}
+                  <div className="ticket-qr-frame">
+                    <span className="qr-corner qr-tl" />
+                    <span className="qr-corner qr-tr" />
+                    <span className="qr-corner qr-bl" />
+                    <span className="qr-corner qr-br" />
+
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(ticketData.registrationId)}&color=000000&bgcolor=ffffff`}
+                      alt={`QR Code for ${ticketData.registrationId}`}
+                      className="ticket-qr-image"
+                      loading="eager"
+                    />
+                    <div className="ticket-qr-caption">
+                      <FaQrcode style={{ marginRight: '0.25rem', fontSize: '0.65rem' }} />
+                      <span>SCAN FOR CHECK-IN</span>
+                    </div>
+                  </div>
+
+                  {/* Registration ID & Copy Button */}
+                  <div className="ticket-id-container">
+                    <span className="ticket-code-label">OFFICIAL REGISTRATION ID</span>
+                    <div className="ticket-code-value">{ticketData.registrationId}</div>
+                    <button type="button" className="btn-copy-code" onClick={handleCopyId}>
+                      {copied ? (
+                        <>
+                          <FaCheck style={{ marginRight: '0.35rem' }} /> COPIED TO CLIPBOARD
+                        </>
+                      ) : (
+                        <>
+                          <FaClipboard style={{ marginRight: '0.35rem' }} /> COPY REGISTRATION ID
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <p className="ticket-scan-hint">
+                    <FaBolt style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} /> Present this QR at the venue entrance. Admin & coordinators will scan this for participation check-in.
+                  </p>
                 </div>
 
-                <div className="ticket-code-block">
-                  <span className="ticket-code-label">OFFICIAL REGISTRATION ID</span>
-                  <div className="ticket-code-value">{ticketData.registrationId}</div>
-                  <button type="button" className="btn-copy-code" onClick={handleCopyId}>
-                    {copied ? (
-                      <>
-                        <FaCheck style={{ marginRight: '0.3rem' }} /> COPIED TO CLIPBOARD
-                      </>
-                    ) : (
-                      <>
-                        <FaClipboard style={{ marginRight: '0.3rem' }} /> COPY REGISTRATION ID
-                      </>
+                {/* Perforated Stub Divider */}
+                <div className="ticket-stub-divider" aria-hidden="true">
+                  <div className="stub-notch stub-notch-top" />
+                  <div className="stub-line" />
+                  <div className="stub-notch stub-notch-bottom" />
+                </div>
+
+                {/* Right Body: Verified Badge & Participant Details */}
+                <div className="ticket-body-right">
+                  <div className="ticket-right-header">
+                    <div className="ticket-right-meta">
+                      <span className="ticket-delegate-badge">OFFICIAL PARTICIPANT CREDENTIAL</span>
+                      <span className="ticket-host-text">CAHCET MELVISHARAM // SEPTEMBER 26, 2026</span>
+                    </div>
+                    <div className="ticket-card-shield">
+                      <FaShieldAlt className="ticket-shield-icon" />
+                      <span className="ticket-shield-text">VERIFIED</span>
+                    </div>
+                  </div>
+
+                  {/* Card Details Grid */}
+                  <div className="ticket-pass-grid">
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">LEAD PARTICIPANT</span>
+                      <span className="ticket-val">{ticketData.fullName}</span>
+                    </div>
+
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">COLLEGE / INSTITUTION</span>
+                      <span className="ticket-val">{ticketData.college}</span>
+                    </div>
+
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">DEPARTMENT & YEAR</span>
+                      <span className="ticket-val">{ticketData.department} ({ticketData.year})</span>
+                    </div>
+
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">CONTACT PHONE & EMAIL</span>
+                      <span className="ticket-val">{ticketData.phone} • {ticketData.email}</span>
+                    </div>
+
+                    {ticketData.isTeam && ticketData.teamName && (
+                      <div className="ticket-info-item">
+                        <span className="ticket-label">SQUAD / TEAM NAME</span>
+                        <span className="ticket-val">{ticketData.teamName} ({ticketData.participantCount || (1 + (ticketData.teamMembersList?.length || 0))} Total)</span>
+                      </div>
                     )}
-                  </button>
-                </div>
-              </div>
 
-              <div className="ticket-pass-grid">
-                <div className="ticket-info-item">
-                  <span className="ticket-label">LEAD PARTICIPANT</span>
-                  <span className="ticket-val">{ticketData.fullName}</span>
-                </div>
-
-                <div className="ticket-info-item">
-                  <span className="ticket-label">COLLEGE / INSTITUTION</span>
-                  <span className="ticket-val">{ticketData.college}</span>
-                </div>
-
-                <div className="ticket-info-item">
-                  <span className="ticket-label">DEPARTMENT & YEAR</span>
-                  <span className="ticket-val">{ticketData.department} ({ticketData.year})</span>
-                </div>
-
-                <div className="ticket-info-item">
-                  <span className="ticket-label">CONTACT PHONE & EMAIL</span>
-                  <span className="ticket-val">{ticketData.phone} • {ticketData.email}</span>
-                </div>
-
-                {ticketData.isTeam && ticketData.teamName && (
-                  <div className="ticket-info-item">
-                    <span className="ticket-label">SQUAD / TEAM NAME</span>
-                    <span className="ticket-val">{ticketData.teamName} ({ticketData.participantCount || (1 + (ticketData.teamMembersList?.length || 0))} Total)</span>
-                  </div>
-                )}
-                {ticketData.isTeam && ticketData.teamMembersList && ticketData.teamMembersList.length > 0 && (
-                  <div className="ticket-info-item" style={{ gridColumn: '1 / -1' }}>
-                    <span className="ticket-label">SQUAD MEMBERS</span>
-                    <span className="ticket-val">
-                      1. {ticketData.fullName} (Leader)<br />
-                      {ticketData.teamMembersList.map((tm, i) => (
-                        <span key={i} style={{ display: 'inline-block', marginRight: '0.75rem' }}>
-                          {i + 2}. {typeof tm === 'string' ? tm : (tm.fullName || tm.name)}
+                    {ticketData.isTeam && ticketData.teamMembersList && ticketData.teamMembersList.length > 0 && (
+                      <div className="ticket-info-item" style={{ gridColumn: '1 / -1' }}>
+                        <span className="ticket-label">SQUAD MEMBERS</span>
+                        <span className="ticket-val">
+                          1. {ticketData.fullName} (Leader)<br />
+                          {ticketData.teamMembersList.map((tm, i) => (
+                            <span key={i} style={{ display: 'inline-block', marginRight: '0.75rem' }}>
+                              {i + 2}. {typeof tm === 'string' ? tm : (tm.fullName || tm.name)}
+                            </span>
+                          ))}
                         </span>
-                      ))}
+                      </div>
+                    )}
+
+                    {(ticketData.game || isEsports) && (
+                      <div className="ticket-info-item">
+                        <span className="ticket-label">GAME ARENA</span>
+                        <span className="ticket-val game-highlight"><FaFire style={{ marginRight: '0.35rem' }} /> {ticketData.game || selectedGame} SQUAD</span>
+                      </div>
+                    )}
+
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">PAYMENT STATUS</span>
+                      <span className="ticket-val status-confirmed" style={{ color: '#10b981' }}>
+                        <FaCheckCircle style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                        {ticketData.paymentStatus === 'PAID'
+                          ? 'PAID ONLINE (VERIFIED)'
+                          : ticketData.paymentStatus === 'FREE'
+                          ? 'FREE ENTRY'
+                          : (ticketData.paymentStatus || 'CONFIRMED')}
+                      </span>
+                    </div>
+
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">PAYMENT MODE</span>
+                      <span className="ticket-val" style={{ color: '#00f5ff', fontWeight: '700' }}>
+                        {ticketData.paymentMethod === 'RAZORPAY_UPI'
+                          ? 'UPI (Razorpay)'
+                          : ticketData.paymentMethod === 'RAZORPAY'
+                          ? 'Cards / Netbanking (Razorpay)'
+                          : (ticketData.paymentMethod || 'ONLINE')}
+                      </span>
+                    </div>
+
+                    {ticketData.razorpayPaymentId && (
+                      <div className="ticket-info-item">
+                        <span className="ticket-label">RAZORPAY PAYMENT ID</span>
+                        <span className="ticket-val" style={{ color: '#00f5ff', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                          {ticketData.razorpayPaymentId}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="ticket-info-item">
+                      <span className="ticket-label">REGISTRATION FEE</span>
+                      <span className="ticket-val fee-highlight">
+                        {ticketData.totalAmount === 0 ? 'FREE' : `₹${ticketData.totalAmount}`}
+                        {ticketData.paymentStatus === 'PAID' && ' (PAID)'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Section Footer */}
+                  <div className="ticket-pass-footer">
+                    <span>
+                      <FaCalendarAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                      September 26, 2026
+                    </span>
+                    <span>
+                      <FaMapMarkerAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                      CAHCET Campus, Melvisharam
+                    </span>
+                    <span>
+                      <FaClock style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
+                      Logged: {ticketData.createdAtFormatted || '2026-09-26'}
                     </span>
                   </div>
-                )}
-                {(ticketData.game || isEsports) && (
-                  <div className="ticket-info-item">
-                    <span className="ticket-label">GAME ARENA</span>
-                    <span className="ticket-val game-highlight">🔥 {ticketData.game || selectedGame} SQUAD</span>
-                  </div>
-                )}
-                <div className="ticket-info-item">
-                  <span className="ticket-label">PAYMENT STATUS</span>
-                  <span className="ticket-val status-confirmed" style={{ color: '#10b981' }}>
-                    <FaCheckCircle style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                    {ticketData.paymentStatus === 'PAID'
-                      ? 'PAID ONLINE (VERIFIED)'
-                      : ticketData.paymentStatus === 'FREE'
-                      ? 'FREE ENTRY'
-                      : (ticketData.paymentStatus || 'CONFIRMED')}
-                  </span>
-                </div>
-
-                <div className="ticket-info-item">
-                  <span className="ticket-label">PAYMENT MODE</span>
-                  <span className="ticket-val" style={{ color: '#00f5ff', fontWeight: '700' }}>
-                    {ticketData.paymentMethod === 'RAZORPAY_UPI'
-                      ? '⚡ UPI (Razorpay)'
-                      : ticketData.paymentMethod === 'RAZORPAY'
-                      ? '💳 Cards / Netbanking (Razorpay)'
-                      : (ticketData.paymentMethod || 'ONLINE')}
-                  </span>
-                </div>
-
-                {ticketData.razorpayPaymentId && (
-                  <div className="ticket-info-item">
-                    <span className="ticket-label">RAZORPAY PAYMENT ID</span>
-                    <span className="ticket-val" style={{ color: '#00f5ff', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                      {ticketData.razorpayPaymentId}
-                    </span>
-                  </div>
-                )}
-
-                <div className="ticket-info-item">
-                  <span className="ticket-label">REGISTRATION FEE</span>
-                  <span className="ticket-val fee-highlight">
-                    {ticketData.totalAmount === 0 ? 'FREE' : `₹${ticketData.totalAmount}`}
-                    {ticketData.paymentStatus === 'PAID' && ' (PAID)'}
-                  </span>
                 </div>
               </div>
 
-              <div className="ticket-pass-footer">
-                <span>
-                  <FaCalendarAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                  Date: September 26, 2026
-                </span>
-                <span>
-                  <FaMapMarkerAlt style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                  Venue: CAHCET Campus, Melvisharam
-                </span>
-                <span>
-                  <FaClock style={{ marginRight: '0.35rem', verticalAlign: '-1px' }} />
-                  Logged: {ticketData.createdAtFormatted || '2026-09-26'}
-                </span>
+              {/* Bottom Security Strip */}
+              <div className="ticket-card-bottom-bar">
+                <span className="ticket-card-serial">AUTH-SEC // CAHCET-ELOQUENCE-2026 // {ticketData.registrationId}</span>
+                <span className="ticket-card-badge-pill">OFFICIAL PARTICIPANT CREDENTIAL</span>
               </div>
             </div>
 
             {/* Success Actions */}
             <div className="success-actions">
-              <button type="button" className="btn btn-primary" onClick={() => window.print()}>
-                <FaPrint style={{ marginRight: '0.4rem' }} /> PRINT / SAVE PASS
+              <button
+                type="button"
+                className="btn btn-primary btn-save-pass-main"
+                onClick={() => window.print()}
+              >
+                <FaDownload style={{ marginRight: '0.45rem' }} /> DOWNLOAD / PRINT PASS
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-screenshot-tip"
+                onClick={() => {
+                  toast('Tip: Press Power + Volume Down on mobile (or Win+Shift+S on PC) to screenshot your card!', {
+                    duration: 5000,
+                  });
+                }}
+              >
+                <FaCamera style={{ marginRight: '0.45rem' }} /> SCREENSHOT PASS
               </button>
               <button type="button" className="btn btn-secondary" onClick={resetForNewRegistration}>
                 <FaUserPlus style={{ marginRight: '0.4rem' }} /> REGISTER ANOTHER EVENT
@@ -2144,8 +2294,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                         <div className="change-event-item-meta">
                           <span>{ev.teamSize || 'Individual'}</span>
                           {isSelected ? (
-                            <span style={{ color: '#39ff88', fontWeight: '800', fontSize: '0.72rem' }}>
-                              ✓ CURRENT
+                            <span style={{ color: '#39ff88', fontWeight: '800', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                              <FaCheck /> CURRENT
                             </span>
                           ) : (
                             <span style={{ color: 'var(--silver)', fontSize: '0.72rem' }}>SELECT →</span>

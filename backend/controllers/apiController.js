@@ -254,7 +254,8 @@ exports.getRegistrationStatus = (req, res) => {
       success: true,
       data: settings,
       isRegistrationClosed: Boolean(settings.isRegistrationClosed),
-      closedReason: settings.closedReason || 'Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!',
+      closedReason: settings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+      onSpotNotice: settings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
       closedAt: settings.closedAt || null
     });
   } catch (err) {
@@ -743,6 +744,15 @@ const enrichRegistrationRecord = (r) => {
   copy.registrationStatus = (copy.registration_status || copy.registrationStatus || 'ACTIVE').toUpperCase();
   copy.paymentMethod = copy.payment_method || copy.paymentMethod || 'ONLINE';
 
+  copy.is_verified = Boolean(copy.is_verified || copy.isVerified || copy.attendance_status === 'verified' || copy.attendanceStatus === 'verified');
+  copy.isVerified = copy.is_verified;
+  copy.attendance_status = copy.is_verified ? 'verified' : (copy.attendance_status || copy.attendanceStatus || 'pending');
+  copy.attendanceStatus = copy.attendance_status;
+  copy.verified_at = copy.verified_at || copy.verifiedAt || null;
+  copy.verifiedAt = copy.verified_at;
+  copy.verified_by = copy.verified_by || copy.verifiedBy || null;
+  copy.verifiedBy = copy.verified_by;
+
   if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(copy.venue_snapshot);
@@ -810,9 +820,21 @@ exports.getRegistrations = async (req, res) => {
 
       if (mergedMap.has(key)) {
         const existing = mergedMap.get(key);
+        const isVerifiedCombined = Boolean(existing.is_verified || existing.isVerified || loc.is_verified || loc.isVerified || existing.attendance_status === 'verified' || loc.attendance_status === 'verified');
+        const verifiedAtCombined = existing.verified_at || existing.verifiedAt || loc.verified_at || loc.verifiedAt || null;
+        const verifiedByCombined = existing.verified_by || existing.verifiedBy || loc.verified_by || loc.verifiedBy || null;
+
         mergedMap.set(key, {
           ...loc,
           ...existing,
+          is_verified: isVerifiedCombined,
+          isVerified: isVerifiedCombined,
+          attendance_status: isVerifiedCombined ? 'verified' : (existing.attendance_status || loc.attendance_status || 'pending'),
+          attendanceStatus: isVerifiedCombined ? 'verified' : (existing.attendanceStatus || loc.attendanceStatus || 'pending'),
+          verified_at: verifiedAtCombined,
+          verifiedAt: verifiedAtCombined,
+          verified_by: verifiedByCombined,
+          verifiedBy: verifiedByCombined,
           payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
           paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
           razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,

@@ -348,11 +348,11 @@
     "year": "3rd Year",
     "role": "Coordinator",
     "assignedEvents": [
-      "tech-01"
+      "tech-06"
     ],
     "displayOrder": 31,
-    "isActive": false,
+    "isActive": true,
     "createdAt": "2026-09-12T16:11:25.490Z",
-    "updatedAt": "2026-09-12T16:16:52.598Z"
+    "updatedAt": "2026-09-15T05:32:07.393Z"
   }
 ]
