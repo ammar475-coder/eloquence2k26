@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
+const JWT_SECRET = process.env.JWT_SECRET || 'eloquence2k26_default_secure_jwt_secret_key';
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
@@ -404,7 +405,7 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign(
           { id: matchedDbUser.id, username: matchedDbUser.username, role: matchedDbUser.role, assignedEvents },
-          process.env.JWT_SECRET,
+          JWT_SECRET,
           { expiresIn: '1d' }
         );
         return res.json({ 
@@ -445,7 +446,7 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role, assignedEvents }, 
-      process.env.JWT_SECRET, 
+      JWT_SECRET, 
       { expiresIn: '1d' }
     );
     return res.json({ 
@@ -472,7 +473,7 @@ exports.login = async (req, res) => {
     const assignedEvents = Array.isArray(matchedCoord.assignedEvents) ? matchedCoord.assignedEvents : [];
     const token = jwt.sign(
       { id: Date.now(), username: matchedCoord.name, role: matchedCoord.role || 'Event Coordinator', assignedEvents }, 
-      process.env.JWT_SECRET, 
+      JWT_SECRET, 
       { expiresIn: '1d' }
     );
     return res.json({ 
@@ -496,7 +497,7 @@ exports.verifyToken = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // Attach user info to request
     next();
   } catch (err) {
