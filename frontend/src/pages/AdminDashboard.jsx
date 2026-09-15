@@ -862,13 +862,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
   // ==================== CLOSE RG (REGISTRATION STATUS) STATE ====================
   const [registrationSettings, setRegistrationSettings] = useState({
     isRegistrationClosed: false,
-    closedReason: 'Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!',
+    closedReason: 'ONLINE REGISTRATIONS ARE CLOSED',
+    onSpotNotice: 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
     closedAt: null,
     closedBy: null
   });
   const [isCloseRgModalOpen, setIsCloseRgModalOpen] = useState(false);
   const [closeRgPendingAction, setCloseRgPendingAction] = useState('close'); // 'close' | 'open'
-  const [customClosedReason, setCustomClosedReason] = useState('');
+  const [customClosedReason, setCustomClosedReason] = useState('ONLINE REGISTRATIONS ARE CLOSED');
+  const [customOnSpotNotice, setCustomOnSpotNotice] = useState('ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM');
   const [isTogglingCloseRg, setIsTogglingCloseRg] = useState(false);
   const [isSavingCustomReason, setIsSavingCustomReason] = useState(false);
   // ==================== EVENT ALLOCATION STATE ====================
@@ -1035,7 +1037,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
       .then(result => {
         if (result.success && result.data) {
           setRegistrationSettings(result.data);
-          setCustomClosedReason(result.data.closedReason || 'Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!');
+          setCustomClosedReason(result.data.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED');
+          setCustomOnSpotNotice(result.data.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM');
         }
       })
       .catch(err => console.warn('Error fetching registration settings:', err));
@@ -1043,7 +1046,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const handleOpenCloseRgModal = (action) => {
     setCloseRgPendingAction(action);
-    setCustomClosedReason(registrationSettings.closedReason || 'Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!');
+    setCustomClosedReason(registrationSettings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED');
+    setCustomOnSpotNotice(registrationSettings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM');
     setIsCloseRgModalOpen(true);
   };
 
@@ -1054,7 +1058,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
     try {
       const res = await updateRegistrationStatus(token, {
         isRegistrationClosed: shouldClose,
-        closedReason: customClosedReason.trim() || registrationSettings.closedReason
+        closedReason: customClosedReason.trim() || registrationSettings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+        onSpotNotice: customOnSpotNotice.trim() || registrationSettings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM'
       });
       if (res.success && res.data) {
         setRegistrationSettings(res.data);
@@ -1076,11 +1081,12 @@ export default function AdminDashboard({ token, user, onLogout }) {
     try {
       const res = await updateRegistrationStatus(token, {
         isRegistrationClosed: registrationSettings.isRegistrationClosed,
-        closedReason: customClosedReason.trim()
+        closedReason: customClosedReason.trim() || 'ONLINE REGISTRATIONS ARE CLOSED',
+        onSpotNotice: customOnSpotNotice.trim() || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM'
       });
       if (res.success && res.data) {
         setRegistrationSettings(res.data);
-        toast.success('Closing announcement message saved successfully.');
+        toast.success('Closing marquee ticker & spot registration note saved successfully!');
       } else {
         toast.error(res.message || 'Failed to update announcement message.');
       }
@@ -6356,27 +6362,98 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {/* Public Announcement Notice Editor */}
               <div style={S.card}>
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <h3 style={S.cardTitle}>Public Closing Announcement Notice</h3>
+                  <h3 style={S.cardTitle}>Homepage &amp; Registration Portal Announcement Settings</h3>
                   <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                    This message is prominently displayed to participants when they visit the registration page while registrations are closed.
+                    Configure the red scrolling marquee ticker and the on-spot registration subtitle shown on the homepage and registration portal when registrations are closed.
                   </p>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <textarea
-                    rows={4}
-                    value={customClosedReason}
-                    onChange={(e) => setCustomClosedReason(e.target.value)}
-                    placeholder="e.g. Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!"
-                    style={{
-                      ...S.input,
-                      resize: 'vertical',
-                      lineHeight: 1.5,
-                      fontFamily: 'inherit'
-                    }}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Field 1: Red Capsule Marquee Ticker */}
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>
+                      1. Red Capsule Marquee Ticker Text (Scrolling Marquee) *
+                    </label>
+                    <input
+                      type="text"
+                      value={customClosedReason}
+                      onChange={(e) => setCustomClosedReason(e.target.value)}
+                      placeholder="e.g. ONLINE REGISTRATIONS ARE CLOSED"
+                      style={{
+                        ...S.input,
+                        fontWeight: '700',
+                        fontSize: '0.95rem'
+                      }}
+                    />
+                    <span style={S.inputHelper}>
+                      This text scrolls continuously inside the prominent red capsule ticker on the homepage hero banner.
+                    </span>
+                  </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                  {/* Field 2: Spot Registration Subtitle */}
+                  <div style={S.modalInputGroup}>
+                    <label style={S.label}>
+                      2. On-Spot / Desk Registration Subtitle Text (Down) *
+                    </label>
+                    <input
+                      type="text"
+                      value={customOnSpotNotice}
+                      onChange={(e) => setCustomOnSpotNotice(e.target.value)}
+                      placeholder="e.g. ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM"
+                      style={{
+                        ...S.input,
+                        fontWeight: '700',
+                        fontSize: '0.95rem'
+                      }}
+                    />
+                    <span style={S.inputHelper}>
+                      Displayed directly below the red marquee ticker in bold uppercase typography.
+                    </span>
+                  </div>
+
+                  {/* Live Theme Preview */}
+                  <div style={{
+                    marginTop: '0.5rem',
+                    padding: '1.5rem',
+                    borderRadius: '16px',
+                    background: isDark ? '#0a0e17' : '#111827',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}>
+                    <div style={{
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      letterSpacing: '0.15em',
+                      color: '#9ca3af',
+                      textTransform: 'uppercase',
+                      alignSelf: 'flex-start'
+                    }}>
+                      ⚡ Live Homepage Hero Preview (When Closed):
+                    </div>
+
+                    {/* Red Marquee Capsule Pill Preview */}
+                    <div className="hero-closed-marquee-pill" style={{ width: '100%', maxWidth: '480px', margin: '0 auto' }}>
+                      <div className="hero-marquee-track">
+                        <span className="marquee-text-block">
+                          {(customClosedReason || 'ONLINE REGISTRATIONS ARE CLOSED').toUpperCase()} &nbsp;&bull;&nbsp;&nbsp; {(customClosedReason || 'ONLINE REGISTRATIONS ARE CLOSED').toUpperCase()} &nbsp;&bull;&nbsp;&nbsp; {(customClosedReason || 'ONLINE REGISTRATIONS ARE CLOSED').toUpperCase()} &nbsp;&bull;&nbsp;&nbsp;
+                        </span>
+                        <span className="marquee-text-block" aria-hidden="true">
+                          {(customClosedReason || 'ONLINE REGISTRATIONS ARE CLOSED').toUpperCase()} &nbsp;&bull;&nbsp;&nbsp; {(customClosedReason || 'ONLINE REGISTRATIONS ARE CLOSED').toUpperCase()} &nbsp;&bull;&nbsp;&nbsp; {(customClosedReason || 'ONLINE REGISTRATIONS ARE CLOSED').toUpperCase()} &nbsp;&bull;&nbsp;&nbsp;
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Subtitle Preview */}
+                    <p className="hero-closed-spot-subtitle" style={{ margin: 0, textAlign: 'center' }}>
+                      {(customOnSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM').toUpperCase()}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
                     <button
                       type="button"
                       onClick={handleSaveCustomReason}
@@ -6385,11 +6462,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         ...S.primaryBtn,
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        padding: '0.85rem 1.6rem',
+                        fontSize: '0.92rem'
                       }}
                     >
                       {isSavingCustomReason ? <FaSpinner className="fa-spin" /> : <FaCheck />}
-                      <span>Save Notice Message</span>
+                      <span>Save Announcement Texts</span>
                     </button>
                   </div>
                 </div>

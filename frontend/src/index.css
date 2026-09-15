@@ -11614,6 +11614,92 @@ img {
   }
 }
 
+/* ==================== HERO REGISTRATION CLOSED RED MARQUEE CAPSULE & SUBTITLE ==================== */
+.hero-closed-banner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 580px;
+  margin: 0.5rem auto 0;
+  position: relative;
+  z-index: 15;
+  animation: fadeInHeroClosed 0.4s ease;
+}
+
+/* Red Capsule / Pill Marquee Container */
+.hero-closed-marquee-pill {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  background: linear-gradient(135deg, #e50914 0%, #b80000 100%);
+  border: 2.5px solid #000000;
+  border-radius: 9999px;
+  padding: 0.55rem 0;
+  box-shadow: 0 4px 22px rgba(229, 9, 20, 0.5), inset 0 1px 3px rgba(255, 255, 255, 0.35);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+/* Infinite Continuous Scrolling Track */
+.hero-marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: heroMarqueeScroll 16s linear infinite;
+  white-space: nowrap;
+}
+
+.hero-closed-marquee-pill:hover .hero-marquee-track {
+  animation-play-state: paused;
+}
+
+.marquee-text-block {
+  display: inline-block;
+  font-family: var(--font-display, 'Orbitron', 'Impact', sans-serif);
+  font-size: clamp(0.85rem, 1.35vw, 1.05rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+  padding-right: 0.5rem;
+}
+
+/* Bold On-Spot Subtitle Text (Down) */
+.hero-closed-spot-subtitle {
+  font-family: var(--font-display, 'Orbitron', 'Impact', sans-serif);
+  font-size: clamp(0.78rem, 1.2vw, 0.96rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  color: #ffffff;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0.45rem 0 0.4rem 0;
+  line-height: 1.4;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 12px rgba(57, 255, 136, 0.3);
+}
+
+.hero-buttons-closed {
+  margin-top: 0.25rem;
+}
+
+@keyframes heroMarqueeScroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes fadeInHeroClosed {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 
 
 

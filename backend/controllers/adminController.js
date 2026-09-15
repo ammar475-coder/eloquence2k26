@@ -2313,14 +2313,15 @@ exports.getAdminRegistrationStatus = async (req, res) => {
 
 exports.updateRegistrationStatus = async (req, res) => {
   try {
-    const { isRegistrationClosed, closedReason } = req.body;
+    const { isRegistrationClosed, closedReason, onSpotNotice } = req.body;
     const current = getSettingsData();
     const shouldClose = Boolean(isRegistrationClosed);
 
     const updated = {
       ...current,
       isRegistrationClosed: shouldClose,
-      closedReason: typeof closedReason === 'string' && closedReason.trim() ? closedReason.trim() : current.closedReason,
+      closedReason: typeof closedReason === 'string' && closedReason.trim() ? closedReason.trim() : (current.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'),
+      onSpotNotice: typeof onSpotNotice === 'string' && onSpotNotice.trim() ? onSpotNotice.trim() : (current.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM'),
       closedAt: shouldClose ? (current.isRegistrationClosed ? current.closedAt : new Date().toISOString()) : null,
       closedBy: shouldClose ? (req.user?.username || 'admin') : null,
       updatedAt: new Date().toISOString()
