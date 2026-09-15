@@ -2046,6 +2046,89 @@ img {
   text-shadow: 0 0 8px rgba(57, 255, 136, 0.4);
 }
 
+/* Footer Social / Connect Section */
+.footer-connect-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(57, 255, 136, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.footer-connect-heading {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--bright-green);
+  opacity: 0.9;
+  text-shadow: 0 0 10px rgba(57, 255, 136, 0.2);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.footer-social-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.footer-social-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: rgba(14, 24, 18, 0.85);
+  border: 1px solid rgba(57, 255, 136, 0.25);
+  color: #d1fae5;
+  font-size: 1.12rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.footer-social-icon-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(57, 255, 136, 0.2), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.footer-social-icon-btn:hover {
+  color: #ffffff;
+  border-color: #39ff88;
+  background: rgba(20, 36, 26, 0.95);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), 0 0 16px rgba(57, 255, 136, 0.45);
+}
+
+.footer-social-icon-btn:hover::before {
+  opacity: 1;
+}
+
+.footer-social-icon-btn:active {
+  transform: translateY(-1px) scale(1);
+}
+
+.footer-social-svg {
+  width: 1.15em;
+  height: 1.15em;
+  transition: transform 0.25s ease;
+}
+
+.footer-social-icon-btn:hover .footer-social-svg {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 6px rgba(57, 255, 136, 0.7));
+}
+
 .footer-logo-container:focus-visible,
 .footer-links a:focus-visible {
   outline: 1px solid var(--bright-green);

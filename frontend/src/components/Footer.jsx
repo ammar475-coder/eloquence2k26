@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FaBolt, FaGamepad, FaCompass } from 'react-icons/fa';
+import { FaBolt, FaGamepad, FaCompass, FaInstagram, FaRegEnvelope } from 'react-icons/fa';
 import logoImg from '../assets/logo.png';
 import staticEvents from '../data/events.js';
 import { getCachedEvents } from '../services/api.js';
@@ -183,6 +183,31 @@ export default function Footer({ onNavigate }) {
               </a>
             </li>
           </ul>
+
+          {/* Social / Connect Details under Navigation */}
+          <div className="footer-connect-section">
+            <h5 className="footer-connect-heading">CONNECT WITH US</h5>
+            <div className="footer-social-icons-row">
+              <a
+                href="https://www.instagram.com/eloquence.26?utm_source=ig_web_button_share_sheet&stkn=ZDNlZDc0MzIxNw=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className="footer-social-icon-btn footer-instagram-btn"
+                aria-label="Follow ELOQUENCE'26 on Instagram"
+                title="Instagram: @eloquence.26"
+              >
+                <FaInstagram className="footer-social-svg" />
+              </a>
+              <a
+                href="mailto:eloquence2k26@gmail.com"
+                className="footer-social-icon-btn footer-email-btn"
+                aria-label="Email ELOQUENCE'26"
+                title="Email: eloquence2k26@gmail.com"
+              >
+                <FaRegEnvelope className="footer-social-svg" />
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
