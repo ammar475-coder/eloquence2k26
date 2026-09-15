@@ -94,5 +94,18 @@ router.get('/winners/:eventId', apiController.getEventWinners);
 router.post('/winners', apiController.submitEventWinners);
 router.put('/events/:id/coordinator-update', apiController.updateEventCoordinatorDetails);
 
+// ── Certificates, Attendance Logs & Event Scores DB Endpoints ────────
+router.get('/certificates', apiController.getCertificates);
+router.post('/certificates', apiController.createCertificate);
+router.delete('/certificates/:id', apiController.deleteCertificate);
+
+router.get('/attendance-logs', apiController.getAttendanceLogs);
+router.post('/attendance-logs', apiController.createAttendanceLog);
+
+router.get('/event-scores', apiController.getEventScores);
+router.post('/event-scores', apiController.createEventScore);
+router.put('/event-scores/:id', apiController.updateEventScore);
+router.delete('/event-scores/:id', apiController.deleteEventScore);
+
 module.exports = router;
 

@@ -1153,15 +1153,26 @@ function writeDispatches(data) {
   }
 }
 
-const dbToDispatch = (d) => ({
-  id: d.id,
-  eventId: d.event_id || d.eventId,
-  eventName: d.event_name || d.eventName,
-  coordinatorId: d.coordinator_id || d.coordinatorId || null,
-  coordinatorName: d.coordinator_name || d.coordinatorName,
-  dispatchedBy: d.dispatched_by || 'Admin',
-  sentAt: d.sent_at || d.sentAt || d.created_at
-});
+const dbToDispatch = (d) => {
+  let coordName = d.coordinator_name || d.coordinatorName || '';
+  let coordUsername = d.coordinator_username || d.coordinatorUsername || null;
+
+  if (!coordUsername && coordName.includes('(@')) {
+    const match = coordName.match(/\(@([^)]+)\)/);
+    if (match) coordUsername = match[1];
+  }
+
+  return {
+    id: String(d.id),
+    eventId: d.event_id || d.eventId,
+    eventName: d.event_name || d.eventName,
+    coordinatorId: d.coordinator_id || d.coordinatorId || null,
+    coordinatorName: coordName,
+    coordinatorUsername: coordUsername || coordName,
+    dispatchedBy: d.dispatched_by || d.dispatchedBy || 'Admin',
+    sentAt: d.sent_at || d.sentAt || d.created_at || new Date().toISOString()
+  };
+};
 
 exports.sendParticipantList = async (req, res) => {
   try {
@@ -1172,12 +1183,18 @@ exports.sendParticipantList = async (req, res) => {
 
     const dispatchId = Date.now().toString();
     const now = new Date().toISOString();
+
+    // Format display string with username so it fits existing Supabase schema
+    const displayCoordName = coordinatorUsername && coordinatorUsername !== coordinatorName && !coordinatorName.includes(`@${coordinatorUsername}`)
+      ? `${coordinatorName} (@${coordinatorUsername})`
+      : coordinatorName;
+
     const dbPayload = {
       id: dispatchId,
       event_id: eventId,
       event_name: eventName || eventId,
-      coordinator_name: coordinatorName,
-      coordinator_username: coordinatorUsername || null,
+      coordinator_name: displayCoordName,
+      dispatched_by: 'Admin',
       sent_at: now
     };
 
@@ -1186,21 +1203,26 @@ exports.sendParticipantList = async (req, res) => {
       const { data, error } = await supabase.from('dispatches').insert([dbPayload]).select();
       if (!error && data && data.length > 0) {
         dispatchData = dbToDispatch(data[0]);
+      } else if (error) {
+        console.warn('Supabase dispatches insert error:', error.message);
       }
     } catch (dbErr) {
       console.warn('Supabase sendParticipantList fallback:', dbErr.message);
     }
 
-    const formatted = dispatchData || dbToDispatch(dbPayload);
+    const formatted = dispatchData || dbToDispatch({
+      ...dbPayload,
+      coordinator_username: coordinatorUsername
+    });
 
-    // Sync to local file
-    const dispatches = readDispatches();
-    dispatches.push(formatted);
+    // Sync to local file (prepend to top of history)
+    let dispatches = readDispatches();
+    dispatches = [formatted, ...dispatches.filter(d => d.id !== formatted.id)];
     writeDispatches(dispatches);
 
     res.json({
       success: true,
-      message: `Participant list for "${eventName || eventId}" sent to ${coordinatorName} (${coordinatorUsername || 'Coordinator Login'}) successfully in database!`,
+      message: `Participant list for "${eventName || eventId}" sent to ${displayCoordName} successfully in database!`,
       dispatch: formatted
     });
   } catch (err) {
@@ -1446,5 +1468,255 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
   } catch (err) {
     console.error('Error updating event coordinator details:', err);
     res.status(500).json({ success: false, message: 'Failed to update event details' });
+  }
+};
+
+// ==================== CERTIFICATES DB CONTROLLERS ====================
+const CERTIFICATES_FILE = path.join(DATA_DIR, 'certificates.json');
+const readCertificates = () => {
+  try {
+    return JSON.parse(fs.readFileSync(CERTIFICATES_FILE, 'utf-8') || '[]');
+  } catch (e) {
+    return [];
+  }
+};
+const writeCertificates = (data) => {
+  try {
+    fs.writeFileSync(CERTIFICATES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {}
+};
+
+exports.getCertificates = async (req, res) => {
+  try {
+    try {
+      const { data, error } = await supabase.from('certificates').select('*').order('issued_at', { ascending: false });
+      if (!error && Array.isArray(data)) {
+        return res.json({ success: true, count: data.length, data });
+      }
+    } catch (e) {}
+    const local = readCertificates();
+    res.json({ success: true, count: local.length, data: local });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch certificates' });
+  }
+};
+
+exports.createCertificate = async (req, res) => {
+  try {
+    const cert = {
+      id: req.body.id || Date.now().toString(),
+      ticket_code: req.body.ticket_code || req.body.ticketCode,
+      participant_name: req.body.participant_name || req.body.participantName,
+      college: req.body.college || 'CAHCET',
+      event_id: req.body.event_id || req.body.eventId,
+      event_name: req.body.event_name || req.body.eventName,
+      position: req.body.position || 'Participant',
+      certificate_url: req.body.certificate_url || req.body.certificateUrl || null,
+      issued_by: req.body.issued_by || req.body.issuedBy || 'Admin',
+      issued_at: new Date().toISOString()
+    };
+
+    try {
+      await supabase.from('certificates').insert([cert]);
+    } catch (e) {}
+
+    const local = readCertificates();
+    local.unshift(cert);
+    writeCertificates(local);
+
+    res.json({ success: true, message: 'Certificate record created successfully in DB', data: cert });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to create certificate' });
+  }
+};
+
+exports.deleteCertificate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    try {
+      await supabase.from('certificates').delete().eq('id', id);
+    } catch (e) {}
+
+    let local = readCertificates();
+    local = local.filter(c => c.id !== id);
+    writeCertificates(local);
+
+    res.json({ success: true, message: 'Certificate record deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to delete certificate' });
+  }
+};
+
+// ==================== ATTENDANCE LOGS DB CONTROLLERS ====================
+const ATTENDANCE_FILE = path.join(DATA_DIR, 'attendance_logs.json');
+const readAttendanceLogs = () => {
+  try {
+    return JSON.parse(fs.readFileSync(ATTENDANCE_FILE, 'utf-8') || '[]');
+  } catch (e) {
+    return [];
+  }
+};
+const writeAttendanceLogs = (data) => {
+  try {
+    fs.writeFileSync(ATTENDANCE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {}
+};
+
+exports.getAttendanceLogs = async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    try {
+      let query = supabase.from('attendance_logs').select('*').order('check_in_time', { ascending: false });
+      if (eventId) query = query.eq('event_id', eventId);
+      const { data, error } = await query;
+      if (!error && Array.isArray(data)) {
+        return res.json({ success: true, count: data.length, data });
+      }
+    } catch (e) {}
+
+    let local = readAttendanceLogs();
+    if (eventId) local = local.filter(l => l.event_id === eventId || l.eventId === eventId);
+    res.json({ success: true, count: local.length, data: local });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch attendance logs' });
+  }
+};
+
+exports.createAttendanceLog = async (req, res) => {
+  try {
+    const log = {
+      id: req.body.id || Date.now().toString(),
+      ticket_code: req.body.ticket_code || req.body.ticketCode,
+      event_id: req.body.event_id || req.body.eventId,
+      event_name: req.body.event_name || req.body.eventName,
+      participant_name: req.body.participant_name || req.body.participantName,
+      verified_by: req.body.verified_by || req.body.verifiedBy || 'Event Coordinator',
+      check_in_time: new Date().toISOString(),
+      status: req.body.status || 'PRESENT',
+      method: req.body.method || 'QR_SCAN'
+    };
+
+    try {
+      await supabase.from('attendance_logs').insert([log]);
+    } catch (e) {}
+
+    const local = readAttendanceLogs();
+    local.unshift(log);
+    writeAttendanceLogs(local);
+
+    res.json({ success: true, message: 'Attendance check-in logged in DB', data: log });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to log attendance' });
+  }
+};
+
+// ==================== EVENT SCORES DB CONTROLLERS ====================
+const SCORES_FILE = path.join(DATA_DIR, 'event_scores.json');
+const readScores = () => {
+  try {
+    return JSON.parse(fs.readFileSync(SCORES_FILE, 'utf-8') || '[]');
+  } catch (e) {
+    return [];
+  }
+};
+const writeScores = (data) => {
+  try {
+    fs.writeFileSync(SCORES_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {}
+};
+
+exports.getEventScores = async (req, res) => {
+  try {
+    const { eventId } = req.query;
+    try {
+      let query = supabase.from('event_scores').select('*').order('total_score', { ascending: false });
+      if (eventId) query = query.eq('event_id', eventId);
+      const { data, error } = await query;
+      if (!error && Array.isArray(data)) {
+        return res.json({ success: true, count: data.length, data });
+      }
+    } catch (e) {}
+
+    let local = readScores();
+    if (eventId) local = local.filter(s => s.event_id === eventId || s.eventId === eventId);
+    res.json({ success: true, count: local.length, data: local });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch event scores' });
+  }
+};
+
+exports.createEventScore = async (req, res) => {
+  try {
+    const scoreItem = {
+      id: req.body.id || Date.now().toString(),
+      event_id: req.body.event_id || req.body.eventId,
+      event_name: req.body.event_name || req.body.eventName,
+      ticket_code: req.body.ticket_code || req.body.ticketCode,
+      participant_name: req.body.participant_name || req.body.participantName,
+      team_name: req.body.team_name || req.body.teamName || null,
+      round_number: Number(req.body.round_number || req.body.roundNumber || 1),
+      criteria_1_score: Number(req.body.criteria_1_score || req.body.criteria1 || 0),
+      criteria_2_score: Number(req.body.criteria_2_score || req.body.criteria2 || 0),
+      criteria_3_score: Number(req.body.criteria_3_score || req.body.criteria3 || 0),
+      total_score: Number(req.body.total_score || req.body.totalScore || 0),
+      evaluator_name: req.body.evaluator_name || req.body.evaluatorName || 'Lead Evaluator',
+      comments: req.body.comments || '',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      await supabase.from('event_scores').insert([scoreItem]);
+    } catch (e) {}
+
+    const local = readScores();
+    local.unshift(scoreItem);
+    writeScores(local);
+
+    res.json({ success: true, message: 'Score record saved successfully in DB', data: scoreItem });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to create score record' });
+  }
+};
+
+exports.updateEventScore = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatePayload = {
+      ...req.body,
+      updated_at: new Date().toISOString()
+    };
+
+    try {
+      await supabase.from('event_scores').update(updatePayload).eq('id', id);
+    } catch (e) {}
+
+    const local = readScores();
+    const idx = local.findIndex(s => s.id === id);
+    if (idx !== -1) {
+      local[idx] = { ...local[idx], ...updatePayload };
+      writeScores(local);
+    }
+
+    res.json({ success: true, message: 'Score updated successfully in DB', data: updatePayload });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to update score record' });
+  }
+};
+
+exports.deleteEventScore = async (req, res) => {
+  try {
+    const { id } = req.params;
+    try {
+      await supabase.from('event_scores').delete().eq('id', id);
+    } catch (e) {}
+
+    let local = readScores();
+    local = local.filter(s => s.id !== id);
+    writeScores(local);
+
+    res.json({ success: true, message: 'Score record deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to delete score record' });
   }
 };

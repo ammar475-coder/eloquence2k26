@@ -31,7 +31,11 @@ import {
   FaExclamationTriangle, 
   FaBars,
   FaShieldAlt,
-  FaFileAlt
+  FaFileAlt,
+  FaLock,
+  FaSyncAlt,
+  FaThLarge,
+  FaTable
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
@@ -138,23 +142,26 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
       // 2. Fetch Registrations
       const regRes = await fetch(getApiUrl('/api/registrations'));
       const regJson = await regRes.json();
-      if (regJson.success && Array.isArray(regJson.data)) {
-        setRegistrationsList(regJson.data);
+      const rawRegs = regJson.registrations || regJson.data || (Array.isArray(regJson) ? regJson : []);
+      if (Array.isArray(rawRegs)) {
+        setRegistrationsList(rawRegs);
       }
 
       // 3. Fetch Coordinators
       const coordRes = await fetch(getApiUrl('/api/coordinators'));
       const coordJson = await coordRes.json();
-      if (coordJson.success && Array.isArray(coordJson.data)) {
-        setCoordinatorsList(coordJson.data);
+      const rawCoords = coordJson.data || coordJson.coordinators || (Array.isArray(coordJson) ? coordJson : []);
+      if (Array.isArray(rawCoords)) {
+        setCoordinatorsList(rawCoords);
       }
 
       // 4. Fetch Dispatches
       try {
         const dispRes = await fetch(getApiUrl('/api/dispatches'));
         const dispJson = await dispRes.json();
-        if (dispJson.success && Array.isArray(dispJson.data)) {
-          setDispatchesList(dispJson.data);
+        const rawDisps = dispJson.data || dispJson.dispatches || (Array.isArray(dispJson) ? dispJson : []);
+        if (Array.isArray(rawDisps)) {
+          setDispatchesList(rawDisps);
         }
       } catch (_) {}
 
@@ -177,18 +184,123 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   }, []);
 
   // ── 4. Filtered Coordinators for ONLY this Allocated Event ──
+  const [teamSearch, setTeamSearch] = useState('');
+  const [teamRoleFilter, setTeamRoleFilter] = useState('all'); // all | lead | sub | faculty
+
   const currentEventTeam = useMemo(() => {
-    return coordinatorsList.filter(c => {
-      const assigned = Array.isArray(c.assignedEvents) ? c.assignedEvents : (c.assigned_events || []);
-      return assigned.some(a => String(a).toLowerCase().trim() === selectedEventId.toLowerCase().trim());
+    const matched = [];
+    const seenIds = new Set();
+    const curId = String(selectedEventId || '').toLowerCase().trim();
+    const curIdClean = curId.replace(/[-_]/g, '');
+    const curName = String(currentEvent?.name || '').toLowerCase().trim();
+
+    // 1. Match from live coordinatorsList (database & fallback json)
+    coordinatorsList.forEach(c => {
+      let assigned = [];
+      if (Array.isArray(c.assignedEvents)) assigned = c.assignedEvents;
+      else if (Array.isArray(c.assigned_events)) assigned = c.assigned_events;
+      else if (typeof c.assignedEvents === 'string') assigned = c.assignedEvents.split(',').map(s => s.trim());
+      else if (typeof c.assigned_events === 'string') assigned = c.assigned_events.split(',').map(s => s.trim());
+      else if (c.eventId || c.event_id) assigned = [c.eventId || c.event_id];
+
+      const isAssigned = assigned.some(a => {
+        const str = String(a || '').toLowerCase().trim();
+        const strClean = str.replace(/[-_]/g, '');
+        return (
+          str === curId ||
+          strClean === curIdClean ||
+          (curName && (str === curName || curName.includes(str) || str.includes(curName)))
+        );
+      });
+
+      const uniqueKey = c.id || `${c.name}-${c.phone}`;
+      if (isAssigned && !seenIds.has(uniqueKey)) {
+        seenIds.add(uniqueKey);
+        matched.push(c);
+      }
     });
-  }, [coordinatorsList, selectedEventId]);
+
+    // 2. Fallback: Merge default coordinators from currentEvent if none found or to ensure defaults present
+    if (Array.isArray(currentEvent?.coordinators)) {
+      currentEvent.coordinators.forEach((cc, i) => {
+        const ccName = cc.name || `Coordinator ${i + 1}`;
+        const alreadyIn = matched.some(m => String(m.name || '').toLowerCase() === ccName.toLowerCase());
+        if (!alreadyIn) {
+          const synth = {
+            id: `static-${selectedEventId}-${i}`,
+            name: ccName,
+            phone: cc.phone || '',
+            whatsapp: cc.whatsapp || cc.phone || '',
+            email: cc.email || '',
+            department: cc.department || 'CSE',
+            year: cc.year || '3rd Year',
+            role: cc.role || (i === 0 ? 'Lead Coordinator' : 'Sub Coordinator'),
+            assignedEvents: [selectedEventId],
+            isActive: true,
+            displayOrder: i + 1
+          };
+          matched.push(synth);
+        }
+      });
+    }
+
+    // 3. Sort by priority: Lead Coordinator first, then Sub Coordinator, then Student Coordinator, then displayOrder
+    matched.sort((a, b) => {
+      const getRoleRank = (r) => {
+        const role = String(r || '').toLowerCase();
+        if (role.includes('lead')) return 1;
+        if (role.includes('sub')) return 2;
+        if (role.includes('student')) return 3;
+        if (role.includes('faculty')) return 4;
+        return 5;
+      };
+      const rankA = getRoleRank(a.role);
+      const rankB = getRoleRank(b.role);
+      if (rankA !== rankB) return rankA - rankB;
+      return (Number(a.displayOrder) || 99) - (Number(b.displayOrder) || 99);
+    });
+
+    return matched;
+  }, [coordinatorsList, selectedEventId, currentEvent]);
+
+  // Filtered Event Team for Search and Role Pills
+  const filteredEventTeam = useMemo(() => {
+    return currentEventTeam.filter(c => {
+      const q = teamSearch.toLowerCase().trim();
+      const matchSearch = !q || 
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.includes(q)) ||
+        (c.department && c.department.toLowerCase().includes(q)) ||
+        (c.role && c.role.toLowerCase().includes(q));
+
+      const roleStr = String(c.role || '').toLowerCase();
+      const matchRole = 
+        teamRoleFilter === 'all' ? true :
+        teamRoleFilter === 'lead' ? roleStr.includes('lead') :
+        teamRoleFilter === 'sub' ? (roleStr.includes('sub') || roleStr.includes('student') || roleStr.includes('coord')) :
+        teamRoleFilter === 'faculty' ? roleStr.includes('faculty') :
+        true;
+
+      return matchSearch && matchRole;
+    });
+  }, [currentEventTeam, teamSearch, teamRoleFilter]);
+
+  // Current Event Coordinators / Conductors
+  const currentEventCoordinators = currentEventTeam;
 
   // Check if a participant list was dispatched specifically to this event or login
   const eventDispatch = useMemo(() => {
     return dispatchesList.find(d => {
       const isEvt = String(d.eventId || d.event_id || '').toLowerCase().trim() === selectedEventId.toLowerCase().trim();
-      const isUser = !d.coordinator_username || d.coordinator_username === user?.username || d.coordinatorName?.toLowerCase().includes(String(user?.username || '').toLowerCase());
+      const coordUser = String(d.coordinatorUsername || d.coordinator_username || '').toLowerCase().trim();
+      const currentUName = String(user?.username || '').toLowerCase().trim();
+      const coordName = String(d.coordinatorName || d.coordinator_name || '').toLowerCase().trim();
+      
+      const isUser = !coordUser || 
+        coordUser === currentUName || 
+        coordName.includes(currentUName) || 
+        (user?.name && coordName.includes(user.name.toLowerCase()));
+
       return isEvt && isUser;
     });
   }, [dispatchesList, selectedEventId, user]);
@@ -196,28 +308,44 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   // ── 5. Filtered Participants for ONLY the Allocated Event ──
   const eventParticipants = useMemo(() => {
     return registrationsList.filter(r => {
-      const eId = (r.eventId || r.event_id || '').toLowerCase().trim();
-      const target = selectedEventId.toLowerCase().trim();
-      return eId === target || eId === target.replace('-', '') || (r.eventName && r.eventName.toLowerCase() === currentEvent.name?.toLowerCase());
+      const eId = String(r.eventId || r.event_id || '').toLowerCase().trim();
+      const target = String(selectedEventId || '').toLowerCase().trim();
+      const rEventName = String(r.eventName || r.event_name || '').toLowerCase().trim();
+      const curEventName = String(currentEvent?.name || '').toLowerCase().trim();
+      
+      return (
+        eId === target ||
+        eId === target.replace('-', '') ||
+        target === eId.replace('-', '') ||
+        (rEventName && curEventName && (rEventName === curEventName || curEventName.includes(rEventName) || rEventName.includes(curEventName)))
+      );
     });
   }, [registrationsList, selectedEventId, currentEvent]);
 
-  // ── 5. Participant Search & Filter State ──
+  // ── Participant Search & Filter State ──
   const [partSearch, setPartSearch] = useState('');
   const [attendanceFilter, setAttendanceFilter] = useState('all'); // all | present | absent
+  const [partViewMode, setPartViewMode] = useState('cards'); // 'cards' | 'table'
 
   const filteredEventParticipants = useMemo(() => {
     return eventParticipants.filter(p => {
-      const q = partSearch.toLowerCase();
-      const matchQuery = !q || 
-        (p.fullName || p.name || '').toLowerCase().includes(q) ||
-        (p.registrationId || p.id || '').toLowerCase().includes(q) ||
-        (p.college || '').toLowerCase().includes(q) ||
-        (p.phone || '').includes(q) ||
-        (p.email || '').toLowerCase().includes(q) ||
-        (p.teamName || '').toLowerCase().includes(q);
+      const q = partSearch.toLowerCase().trim();
+      const pName = String(p.fullName || p.full_name || p.name || '').toLowerCase();
+      const pId = String(p.ticketCode || p.ticket_code || p.registrationId || p.id || '').toLowerCase();
+      const pCollege = String(p.college || '').toLowerCase();
+      const pPhone = String(p.phone || '');
+      const pEmail = String(p.email || '').toLowerCase();
+      const pTeam = String(p.teamName || p.team_name || '').toLowerCase();
 
-      const isPresent = p.verified || p.attended || p.checkedIn;
+      const matchQuery = !q || 
+        pName.includes(q) ||
+        pId.includes(q) ||
+        pCollege.includes(q) ||
+        pPhone.includes(q) ||
+        pEmail.includes(q) ||
+        pTeam.includes(q);
+
+      const isPresent = Boolean(p.verified || p.attended || p.checkedIn || (p.attendance_status && p.attendance_status === 'PRESENT'));
       const matchAttendance = 
         attendanceFilter === 'all' ? true :
         attendanceFilter === 'present' ? isPresent :
@@ -231,14 +359,6 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   const verifiedCount = useMemo(() => {
     return eventParticipants.filter(p => p.verified || p.attended || p.checkedIn).length;
   }, [eventParticipants]);
-
-  // Current Event Coordinators / Conductors
-  const currentEventCoordinators = useMemo(() => {
-    return coordinatorsList.filter(c => 
-      c.assignedEvents?.includes(selectedEventId) || 
-      c.assignedEvents?.includes(selectedEventId.replace('-', ''))
-    );
-  }, [coordinatorsList, selectedEventId]);
 
   // Current Event Winner Submission
   const currentWinnerSubmission = useMemo(() => {
@@ -770,7 +890,21 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                   <FaUsers style={S.navIcon} />
                   <span>Participant List</span>
                 </div>
-                <span style={S.badgeCount}>{eventParticipants.length}</span>
+                {eventDispatch ? (
+                  <span style={{ ...S.badgeCount, background: '#10b981', color: '#ffffff', fontWeight: '800' }}>
+                    {eventParticipants.length}
+                  </span>
+                ) : (
+                  <span style={{
+                    ...S.badgeCount,
+                    background: isDark ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2',
+                    color: isDark ? '#f87171' : '#dc2626',
+                    fontSize: '0.62rem',
+                    fontWeight: '800'
+                  }}>
+                    AWAITING
+                  </span>
+                )}
               </div>
             </button>
 
@@ -1076,27 +1210,60 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                   </div>
                   <div style={S.cardBody}>
                     {currentEventCoordinators.length > 0 ? (
-                      currentEventCoordinators.map(c => (
-                        <div key={c.id} style={{ ...S.conductorItem, marginBottom: '0.85rem' }}>
-                          <div style={S.conductorAvatar}>{c.name.slice(0, 2).toUpperCase()}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={S.conductorName}>{c.name}</div>
-                            <div style={S.conductorRole}>{c.role} • {c.department} ({c.year || '3rd Year'})</div>
-                            <div style={S.conductorContactRow}>
-                              {c.phone && (
-                                <a href={`tel:${c.phone}`} style={S.contactChip}>
-                                  <FaPhoneAlt size={10} /> Call ({c.phone})
-                                </a>
-                              )}
-                              {c.email && (
-                                <a href={`mailto:${c.email}`} style={S.contactChip}>
-                                  <FaEnvelope size={10} /> {c.email}
-                                </a>
-                              )}
+                      currentEventCoordinators.map(c => {
+                        const isLead = (c.role || '').toLowerCase().includes('lead');
+                        const isSub = (c.role || '').toLowerCase().includes('sub');
+                        return (
+                          <div key={c.id} style={{ ...S.conductorItem, marginBottom: '0.85rem' }}>
+                            <div style={{
+                              ...S.conductorAvatar,
+                              background: isLead ? 'rgba(245, 158, 11, 0.15)' : (isSub ? 'rgba(6, 182, 212, 0.15)' : 'rgba(57, 255, 136, 0.15)'),
+                              color: isLead ? '#f59e0b' : (isSub ? '#06b6d4' : '#39FF88')
+                            }}>
+                              {c.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                <div style={S.conductorName}>{c.name}</div>
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: '800',
+                                  padding: '0.15rem 0.5rem',
+                                  borderRadius: '999px',
+                                  background: isLead ? 'rgba(245, 158, 11, 0.15)' : (isSub ? 'rgba(6, 182, 212, 0.15)' : 'rgba(57, 255, 136, 0.15)'),
+                                  color: isLead ? '#f59e0b' : (isSub ? '#06b6d4' : '#39FF88')
+                                }}>
+                                  {isLead ? 'Lead' : (isSub ? 'Sub-Coord' : (c.role || 'Coord'))}
+                                </span>
+                              </div>
+                              <div style={S.conductorRole}>{c.role || 'Coordinator'} • {c.department || 'CSE'} ({c.year || '3rd Year'})</div>
+                              <div style={S.conductorContactRow}>
+                                {c.phone && (
+                                  <a href={`tel:${c.phone}`} style={S.contactChip} title="Direct Call">
+                                    <FaPhoneAlt size={10} /> {c.phone}
+                                  </a>
+                                )}
+                                {c.phone && (
+                                  <a 
+                                    href={`https://wa.me/91${(c.whatsapp || c.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${c.name}, regarding ${currentEvent.name}...`)}`} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    style={{ ...S.contactChip, color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }} 
+                                    title="WhatsApp Direct"
+                                  >
+                                    <FaWhatsapp size={11} /> WA
+                                  </a>
+                                )}
+                                {c.email && (
+                                  <a href={`mailto:${c.email}`} style={S.contactChip} title="Send Email">
+                                    <FaEnvelope size={10} /> {c.email}
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <p style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: '0.88rem' }}>
                         You are managing this event as the lead coordinator.
@@ -1167,163 +1334,527 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                     Participant List — {currentEvent.name}
                   </h2>
                   <p style={S.sectionHeadingSub}>
-                    Showing <strong>{filteredEventParticipants.length}</strong> of <strong>{eventParticipants.length}</strong> participants registered strictly for your allocated event.
+                    {eventDispatch 
+                      ? `Showing ${filteredEventParticipants.length} of ${eventParticipants.length} participants registered strictly for your allocated event.`
+                      : `Official participant list for ${currentEvent.name} is awaiting administrative dispatch.`}
                   </p>
                 </div>
                 
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <button onClick={handleExportCSV} style={S.btnSecondary}>
-                    <FaFileCsv /> Export CSV
-                  </button>
-                  <button onClick={() => setActiveTab('search-verify')} style={S.btnPrimary}>
-                    <FaQrcode /> Scan QR & Verify
-                  </button>
-                </div>
-              </div>
-
-              {/* Search & Filter Bar */}
-              <div style={S.filterBar}>
-                <div style={S.searchWrap}>
-                  <FaSearch style={S.searchIcon} />
-                  <input
-                    type="text"
-                    placeholder="Search by participant name, registration ID, phone, college..."
-                    value={partSearch}
-                    onChange={(e) => setPartSearch(e.target.value)}
-                    style={S.searchInput}
-                  />
-                  {partSearch && (
-                    <button onClick={() => setPartSearch('')} style={S.clearSearchBtn}>
-                      <FaTimes size={12} />
+                {eventDispatch && (
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button onClick={handleExportCSV} style={S.btnSecondary}>
+                      <FaFileCsv /> Export CSV
                     </button>
-                  )}
-                </div>
-
-                <div style={S.filterGroup}>
-                  <span style={S.filterLabel}><FaFilter size={11} /> Attendance:</span>
-                  <select 
-                    value={attendanceFilter} 
-                    onChange={(e) => setAttendanceFilter(e.target.value)}
-                    style={S.filterSelect}
-                  >
-                    <option value="all">All Participants ({eventParticipants.length})</option>
-                    <option value="present">Present / Verified ({verifiedCount})</option>
-                    <option value="absent">Pending / Absent ({Math.max(0, eventParticipants.length - verifiedCount)})</option>
-                  </select>
-                </div>
+                    <button onClick={() => setActiveTab('search-verify')} style={S.btnPrimary}>
+                      <FaQrcode /> Scan QR & Verify
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* Participant Cards / Table */}
-              {filteredEventParticipants.length > 0 ? (
-                <div style={S.participantGrid}>
-                  {filteredEventParticipants.map(p => {
-                    const isPresent = Boolean(p.verified || p.attended || p.checkedIn);
-                    const cleanPhone = (p.phone || '').replace(/[^0-9+]/g, '');
-                    const cleanWhatsapp = (p.whatsapp || p.phone || '').replace(/[^0-9]/g, '');
-
-                    return (
-                      <div key={p.registrationId || p.id} style={{ ...S.participantCard, borderLeft: isPresent ? '4px solid #39FF88' : '4px solid #64748b' }}>
-                        {/* Header: Name + ID + Attendance Badge */}
-                        <div style={S.partCardHeader}>
-                          <div>
-                            <div style={S.partName}>{p.fullName || p.name}</div>
-                            <div style={S.partIdBadge}>{p.registrationId || p.id}</div>
-                          </div>
-
-                          {/* Attendance Status Button */}
-                          <button
-                            onClick={() => handleToggleAttendance(p)}
-                            style={{
-                              ...S.attendanceToggleBtn,
-                              background: isPresent ? 'rgba(57, 255, 136, 0.16)' : 'rgba(255, 255, 255, 0.05)',
-                              color: isPresent ? '#39FF88' : '#94a3b8',
-                              border: isPresent ? '1px solid #39FF88' : '1px solid rgba(255, 255, 255, 0.15)'
-                            }}
-                            title="Click to toggle attendance status"
-                          >
-                            {isPresent ? <FaCheck size={11} /> : <FaTimes size={11} />}
-                            <span>{isPresent ? 'PRESENT' : 'MARK PRESENT'}</span>
-                          </button>
+              {/* Conditional Dispatch View */}
+              {eventDispatch ? (
+                <>
+                  {/* Dispatch Status Banner */}
+                  <div style={{
+                    background: isDark ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.08) 100%)' : '#ecfdf5',
+                    border: isDark ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #a7f3d0',
+                    borderRadius: '12px',
+                    padding: '1rem 1.25rem',
+                    marginBottom: '1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: isDark ? 'rgba(16, 185, 129, 0.25)' : '#d1fae5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#10b981',
+                        fontSize: '1.2rem'
+                      }}>
+                        <FaCheckCircle />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '800', color: isDark ? '#34d399' : '#065f46', fontSize: '0.95rem' }}>
+                          Official Participant List Dispatched by Admin
                         </div>
-
-                        {/* College & Department */}
-                        <div style={S.partDetailsBox}>
-                          <div style={S.partDetailRow}>
-                            <span style={S.detailKey}>College:</span>
-                            <span style={S.detailVal}>{p.college || 'CAHCET'}</span>
-                          </div>
-                          {(p.dept || p.department) && (
-                            <div style={S.partDetailRow}>
-                              <span style={S.detailKey}>Dept & Year:</span>
-                              <span style={S.detailVal}>{p.dept || p.department} • {p.year || '3rd Year'}</span>
-                            </div>
-                          )}
-                          {p.teamName && (
-                            <div style={S.partDetailRow}>
-                              <span style={S.detailKey}>Team Name:</span>
-                              <span style={{ ...S.detailVal, color: '#38bdf8', fontWeight: '700' }}>{p.teamName}</span>
-                            </div>
-                          )}
-                          {Array.isArray(p.teamMembers) && p.teamMembers.length > 0 && (
-                            <div style={S.partDetailRow}>
-                              <span style={S.detailKey}>Members:</span>
-                              <span style={S.detailVal}>
-                                {p.teamMembers.map(m => typeof m === 'string' ? m : m.name).join(', ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Direct Call & Action Buttons */}
-                        <div style={S.partActionRow}>
-                          {cleanPhone ? (
-                            <a
-                              href={`tel:${cleanPhone}`}
-                              style={S.btnDirectCall}
-                              title={`Call ${p.fullName || 'Participant'} directly`}
-                            >
-                              <FaPhoneAlt size={12} />
-                              <span>CALL NOW ({cleanPhone})</span>
-                            </a>
-                          ) : (
-                            <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>No phone provided</span>
-                          )}
-
-                          {cleanWhatsapp && (
-                            <a
-                              href={`https://wa.me/${cleanWhatsapp}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={S.btnDirectWhatsapp}
-                              title="Message on WhatsApp"
-                            >
-                              <FaWhatsapp size={14} />
-                            </a>
-                          )}
-
-                          {p.email && (
-                            <a
-                              href={`mailto:${p.email}`}
-                              style={S.btnDirectEmail}
-                              title={`Send Email to ${p.email}`}
-                            >
-                              <FaEnvelope size={13} />
-                            </a>
-                          )}
+                        <div style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#047857', marginTop: '2px' }}>
+                          Assigned To: <strong>{eventDispatch.coordinatorName}</strong> • Dispatched: <strong>{new Date(eventDispatch.sentAt).toLocaleString()}</strong>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                    <div style={{
+                      background: isDark ? 'rgba(16, 185, 129, 0.2)' : '#10b981',
+                      color: isDark ? '#6ee7b7' : '#ffffff',
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '20px',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399' }} />
+                      LIVE AUTHORIZED DISPATCH
+                    </div>
+                  </div>
+
+                  {/* Search & Filter Bar */}
+                  <div style={{ ...S.filterBar, flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', flex: 1, minWidth: '280px', flexWrap: 'wrap' }}>
+                      <div style={S.searchWrap}>
+                        <FaSearch style={S.searchIcon} />
+                        <input
+                          type="text"
+                          placeholder="Search by participant name, registration ID, phone, college..."
+                          value={partSearch}
+                          onChange={(e) => setPartSearch(e.target.value)}
+                          style={S.searchInput}
+                        />
+                        {partSearch && (
+                          <button onClick={() => setPartSearch('')} style={S.clearSearchBtn}>
+                            <FaTimes size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div style={S.filterGroup}>
+                        <span style={S.filterLabel}><FaFilter size={11} /> Attendance:</span>
+                        <select 
+                          value={attendanceFilter} 
+                          onChange={(e) => setAttendanceFilter(e.target.value)}
+                          style={S.filterSelect}
+                        >
+                          <option value="all">All ({eventParticipants.length})</option>
+                          <option value="present">Present ({verifiedCount})</option>
+                          <option value="absent">Pending ({Math.max(0, eventParticipants.length - verifiedCount)})</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* View Mode Switcher (Cards vs Table) */}
+                    <div style={{
+                      display: 'inline-flex',
+                      background: isDark ? 'rgba(0,0,0,0.4)' : '#f1f5f9',
+                      borderRadius: '8px',
+                      padding: '3px',
+                      border: isDark ? '1px solid rgba(57, 255, 136, 0.25)' : '1px solid #cbd5e1',
+                      alignSelf: 'center'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={() => setPartViewMode('cards')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '0.42rem 0.8rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: '700',
+                          background: partViewMode === 'cards' 
+                            ? (isDark ? '#39FF88' : '#059669') 
+                            : 'transparent',
+                          color: partViewMode === 'cards' 
+                            ? (isDark ? '#050a06' : '#ffffff') 
+                            : (isDark ? '#9ca3af' : '#64748b'),
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <FaThLarge size={12} /> Cards
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPartViewMode('table')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '0.42rem 0.8rem',
+                          borderRadius: '6px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: '700',
+                          background: partViewMode === 'table' 
+                            ? (isDark ? '#39FF88' : '#059669') 
+                            : 'transparent',
+                          color: partViewMode === 'table' 
+                            ? (isDark ? '#050a06' : '#ffffff') 
+                            : (isDark ? '#9ca3af' : '#64748b'),
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <FaTable size={12} /> Table
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Participant Cards / Table View */}
+                  {filteredEventParticipants.length > 0 ? (
+                    partViewMode === 'cards' ? (
+                      /* Cards Grid View */
+                      <div style={S.participantGrid}>
+                        {filteredEventParticipants.map(p => {
+                          const isPresent = Boolean(p.verified || p.attended || p.checkedIn || (p.attendance_status && p.attendance_status === 'PRESENT'));
+                          const cleanPhone = (p.phone || '').replace(/[^0-9+]/g, '');
+                          const cleanWhatsapp = (p.whatsapp || p.phone || '').replace(/[^0-9]/g, '');
+
+                          return (
+                            <div key={p.registrationId || p.id} style={{ ...S.participantCard, borderLeft: isPresent ? '4px solid #39FF88' : '4px solid #64748b' }}>
+                              {/* Header: Name + ID + Attendance Badge */}
+                              <div style={S.partCardHeader}>
+                                <div>
+                                  <div style={S.partName}>{p.fullName || p.full_name || p.name || 'Participant'}</div>
+                                  <div style={S.partIdBadge}>{p.ticketCode || p.ticket_code || p.registrationId || p.id}</div>
+                                </div>
+
+                                {/* Attendance Status Button */}
+                                <button
+                                  onClick={() => handleToggleAttendance(p)}
+                                  style={{
+                                    ...S.attendanceToggleBtn,
+                                    background: isPresent ? 'rgba(57, 255, 136, 0.16)' : 'rgba(255, 255, 255, 0.05)',
+                                    color: isPresent ? '#39FF88' : '#94a3b8',
+                                    border: isPresent ? '1px solid #39FF88' : '1px solid rgba(255, 255, 255, 0.15)'
+                                  }}
+                                  title="Click to toggle attendance status"
+                                >
+                                  {isPresent ? <FaCheck size={11} /> : <FaTimes size={11} />}
+                                  <span>{isPresent ? 'PRESENT' : 'MARK PRESENT'}</span>
+                                </button>
+                              </div>
+
+                              {/* College & Department */}
+                              <div style={S.partDetailsBox}>
+                                <div style={S.partDetailRow}>
+                                  <span style={S.detailKey}>College:</span>
+                                  <span style={S.detailVal}>{p.college || 'CAHCET'}</span>
+                                </div>
+                                {(p.dept || p.department) && (
+                                  <div style={S.partDetailRow}>
+                                    <span style={S.detailKey}>Dept & Year:</span>
+                                    <span style={S.detailVal}>{p.dept || p.department} • {p.year || '3rd Year'}</span>
+                                  </div>
+                                )}
+                                {(p.teamName || p.team_name) && (
+                                  <div style={S.partDetailRow}>
+                                    <span style={S.detailKey}>Team Name:</span>
+                                    <span style={{ ...S.detailVal, color: '#38bdf8', fontWeight: '700' }}>{p.teamName || p.team_name}</span>
+                                  </div>
+                                )}
+                                {((Array.isArray(p.teamMembers) && p.teamMembers.length > 0) || (Array.isArray(p.registration_members) && p.registration_members.length > 0)) && (
+                                  <div style={S.partDetailRow}>
+                                    <span style={S.detailKey}>Members:</span>
+                                    <span style={S.detailVal}>
+                                      {(Array.isArray(p.teamMembers) && p.teamMembers.length > 0
+                                        ? p.teamMembers.map(m => typeof m === 'string' ? m : (m.name || m.member_name))
+                                        : (p.registration_members || []).map(m => m.member_name || m.name || m)
+                                      ).join(', ')}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Direct Call & Action Buttons */}
+                              <div style={S.partActionRow}>
+                                {cleanPhone ? (
+                                  <a
+                                    href={`tel:${cleanPhone}`}
+                                    style={S.btnDirectCall}
+                                    title={`Call ${p.fullName || 'Participant'} directly`}
+                                  >
+                                    <FaPhoneAlt size={12} />
+                                    <span>CALL NOW ({cleanPhone})</span>
+                                  </a>
+                                ) : (
+                                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>No phone provided</span>
+                                )}
+
+                                {cleanWhatsapp && (
+                                  <a
+                                    href={`https://wa.me/${cleanWhatsapp}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={S.btnDirectWhatsapp}
+                                    title="Message on WhatsApp"
+                                  >
+                                    <FaWhatsapp size={14} />
+                                  </a>
+                                )}
+
+                                {p.email && (
+                                  <a
+                                    href={`mailto:${p.email}`}
+                                    style={S.btnDirectEmail}
+                                    title={`Send Email to ${p.email}`}
+                                  >
+                                    <FaEnvelope size={13} />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* Table View */
+                      <div style={{
+                        background: isDark ? '#0d1810' : '#ffffff',
+                        border: isDark ? '1px solid rgba(57, 255, 136, 0.2)' : '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        overflowX: 'auto',
+                        boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 4px 6px -1px rgba(0,0,0,0.05)'
+                      }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
+                          <thead>
+                            <tr style={{ background: isDark ? '#050a06' : '#f8fafc', borderBottom: isDark ? '1px solid rgba(57, 255, 136, 0.2)' : '1px solid #e2e8f0' }}>
+                              <th style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>#</th>
+                              <th style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket Code / ID</th>
+                              <th style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Participant & Team</th>
+                              <th style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>College / Dept</th>
+                              <th style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Direct Contact</th>
+                              <th style={{ padding: '0.85rem 1rem', fontSize: '0.78rem', fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Attendance</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredEventParticipants.map((p, idx) => {
+                              const isPresent = Boolean(p.verified || p.attended || p.checkedIn || (p.attendance_status && p.attendance_status === 'PRESENT'));
+                              const cleanPhone = (p.phone || '').replace(/[^0-9+]/g, '');
+                              const cleanWhatsapp = (p.whatsapp || p.phone || '').replace(/[^0-9]/g, '');
+                              const members = Array.isArray(p.teamMembers) && p.teamMembers.length > 0
+                                ? p.teamMembers.map(m => typeof m === 'string' ? m : (m.name || m.member_name))
+                                : (p.registration_members || []).map(m => m.member_name || m.name || m);
+
+                              return (
+                                <tr
+                                  key={p.registrationId || p.id || idx}
+                                  style={{
+                                    borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #f1f5f9',
+                                    background: isPresent 
+                                      ? (isDark ? 'rgba(57, 255, 136, 0.03)' : 'rgba(16, 185, 129, 0.03)')
+                                      : 'transparent',
+                                    transition: 'background 0.2s ease'
+                                  }}
+                                >
+                                  <td style={{ padding: '1rem', fontSize: '0.85rem', fontWeight: '700', color: isDark ? '#94a3b8' : '#64748b' }}>
+                                    #{idx + 1}
+                                  </td>
+                                  <td style={{ padding: '1rem' }}>
+                                    <div style={{
+                                      display: 'inline-block',
+                                      padding: '0.25rem 0.6rem',
+                                      borderRadius: '6px',
+                                      background: isDark ? 'rgba(56, 189, 248, 0.12)' : '#e0f2fe',
+                                      color: isDark ? '#38bdf8' : '#0284c7',
+                                      fontWeight: '800',
+                                      fontSize: '0.82rem',
+                                      fontFamily: 'monospace',
+                                      letterSpacing: '0.03em'
+                                    }}>
+                                      {p.ticketCode || p.ticket_code || p.registrationId || p.id}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '1rem' }}>
+                                    <div style={{ fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.92rem' }}>
+                                      {p.fullName || p.full_name || p.name || 'Participant'}
+                                    </div>
+                                    {(p.teamName || p.team_name) && (
+                                      <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: '700', marginTop: '2px' }}>
+                                        Team: {p.teamName || p.team_name}
+                                      </div>
+                                    )}
+                                    {members.length > 0 && (
+                                      <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '2px' }}>
+                                        Members: {members.join(', ')}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '1rem' }}>
+                                    <div style={{ fontWeight: '600', color: isDark ? '#cbd5e1' : '#334155', fontSize: '0.85rem' }}>
+                                      {p.college || 'CAHCET'}
+                                    </div>
+                                    {(p.dept || p.department) && (
+                                      <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                        {p.dept || p.department} {p.year ? `• ${p.year}` : ''}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                      {cleanPhone && (
+                                        <a
+                                          href={`tel:${cleanPhone}`}
+                                          style={{
+                                            padding: '0.35rem 0.65rem',
+                                            borderRadius: '6px',
+                                            background: isDark ? 'rgba(57, 255, 136, 0.12)' : '#ecfdf5',
+                                            color: isDark ? '#39FF88' : '#047857',
+                                            border: isDark ? '1px solid rgba(57, 255, 136, 0.3)' : '1px solid #a7f3d0',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '700',
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                          }}
+                                          title={`Call ${cleanPhone}`}
+                                        >
+                                          <FaPhoneAlt size={10} /> Call
+                                        </a>
+                                      )}
+                                      {cleanWhatsapp && (
+                                        <a
+                                          href={`https://wa.me/${cleanWhatsapp}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          style={{
+                                            padding: '0.35rem 0.6rem',
+                                            borderRadius: '6px',
+                                            background: isDark ? 'rgba(34, 197, 94, 0.12)' : '#dcfce7',
+                                            color: isDark ? '#4ade80' : '#15803d',
+                                            border: isDark ? '1px solid rgba(34, 197, 94, 0.3)' : '1px solid #86efac',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '700',
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                          }}
+                                          title="WhatsApp"
+                                        >
+                                          <FaWhatsapp size={12} /> WA
+                                        </a>
+                                      )}
+                                      {p.email && (
+                                        <a
+                                          href={`mailto:${p.email}`}
+                                          style={{
+                                            padding: '0.35rem 0.55rem',
+                                            borderRadius: '6px',
+                                            background: isDark ? 'rgba(56, 189, 248, 0.12)' : '#f0f9ff',
+                                            color: isDark ? '#38bdf8' : '#0284c7',
+                                            border: isDark ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid #bae6fd',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '700',
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center'
+                                          }}
+                                          title={p.email}
+                                        >
+                                          <FaEnvelope size={11} />
+                                        </a>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '1rem', textAlign: 'center' }}>
+                                    <button
+                                      onClick={() => handleToggleAttendance(p)}
+                                      style={{
+                                        padding: '0.4rem 0.85rem',
+                                        borderRadius: '8px',
+                                        fontSize: '0.78rem',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        transition: 'all 0.2s ease',
+                                        background: isPresent ? 'rgba(57, 255, 136, 0.18)' : 'rgba(255, 255, 255, 0.05)',
+                                        color: isPresent ? '#39FF88' : (isDark ? '#94a3b8' : '#64748b'),
+                                        border: isPresent ? '1px solid #39FF88' : (isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid #cbd5e1')
+                                      }}
+                                      title="Click to toggle attendance status"
+                                    >
+                                      {isPresent ? <FaCheck size={11} /> : <FaTimes size={11} />}
+                                      <span>{isPresent ? 'PRESENT' : 'MARK PRESENT'}</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  ) : (
+                    <div style={S.emptyBox}>
+                      <FaUsers size={36} style={{ color: '#64748b', marginBottom: '0.75rem' }} />
+                      <h3>No Participants Found</h3>
+                      <p>
+                        {partSearch 
+                          ? `No registered participants match "${partSearch}" for ${currentEvent.name}.`
+                          : `No participants have registered for ${currentEvent.name} yet.`}
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div style={S.emptyBox}>
-                  <FaUsers size={36} style={{ color: '#64748b', marginBottom: '0.75rem' }} />
-                  <h3>No Participants Found</h3>
-                  <p>
-                    {partSearch 
-                      ? `No registered participants match "${partSearch}" for ${currentEvent.name}.`
-                      : `No participants have registered for ${currentEvent.name} yet.`}
+                /* Awaiting Dispatch Lock State */
+                <div style={{
+                  background: isDark ? 'rgba(15, 23, 42, 0.75)' : '#f8fafc',
+                  border: isDark ? '1px dashed rgba(239, 68, 68, 0.4)' : '1px dashed #fca5a5',
+                  borderRadius: '16px',
+                  padding: '3.5rem 2rem',
+                  textAlign: 'center',
+                  maxWidth: '720px',
+                  margin: '2rem auto'
+                }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fee2e2',
+                    color: isDark ? '#f87171' : '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1.25rem',
+                    fontSize: '1.75rem'
+                  }}>
+                    <FaLock />
+                  </div>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: isDark ? '#f87171' : '#b91c1c', marginBottom: '0.65rem' }}>
+                    Participant List Awaiting Dispatch from Admin
+                  </h3>
+                  <p style={{ fontSize: '0.92rem', color: isDark ? '#cbd5e1' : '#475569', lineHeight: '1.6', maxWidth: '560px', margin: '0 auto 1.5rem' }}>
+                    The Admin has not yet dispatched the official participant list for <strong>{currentEvent.name}</strong> to your coordinator login (<strong>@{user?.username || 'coordinator'}</strong>).
+                    <br />
+                    Once Admin sends the list from the Admin Portal, it will appear here automatically with direct calling, WhatsApp communication, and attendance controls.
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      toast.loading('Checking for newly dispatched participant lists from Admin...', { duration: 1500 });
+                      fetchData();
+                    }}
+                    style={{
+                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.65rem 1.4rem',
+                      borderRadius: '8px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '0.88rem'
+                    }}
+                  >
+                    <FaSyncAlt /> Check / Refresh Status
+                  </button>
                 </div>
               )}
             </div>
@@ -1641,104 +2172,226 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
               <div style={S.viewHeroBanner} className="coord-hero-banner">
                 <div style={S.heroBannerContent}>
                   <div style={S.heroBadge}>
-                    <FaUserTie /> EVENT COORDINATOR TEAM
+                    <FaUserTie /> EVENT TEAM ROSTER
                   </div>
                   <h1 style={S.heroTitle}>{currentEvent.name} — Coordinator Roster</h1>
                   <p style={S.heroDesc}>
-                    Official faculty and student coordinators assigned to lead and execute {currentEvent.name}. Direct calling and WhatsApp support enabled for instant team synchronization.
+                    Official faculty, lead coordinators, and sub-coordinators allocated to lead and execute <strong>{currentEvent.name}</strong>. Instant calling and WhatsApp synchronization enabled.
                   </p>
                   <div style={S.heroMetaRow}>
-                    <span style={S.metaChip}>
-                      <FaShieldAlt style={{ color: '#39FF88' }} /> {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('lead')).length || 1} Lead Coordinator(s)
+                    <span style={{ ...S.metaChip, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                      👑 {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('lead')).length} Lead Coordinator(s)
+                    </span>
+                    <span style={{ ...S.metaChip, background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
+                      ⚡ {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('sub') || (c.role || '').toLowerCase().includes('student')).length} Sub / Student Coordinator(s)
                     </span>
                     <span style={S.metaChip}>
                       <FaUsers style={{ color: '#39FF88' }} /> {currentEventTeam.length} Team Members Total
                     </span>
-                    <span style={{ ...S.metaChip, background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8' }}>
-                      🔒 Strictly Scoped to {currentEvent.name}
+                    <span style={{ ...S.metaChip, background: 'rgba(57, 255, 136, 0.12)', color: '#39FF88' }}>
+                      🔒 Scoped to {currentEvent.name}
                     </span>
                   </div>
                 </div>
               </div>
 
+              {/* Search & Filter Toolbar */}
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flex: 1, minWidth: '280px', maxWidth: '500px' }}>
+                  <div style={{ ...S.searchBox, width: '100%' }}>
+                    <FaSearch style={S.searchIcon} />
+                    <input 
+                      type="text" 
+                      placeholder="Search team member by name, phone, dept..." 
+                      value={teamSearch}
+                      onChange={(e) => setTeamSearch(e.target.value)}
+                      style={S.searchInput}
+                    />
+                    {teamSearch && (
+                      <button 
+                        onClick={() => setTeamSearch('')} 
+                        style={{ background: 'transparent', border: 'none', color: isDark ? '#94a3b8' : '#64748b', cursor: 'pointer', padding: '0 8px' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'all', label: `All Members (${currentEventTeam.length})` },
+                    { id: 'lead', label: `Lead (${currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('lead')).length})` },
+                    { id: 'sub', label: `Sub-Coordinators (${currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('sub') || (c.role || '').toLowerCase().includes('student')).length})` }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setTeamRoleFilter(tab.id)}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '999px',
+                        fontSize: '0.82rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        background: teamRoleFilter === tab.id
+                          ? (isDark ? 'rgba(57, 255, 136, 0.2)' : '#0f172a')
+                          : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'),
+                        color: teamRoleFilter === tab.id
+                          ? (isDark ? '#39FF88' : '#ffffff')
+                          : (isDark ? '#94a3b8' : '#475569'),
+                        border: teamRoleFilter === tab.id
+                          ? (isDark ? '1px solid rgba(57, 255, 136, 0.4)' : '1px solid #0f172a')
+                          : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0'}`
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Coordinator Cards Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
-                {currentEventTeam.map((coord, idx) => {
-                  const isLead = (coord.role || '').toLowerCase().includes('lead');
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '1.25rem', marginTop: '1rem' }}>
+                {filteredEventTeam.map((coord, idx) => {
+                  const roleStr = String(coord.role || '').toLowerCase();
+                  const isLead = roleStr.includes('lead');
+                  const isSub = roleStr.includes('sub');
+                  const isFaculty = roleStr.includes('faculty');
+
+                  const accentColor = isLead ? '#f59e0b' : (isSub ? '#06b6d4' : (isFaculty ? '#a855f7' : '#39FF88'));
+                  const badgeBg = isLead 
+                    ? (isDark ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7')
+                    : (isSub
+                        ? (isDark ? 'rgba(6, 182, 212, 0.15)' : '#cffafe')
+                        : (isFaculty
+                            ? (isDark ? 'rgba(168, 85, 247, 0.15)' : '#f3e8ff')
+                            : (isDark ? 'rgba(57, 255, 136, 0.15)' : '#ecfdf5')));
+                  const borderStyle = isLead 
+                    ? '1.5px solid rgba(245, 158, 11, 0.45)' 
+                    : (isSub 
+                        ? '1.5px solid rgba(6, 182, 212, 0.4)' 
+                        : `1px solid ${isDark ? 'rgba(57, 255, 136, 0.2)' : '#e2e8f0'}`);
+                  const glowShadow = isLead 
+                    ? '0 0 24px rgba(245, 158, 11, 0.12)' 
+                    : (isSub ? '0 0 20px rgba(6, 182, 212, 0.1)' : '0 4px 12px rgba(0,0,0,0.04)');
+
                   return (
                     <div 
                       key={coord.id || idx} 
                       style={{
-                        background: isDark ? 'rgba(8, 18, 10, 0.85)' : '#ffffff',
-                        border: isLead ? '1.5px solid rgba(57, 255, 136, 0.45)' : `1px solid ${isDark ? 'rgba(57, 255, 136, 0.18)' : '#e2e8f0'}`,
+                        background: isDark ? 'rgba(8, 18, 10, 0.88)' : '#ffffff',
+                        border: borderStyle,
                         borderRadius: '16px',
                         padding: '1.5rem',
-                        boxShadow: isLead ? '0 0 20px rgba(57, 255, 136, 0.1)' : '0 4px 12px rgba(0,0,0,0.03)',
+                        boxShadow: glowShadow,
                         position: 'relative',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between'
+                        justifyContent: 'space-between',
+                        backdropFilter: 'blur(10px)'
                       }}
                     >
                       <div>
+                        {/* Header Row: Avatar, Role Badge & Online Status */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                          <div style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '12px',
-                            background: isLead ? 'rgba(57, 255, 136, 0.15)' : 'rgba(56, 189, 248, 0.12)',
-                            border: isLead ? '1px solid rgba(57, 255, 136, 0.4)' : '1px solid rgba(56, 189, 248, 0.3)',
-                            color: isLead ? '#39FF88' : '#38bdf8',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: '800',
-                            fontSize: '1.1rem'
-                          }}>
-                            {coord.name.slice(0, 2).toUpperCase()}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                              width: '50px',
+                              height: '50px',
+                              borderRadius: '14px',
+                              background: badgeBg,
+                              border: `1.5px solid ${accentColor}40`,
+                              color: accentColor,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '800',
+                              fontSize: '1.15rem'
+                            }}>
+                              {(coord.name || 'EC').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '20px',
+                                background: badgeBg,
+                                color: accentColor,
+                                border: `1px solid ${accentColor}50`,
+                                fontSize: '0.72rem',
+                                fontWeight: '800',
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase'
+                              }}>
+                                {isLead ? '👑 Lead Coordinator' : (isSub ? '⚡ Sub Coordinator' : (coord.role || 'Event Coordinator'))}
+                              </div>
+                            </div>
                           </div>
 
                           <span style={{
-                            padding: '0.3rem 0.75rem',
-                            borderRadius: '20px',
-                            background: isLead ? 'rgba(57, 255, 136, 0.15)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'),
-                            color: isLead ? '#39FF88' : (isDark ? '#cbd5e1' : '#475569'),
-                            border: isLead ? '1px solid rgba(57, 255, 136, 0.35)' : '1px solid transparent',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
                             fontSize: '0.72rem',
-                            fontWeight: '800',
-                            letterSpacing: '0.04em',
-                            textTransform: 'uppercase'
+                            fontWeight: '700',
+                            color: coord.isActive !== false ? '#10b981' : '#ef4444'
                           }}>
-                            {coord.role || (isLead ? 'Lead Coordinator' : 'Event Coordinator')}
+                            <span style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: coord.isActive !== false ? '#10b981' : '#ef4444'
+                            }}></span>
+                            {coord.isActive !== false ? 'Active' : 'Inactive'}
                           </span>
                         </div>
 
-                        <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
+                        {/* Coordinator Name & Department */}
+                        <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.2rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
                           {coord.name}
                         </h3>
                         
-                        <div style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b', marginBottom: '1rem' }}>
+                        <div style={{ fontSize: '0.84rem', color: isDark ? '#94a3b8' : '#64748b', marginBottom: '1.15rem' }}>
                           {coord.department || 'CSE'} Department • {coord.year || '3rd Year'}
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.82rem' }}>
-                          {coord.email && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#cbd5e1' : '#334155' }}>
-                              <FaEnvelope size={12} style={{ color: '#39FF88', flexShrink: 0 }} />
-                              <span style={{ wordBreak: 'break-all' }}>{coord.email}</span>
+                        {/* Contact Information List */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.84rem' }}>
+                          {coord.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: isDark ? 'rgba(57, 255, 136, 0.1)' : '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#39FF88', flexShrink: 0 }}>
+                                <FaPhoneAlt size={11} />
+                              </div>
+                              <span style={{ fontWeight: '600' }}>+91 {coord.phone}</span>
                             </div>
                           )}
-                          {coord.phone && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#cbd5e1' : '#334155' }}>
-                              <FaPhoneAlt size={11} style={{ color: '#39FF88', flexShrink: 0 }} />
-                              <span>{coord.phone}</span>
+
+                          {coord.whatsapp && coord.whatsapp !== coord.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: isDark ? 'rgba(16, 185, 129, 0.1)' : '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}>
+                                <FaWhatsapp size={12} />
+                              </div>
+                              <span style={{ fontWeight: '600' }}>WA: +91 {coord.whatsapp}</span>
+                            </div>
+                          )}
+
+                          {coord.email && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDark ? '#cbd5e1' : '#334155' }}>
+                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: isDark ? 'rgba(56, 189, 248, 0.1)' : '#f0f9ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8', flexShrink: 0 }}>
+                                <FaEnvelope size={11} />
+                              </div>
+                              <span style={{ wordBreak: 'break-all', fontSize: '0.8rem' }}>{coord.email}</span>
                             </div>
                           )}
                         </div>
                       </div>
 
                       {/* Direct Contact Buttons */}
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '1.25rem', paddingTop: '1rem', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'}` }}>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '1.25rem', paddingTop: '1rem', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9'}` }}>
                         {coord.phone && (
                           <a
                             href={`tel:${coord.phone}`}
@@ -1748,22 +2401,23 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                               alignItems: 'center',
                               justifyContent: 'center',
                               gap: '6px',
-                              padding: '0.6rem 0.85rem',
-                              borderRadius: '8px',
+                              padding: '0.65rem 0.85rem',
+                              borderRadius: '10px',
                               background: isDark ? 'rgba(57, 255, 136, 0.12)' : '#ecfdf5',
                               color: isDark ? '#39FF88' : '#047857',
-                              border: '1px solid rgba(57, 255, 136, 0.3)',
+                              border: '1px solid rgba(57, 255, 136, 0.35)',
                               fontWeight: '700',
                               fontSize: '0.82rem',
-                              textDecoration: 'none'
+                              textDecoration: 'none',
+                              transition: 'all 0.2s ease'
                             }}
                           >
                             <FaPhoneAlt size={11} /> Call Direct
                           </a>
                         )}
-                        {coord.whatsapp && (
+                        {coord.phone && (
                           <a
-                            href={`https://wa.me/${coord.whatsapp.replace(/[^0-9]/g, '')}`}
+                            href={`https://wa.me/91${(coord.whatsapp || coord.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${coord.name}, regarding ${currentEvent.name} coordination...`)}`}
                             target="_blank"
                             rel="noreferrer"
                             style={{
@@ -1772,17 +2426,18 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                               alignItems: 'center',
                               justifyContent: 'center',
                               gap: '6px',
-                              padding: '0.6rem 0.85rem',
-                              borderRadius: '8px',
-                              background: isDark ? 'rgba(16, 185, 129, 0.12)' : '#f0fdf4',
+                              padding: '0.65rem 0.85rem',
+                              borderRadius: '10px',
+                              background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4',
                               color: '#10b981',
-                              border: '1px solid rgba(16, 185, 129, 0.3)',
+                              border: '1px solid rgba(16, 185, 129, 0.35)',
                               fontWeight: '700',
                               fontSize: '0.82rem',
-                              textDecoration: 'none'
+                              textDecoration: 'none',
+                              transition: 'all 0.2s ease'
                             }}
                           >
-                            <FaWhatsapp size={13} /> WhatsApp
+                            <FaWhatsapp size={14} /> WhatsApp
                           </a>
                         )}
                       </div>
@@ -1790,13 +2445,25 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                   );
                 })}
 
-                {currentEventTeam.length === 0 && (
-                  <div style={{ gridColumn: '1 / -1', padding: '3rem 1.5rem', textAlign: 'center', background: isDark ? 'rgba(8, 18, 10, 0.6)' : '#ffffff', borderRadius: '16px', border: `1px solid ${isDark ? 'rgba(57, 255, 136, 0.15)' : '#e2e8f0'}` }}>
-                    <FaUserTie size={36} style={{ color: '#39FF88', opacity: 0.5, marginBottom: '0.75rem' }} />
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: isDark ? '#ffffff' : '#0f172a' }}>No Coordinators Configured Yet</h3>
+                {filteredEventTeam.length === 0 && (
+                  <div style={{ gridColumn: '1 / -1', padding: '3.5rem 1.5rem', textAlign: 'center', background: isDark ? 'rgba(8, 18, 10, 0.6)' : '#ffffff', borderRadius: '16px', border: `1px solid ${isDark ? 'rgba(57, 255, 136, 0.15)' : '#e2e8f0'}` }}>
+                    <FaUserTie size={40} style={{ color: '#39FF88', opacity: 0.5, marginBottom: '0.75rem' }} />
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: isDark ? '#ffffff' : '#0f172a', fontSize: '1.2rem' }}>
+                      {teamSearch ? 'No matching team members found' : 'No Coordinators Configured Yet'}
+                    </h3>
                     <p style={{ margin: 0, fontSize: '0.88rem', color: isDark ? '#94a3b8' : '#64748b' }}>
-                      Symposium administrators have not assigned coordinator profiles to {currentEvent.name} yet.
+                      {teamSearch 
+                        ? `No coordinator matches "${teamSearch}". Try resetting the search query.`
+                        : `Symposium administrators have not allocated coordinator profiles to ${currentEvent.name} yet.`}
                     </p>
+                    {teamSearch && (
+                      <button 
+                        onClick={() => { setTeamSearch(''); setTeamRoleFilter('all'); }} 
+                        style={{ ...S.btnPrimarySmall, marginTop: '1rem', display: 'inline-flex' }}
+                      >
+                        Reset Filter
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
