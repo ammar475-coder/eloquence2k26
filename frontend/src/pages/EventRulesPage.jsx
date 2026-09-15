@@ -235,11 +235,18 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     ? event.rounds
     : [];
 
-  const coordsList = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
+  const allCoords = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
     ? liveCoordinators
     : (event && Array.isArray(event.coordinators) && event.coordinators.length > 0
         ? event.coordinators
         : []);
+
+  // ONLY show Lead Coordinators publicly on Event Details (Coordinators & Sub-Coordinators are visible only in internal Coordinator login)
+  const coordsList = allCoords.filter(c => {
+    const roleStr = String(c.role || '').toLowerCase().trim();
+    if (!roleStr) return true;
+    return roleStr.includes('lead');
+  });
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -677,14 +684,16 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
                   <h2 className="rules-card-title">
                     <FaHeadset className="rules-card-icon" /> Event Coordinators & Contact
                   </h2>
-                  <span className="rules-count-badge">{coordsList.length} Coordinators</span>
+                  <span className="rules-count-badge">
+                    {coordsList.length} Lead Coordinator{coordsList.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
 
                 <div className="rules-coords-grid">
                   {coordsList.map((coord, idx) => (
                     <div key={idx} className="rules-embedded-coord-chip">
                       <div className="coord-chip-info">
-                        <span className="coord-chip-badge">{coord.role || `Coordinator ${idx + 1}`}</span>
+                        <span className="coord-chip-badge">{coord.role || 'Lead Coordinator'}</span>
                         <h4 className="coord-chip-name">{coord.name}</h4>
                       </div>
                       <a
