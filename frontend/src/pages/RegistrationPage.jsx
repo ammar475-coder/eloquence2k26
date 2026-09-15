@@ -37,6 +37,7 @@ import {
   FaInfoCircle
 } from 'react-icons/fa';
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
+import { getEventSticker } from '../data/eventStickers.js';
 
 // Helper to dynamically load official Razorpay Checkout SDK
 const loadRazorpayScript = () => {
@@ -612,7 +613,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         });
         const data = await response.json();
         if (data.success) {
-          toast.success('Registration confirmed!');
+          toast.success('Congratulations, you are an Avenger now!', {
+            icon: '🛡️',
+            duration: 5000,
+            id: 'avenger-success-toast'
+          });
           const resTicket = data.ticketData || {};
           setTicketData({
             ...resTicket,
@@ -623,6 +628,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             year: fields.year,
             phone: fields.phone,
             email: fields.email,
+            eventId: selectedEvent?.id,
             eventName: activeEventPayload.name,
             eventCategory: selectedEvent.category,
             isTeam: selectedEvent.isTeam,
@@ -767,8 +773,16 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             });
 
             if (verifyRes.success && verifyRes.ticketData) {
-              toast.success('Payment verified! Registration successfully confirmed.');
-              setTicketData(verifyRes.ticketData);
+              toast.success('Congratulations, you are an Avenger now!', {
+                icon: '🛡️',
+                duration: 5000,
+                id: 'avenger-success-toast'
+              });
+              setTicketData({
+                ...verifyRes.ticketData,
+                eventId: verifyRes.ticketData.eventId || selectedEvent?.id,
+                eventName: verifyRes.ticketData.eventName || activeEventPayload?.name
+              });
               setShowSaveModal(true);
               setStep('success');
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1985,9 +1999,26 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
               </div>
             )}
 
-            <div className="success-badge-icon">
-              <FaCheck />
-            </div>
+            {(() => {
+              const eventSticker = getEventSticker(ticketData.eventId || ticketData.event_id || selectedEvent?.id || ticketData.eventName || selectedEvent);
+              return eventSticker ? (
+                <div className="success-character-badge" title={`${eventSticker.character} — ${ticketData.eventName}`}>
+                  <img
+                    src={eventSticker.src}
+                    alt={eventSticker.alt || eventSticker.character}
+                    className="success-character-img"
+                    style={{
+                      '--sticker-scale': eventSticker.scale || 1,
+                      '--sticker-origin': eventSticker.cropPosition === 'top' ? 'top center' : 'center center'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="success-badge-icon">
+                  <FaCheck />
+                </div>
+              );
+            })()}
 
             <span className="success-pre-title">// AVENGERS INITIATIVE //</span>
             <h2 className="success-card-title">REGISTRATION SUCCESSFUL</h2>
