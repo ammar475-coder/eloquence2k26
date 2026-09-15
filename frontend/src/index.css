@@ -993,7 +993,7 @@ img {
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.92), 0 0 28px rgba(57, 255, 136, 0.3);
 }
 
-/* Top Illustration / Image Container */
+/* Top Illustration / Image Container - Fitted, Bigger, No Waste Space */
 .event-card-top-banner {
   background: #040c07;
   padding: 0;
@@ -1005,8 +1005,9 @@ img {
   position: relative;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 1024 / 682;
-  height: auto;
+  aspect-ratio: 16 / 11;
+  min-height: 220px;
+  max-height: 260px;
 }
 
 .event-banner-img-container {
@@ -1023,8 +1024,8 @@ img {
 .event-card-banner-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center 20%;
   display: block;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1210,12 +1211,6 @@ img {
 }
 
 .meta-fee-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.meta-fee-left {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
@@ -6071,31 +6066,49 @@ img {
 
 .rules-clean-main-title {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 3.8vw, 3.2rem);
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
   font-weight: 900;
   color: #ffffff;
   letter-spacing: 0.02em;
   line-height: 1.15;
-  margin: 0.2rem 0;
+  margin: 0;
   text-shadow: 0 0 25px rgba(57, 255, 136, 0.25);
   text-transform: uppercase;
 }
 
-/* Rules Page Title Mascot Sticker - Big & Visible */
-.rules-title-sticker-wrap {
-  display: inline-flex;
+/* Hero Title & Mascot Image Row */
+.rules-hero-title-row {
+  display: flex;
   align-items: center;
   justify-content: center;
-  vertical-align: middle;
-  margin-left: 1.25rem;
-  position: relative;
-  flex-shrink: 0;
-  overflow: hidden;
-  border-radius: 8px;
-  height: clamp(110px, 13vw, 165px);
-  max-width: 155px;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0.25rem;
+  width: 100%;
 }
 
+/* Rules Page Title Mascot Sticker - Big, Centered & High Impact */
+.rules-hero-sticker-container,
+.rules-title-sticker-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  width: clamp(140px, 14vw, 195px);
+  height: clamp(140px, 14vw, 195px);
+  border-radius: 18px;
+  background: radial-gradient(circle, rgba(57, 255, 136, 0.16) 0%, transparent 72%);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: visible;
+}
+
+.rules-hero-sticker-container:hover,
+.rules-title-sticker-wrap:hover {
+  transform: scale(1.08) translateY(-4px);
+}
+
+.rules-hero-sticker-img,
 .rules-title-sticker-img {
   max-height: 100%;
   max-width: 100%;
@@ -6103,7 +6116,7 @@ img {
   height: auto;
   object-fit: contain;
   vertical-align: middle;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 18px rgba(57, 255, 136, 0.35));
   transform: scale(var(--rules-sticker-scale, 1));
   transform-origin: var(--rules-sticker-origin, center center);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease;
@@ -6111,24 +6124,37 @@ img {
   cursor: pointer;
 }
 
+.rules-hero-sticker-container:hover .rules-hero-sticker-img,
 .rules-title-sticker-wrap:hover .rules-title-sticker-img {
-  transform: scale(calc(var(--rules-sticker-scale, 1) * 1.05));
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.75));
+  transform: scale(calc(var(--rules-sticker-scale, 1) * 1.06));
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 24px rgba(57, 255, 136, 0.5));
 }
 
-@media (max-width: 640px) {
-  .rules-clean-main-title {
-    display: flex;
-    flex-wrap: wrap;
+@media (max-width: 768px) {
+  .rules-hero-title-row {
+    flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
+    justify-content: center;
+    gap: 0.85rem;
+    text-align: center;
+    margin: 0.75rem 0 0.5rem;
   }
+  .rules-clean-main-title {
+    text-align: center;
+    font-size: clamp(1.85rem, 7vw, 2.5rem);
+    display: block;
+    width: 100%;
+  }
+  .rules-hero-sticker-container,
   .rules-title-sticker-wrap {
-    margin-left: 0.5rem;
+    width: clamp(160px, 52vw, 225px);
+    height: clamp(160px, 52vw, 225px);
+    margin: 0.6rem auto;
   }
+  .rules-hero-sticker-img,
   .rules-title-sticker-img {
-    height: clamp(75px, 18vw, 105px);
-    max-width: 95px;
+    max-height: 100%;
+    max-width: 100%;
   }
 }
 
@@ -6204,8 +6230,54 @@ img {
 
 @media (max-width: 1024px) {
   .rules-split-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
   }
+  /* Rules & Guidelines shown FIRST on mobile */
+  .rules-right-stack {
+    order: 1;
+    width: 100%;
+  }
+  /* Overview & Details comes after rules on mobile */
+  .rules-left-overview-stack {
+    order: 2;
+    width: 100%;
+  }
+}
+
+/* Bottom Primary Register CTA - Shown lastly after all rules */
+.rules-bottom-cta-section {
+  margin-top: 1.5rem;
+  margin-bottom: 3.5rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.rules-bottom-cta-section .overview-card-cta-wrap {
+  width: 100%;
+  max-width: 680px;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.btn-rules-main-register {
+  padding: 1.15rem 2.25rem;
+  font-size: 1.12rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  border-radius: 9999px;
+  box-shadow: 0 0 28px rgba(57, 255, 136, 0.42), 0 12px 32px rgba(0, 0, 0, 0.85);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-rules-main-register:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 0 40px rgba(57, 255, 136, 0.7), 0 18px 45px rgba(0, 0, 0, 0.95);
 }
 
 /* Left Overview Stack */
@@ -9606,12 +9678,22 @@ img {
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: rgba(4, 10, 6, 0.92);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid rgba(57, 255, 136, 0.25);
-    box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.7);
+    padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(4, 12, 7, 0.95);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(57, 255, 136, 0.3);
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.85);
+    transform: translateY(115%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  }
+
+  .rules-mobile-sticky-bar.is-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .rules-mobile-back-btn {
@@ -9619,16 +9701,22 @@ img {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(57, 255, 136, 0.1);
+    background: rgba(57, 255, 136, 0.08);
     border: 1px solid rgba(57, 255, 136, 0.3);
     color: #39FF88;
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.05em;
-    padding: 0.65rem 0.85rem;
-    border-radius: 8px;
+    padding: 0.7rem 0.85rem;
+    border-radius: 10px;
     cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .rules-mobile-back-btn:active {
+    background: rgba(57, 255, 136, 0.2);
+    transform: scale(0.98);
   }
 
   .rules-mobile-register-btn {
@@ -9636,17 +9724,31 @@ img {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #00a83b 0%, #064018 100%);
+    background: linear-gradient(135deg, #00c846 0%, #064e1e 100%);
     border: 1px solid #39ff88;
     color: #ffffff;
     font-family: var(--font-display);
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 800;
     letter-spacing: 0.06em;
-    padding: 0.65rem 1rem;
-    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    border-radius: 10px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0, 168, 59, 0.4);
+    box-shadow: 0 4px 18px rgba(0, 168, 59, 0.45);
+    transition: all 0.2s ease;
+  }
+
+  .rules-mobile-register-btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Footer & second page mobile clearance - avoids being blocked by sticky bar */
+  .event-rules-page {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .footer {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

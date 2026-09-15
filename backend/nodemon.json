@@ -2,7 +2,8 @@
   "watch": [
     "index.js",
     "routes",
-    "controllers"
+    "controllers",
+    "config"
   ],
   "ext": "js,mjs,cjs",
   "ignore": [
