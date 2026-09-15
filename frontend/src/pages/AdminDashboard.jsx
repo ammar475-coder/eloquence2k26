@@ -31,6 +31,8 @@ import {
   FaMapMarkerAlt,
   FaBolt,
   FaGamepad,
+  FaPalette,
+  FaCircle,
   FaSun,
   FaMoon,
   FaFilePdf,
@@ -1126,16 +1128,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 setRegistrationSettings(rData);
                 setCustomClosedReason(rData.closedReason || '');
                 if (rData.isRegistrationClosed) {
-                  toast.error('🔒 Alert: Registration portal has been CLOSED across all events.', { duration: 6000 });
+                  toast.error('Alert: Registration portal has been CLOSED across all events.', { duration: 6000 });
                 } else {
-                  toast.success('🔓 Alert: Registration portal has been RE-OPENED for all events.', { duration: 6000 });
+                  toast.success('Alert: Registration portal has been RE-OPENED for all events.', { duration: 6000 });
                 }
               } else if (action === 'CREATE') {
-                toast.success(`⚡ Live Registration: ${name} (${evt})!`, { icon: '🔔', duration: 5000 });
+                toast.success(`Live Registration: ${name} (${evt})!`, { duration: 5000 });
               } else if (action === 'VERIFY') {
-                toast.success(`✅ Live Update: Registration #${ticket} verified!`, { duration: 4000 });
+                toast.success(`Live Update: Registration #${ticket} verified!`, { duration: 4000 });
               } else if (action === 'DELETE') {
-                toast(`🗑️ Live Update: Registration #${ticket} deleted`, { icon: 'ℹ️', duration: 4000 });
+                toast(`Live Update: Registration #${ticket} deleted`, { duration: 4000 });
               }
             }
           } catch (e) {
@@ -3175,7 +3177,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                             {venueName}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                            {photo ? '✓ Photo uploaded' : '⚠ No photo set'} &bull; {venueEvents.length} event{venueEvents.length > 1 ? 's' : ''}
+                            {photo ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaCheck style={{ color: '#10b981' }} /> Photo uploaded</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaExclamationTriangle style={{ color: '#f59e0b' }} /> No photo set</span>} &bull; {venueEvents.length} event{venueEvents.length > 1 ? 's' : ''}
                           </div>
                         </div>
 
@@ -3954,7 +3956,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                   color: isTech ? (isDark ? '#bfdbfe' : '#1d4ed8') : (isDark ? '#fbcfe8' : '#be185d'),
                                   marginBottom: '4px'
                                 }}>
-                                  {isTech ? '⚡ TECHNICAL' : '🎨 NON-TECHNICAL'} • {ev.id.toUpperCase()}
+                                  {isTech ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaBolt /> TECHNICAL</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaPalette /> NON-TECHNICAL</span>} • {ev.id.toUpperCase()}
                                 </span>
                                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
                                   {ev.name}
@@ -3975,14 +3977,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
                             {/* Summary Pills */}
                             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b' }}>
-                                👑 Leads: {leads.length}
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <FaCrown style={{ color: '#eab308' }} /> Leads: {leads.length}
                               </span>
-                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b' }}>
-                                ⚡ Coords: {coords.length}
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <FaBolt style={{ color: '#3b82f6' }} /> Coords: {coords.length}
                               </span>
-                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b' }}>
-                                🛡️ Sub-Coords: {subs.length}
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <FaShieldAlt style={{ color: '#a855f7' }} /> Sub-Coords: {subs.length}
                               </span>
                             </div>
 
@@ -4046,7 +4048,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                             background: roleBadgeBg,
                                             color: roleBadgeColor
                                           }}>
-                                            {isLead ? '👑 Lead' : isSub ? '🛡️ Sub-Coord' : '⚡ Coord'}
+                                            {isLead ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaCrown /> Lead</span> : isSub ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaShieldAlt /> Sub-Coord</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaBolt /> Coord</span>}
                                           </span>
                                         </div>
 
@@ -5214,7 +5216,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                         border: isDark ? '1px solid #374151' : '1px solid #cbd5e1'
                                       }}
                                     >
-                                      <span style={{ fontSize: '0.7rem', color: isDark ? '#60a5fa' : '#2563eb' }}>❖</span>
+                                      <span style={{ fontSize: '0.45rem', color: isDark ? '#60a5fa' : '#2563eb' }}><FaCircle /></span>
                                       <span>{nameStr}</span>
                                     </span>
                                   );
@@ -5493,7 +5495,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                           onClick={() => setRegSearchQuery('')}
                           style={{ position: 'absolute', right: '12px', background: 'transparent', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', fontSize: '0.85rem' }}
                         >
-                          ✕
+                          <FaTimes />
                         </button>
                       )}
                     </div>
@@ -5541,11 +5543,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <div style={S.statLabel}>Category Breakdown</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '600' }}>⚡ Technical:</span>
+                      <span style={{ color: isDark ? '#93c5fd' : '#2563eb', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><FaBolt /> Technical:</span>
                       <span style={{ fontWeight: '700' }}>{techRegs.length} (₹{techRevenue})</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: isDark ? '#f472b6' : '#db2777', fontWeight: '600' }}>🎮 Non-Technical:</span>
+                      <span style={{ color: isDark ? '#f472b6' : '#db2777', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><FaGamepad /> Non-Technical:</span>
                       <span style={{ fontWeight: '700' }}>{nonTechRegs.length} (₹{nonTechRevenue})</span>
                     </div>
                   </div>
@@ -6550,7 +6552,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       })
                       .map(u => (
                         <option key={`alloc-u-${u.id}`} value={u.username}>
-                          👤 @{u.username} ({u.role || 'Coordinator Login'}) — Allocated to this Event
+                          @{u.username} ({u.role || 'Coordinator Login'}) — Allocated to this Event
                         </option>
                       ))}
                     {users.length > 0 && users.filter(u => {
@@ -6558,7 +6560,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       return !Array.isArray(uEvents) || !uEvents.some(e => String(e).toLowerCase() === sendTargetEvent.id.toLowerCase());
                     }).map(u => (
                       <option key={`other-u-${u.id}`} value={u.username}>
-                        👤 @{u.username} ({u.role})
+                        @{u.username} ({u.role})
                       </option>
                     ))}
                   </optgroup>
@@ -6568,7 +6570,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       .filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(sendTargetEvent.id.toLowerCase()))
                       .map(c => (
                         <option key={`alloc-c-${c.id}`} value={c.name}>
-                          ★ {c.name} ({c.role || 'Lead Coordinator'}) — Assigned to this Event
+                          [Assigned] {c.name} ({c.role || 'Lead Coordinator'})
                         </option>
                       ))}
                     {coordinators
@@ -7285,7 +7287,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <p style={S.modalSubtitle}>{editingUserId ? 'Modify user credentials or permission level' : 'Grant administrative access to a new user account'}</p>
                 </div>
               </div>
-              <button onClick={resetUserForm} style={S.modalCloseBtn}>✕</button>
+              <button onClick={resetUserForm} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
             
             <form onSubmit={handleSubmitUser} style={S.modalForm}>
@@ -7354,7 +7356,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <p style={S.modalSubtitle}>{editingRoleId ? 'Modify custom role label' : 'Define an access level identifier for user grouping'}</p>
                 </div>
               </div>
-              <button onClick={resetRoleForm} style={S.modalCloseBtn}>✕</button>
+              <button onClick={resetRoleForm} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
             
             <form onSubmit={handleSubmitRole} style={S.modalForm}>
@@ -7408,7 +7410,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </p>
                 </div>
               </div>
-              <button onClick={resetSponsorForm} style={S.modalCloseBtn}>✕</button>
+              <button onClick={resetSponsorForm} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
             
             <form onSubmit={isLeadCoordinator ? (e) => { e.preventDefault(); resetSponsorForm(); } : handleSubmitSponsor} style={S.modalForm}>
@@ -7699,7 +7701,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </p>
                 </div>
               </div>
-              <button onClick={resetCoordForm} style={S.modalCloseBtn}>✕</button>
+              <button onClick={resetCoordForm} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
             
             <form onSubmit={isLeadCoordinator ? (e) => { e.preventDefault(); resetCoordForm(); } : handleSubmitCoord} style={S.modalForm}>
@@ -7800,9 +7802,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       disabled={isLeadCoordinator}
                       required
                     >
-                      <option value="Lead Coordinator">👑 Lead Coordinator</option>
-                      <option value="Coordinator">⚡ Coordinator</option>
-                      <option value="Sub-Coordinator">🛡️ Sub-Coordinator</option>
+                      <option value="Lead Coordinator">Lead Coordinator</option>
+                      <option value="Coordinator">Coordinator</option>
+                      <option value="Sub-Coordinator">Sub-Coordinator</option>
                     </select>
                   </div>
                 </div>
@@ -7973,7 +7975,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 style={S.modalCloseBtn}
                 title="Close"
               >
-                ✕
+                <FaTimes />
               </button>
             </div>
 
@@ -8196,7 +8198,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   <p style={S.modalSubtitle}>Record an instant in-person registration at the symposium desk</p>
                 </div>
               </div>
-              <button onClick={() => setIsOnSiteRegisterModalOpen(false)} style={S.modalCloseBtn}>✕</button>
+              <button onClick={() => setIsOnSiteRegisterModalOpen(false)} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
 
             <form onSubmit={handleOnSiteRegisterSubmit} style={S.modalForm}>
@@ -8336,7 +8338,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 onClick={() => setOnSiteTeamMembers(prev => prev.filter((_, i) => i !== idx))}
                                 style={{ ...S.cancelBtn, padding: '0.5rem 0.8rem', color: '#ef4444' }}
                               >
-                                ✕
+                                <FaTimes />
                               </button>
                             )}
                           </div>
@@ -8877,7 +8879,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                     padding: '0.2rem 0'
                                   }}
                                 >
-                                  <span style={{ color: strokeColor, fontSize: '0.75rem' }}>❖</span>
+                                  <span style={{ color: strokeColor, fontSize: '0.45rem' }}><FaCircle /></span>
                                   <span style={{
                                     fontSize: '0.88rem',
                                     fontWeight: '700',
@@ -8980,7 +8982,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </p>
                 </div>
               </div>
-              <button onClick={() => setIsCloseRgModalOpen(false)} style={S.modalCloseBtn}>✕</button>
+              <button onClick={() => setIsCloseRgModalOpen(false)} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
 
             <div style={S.modalFormBody}>
@@ -9079,7 +9081,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </p>
                 </div>
               </div>
-              <button onClick={() => setIsAllocModalOpen(false)} style={S.modalCloseBtn}>✕</button>
+              <button onClick={() => setIsAllocModalOpen(false)} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
 
             <form onSubmit={handleSaveAllocations} style={S.modalForm}>
@@ -9269,7 +9271,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </p>
                 </div>
               </div>
-              <button onClick={() => setIsCreateCoordLoginModalOpen(false)} style={S.modalCloseBtn}>✕</button>
+              <button onClick={() => setIsCreateCoordLoginModalOpen(false)} style={S.modalCloseBtn}><FaTimes /></button>
             </div>
 
             <form onSubmit={handleCreateCoordWithAlloc} style={S.modalForm}>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaCircle } from 'react-icons/fa';
 import patrons from '../data/patrons.js';
 import ShaderCard from '../components/ShaderCard.jsx';
 import ScrollableMarquee from '../components/ScrollableMarquee.jsx';
@@ -92,7 +93,9 @@ function PatronSlideCard({ patron, index }) {
           <div className="patron-names-list">
             {patron.names.map((name) => (
               <div className="patron-name-item" key={name}>
-                <span className="patron-name-bullet">❖</span>
+                <span className="patron-name-bullet">
+                  <FaCircle style={{ fontSize: '0.4rem' }} />
+                </span>
                 <span className="patron-name-text">{name}</span>
               </div>
             ))}

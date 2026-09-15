@@ -201,7 +201,7 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
                   <div className="rules-highlights-tags">
                     {highlights.map((h, i) => (
                       <span key={i} className="rules-highlight-pill">
-                        ⚡ {h}
+                        <FaBolt style={{ marginRight: '0.3rem', fontSize: '0.75rem' }} /> {h}
                       </span>
                     ))}
                   </div>

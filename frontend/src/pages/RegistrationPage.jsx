@@ -30,7 +30,11 @@ import {
   FaHome,
   FaCamera,
   FaDownload,
-  FaQrcode
+  FaQrcode,
+  FaFire,
+  FaCreditCard,
+  FaChevronRight,
+  FaInfoCircle
 } from 'react-icons/fa';
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
 
@@ -738,7 +742,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           ondismiss: () => {
             setIsSubmitting(false);
             toast('Payment window closed. You can review your details and retry payment anytime.', {
-              icon: 'ℹ️'
+              icon: <FaInfoCircle />
             });
           }
         },
@@ -1142,7 +1146,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 <div className="connector-fill" />
                 <div className="connector-laser-glow" />
               </div>
-              <span className="connector-chevron">▶</span>
+              <span className="connector-chevron"><FaChevronRight style={{ fontSize: '0.65rem' }} /></span>
             </div>
 
             {/* Step 2: Team Details (if team event) */}
@@ -1167,7 +1171,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     <div className="connector-fill" />
                     <div className="connector-laser-glow" />
                   </div>
-                  <span className="connector-chevron">▶</span>
+                  <span className="connector-chevron"><FaChevronRight style={{ fontSize: '0.65rem' }} /></span>
                 </div>
               </>
             )}
@@ -1677,7 +1681,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 </div>
 
                 <div className="summary-desk-note">
-                  <div className="desk-note-icon">🔒</div>
+                  <div className="desk-note-icon"><FaLock /></div>
                   <p>
                     <strong>Secure UPI Checkout:</strong> Instant online verification via UPI (Google Pay, PhonePe, Paytm, QR) powered by Razorpay with official E-Pass ticket generation.
                   </p>
@@ -1771,7 +1775,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     {isEsports && (
                       <div className="review-row">
                         <span className="r-label">Game Arena:</span>
-                        <span className="r-val font-accent">🔥 {selectedGame}</span>
+                        <span className="r-val font-accent"><FaFire style={{ marginRight: '0.35rem' }} /> {selectedGame}</span>
                       </div>
                     )}
                     <div className="review-row">
@@ -1869,7 +1873,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   {feeInfo.total > 0 && (
                     <div style={{ marginTop: '1.15rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <span style={{ fontSize: '0.82rem', color: '#00f5ff', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem', letterSpacing: '0.04em' }}>
-                        <span>⚡</span> DIRECT UPI CHECKOUT (GOOGLE PAY, PHONEPE, PAYTM, QR)
+                        <FaBolt /> DIRECT UPI CHECKOUT (GOOGLE PAY, PHONEPE, PAYTM, QR)
                       </span>
                       <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
                         <FaShieldAlt style={{ marginRight: '0.3rem', color: '#00f5ff' }} /> 100% Encrypted & Secure
@@ -1911,7 +1915,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     <>CONFIRM REGISTRATION (FREE) →</>
                   ) : (
                     <>
-                      <span style={{ marginRight: '0.45rem', fontSize: '1.05rem' }}>⚡</span>
+                      <FaBolt style={{ marginRight: '0.45rem', fontSize: '1.05rem' }} />
                       PAY ₹{feeInfo.total} VIA UPI (RAZORPAY) →
                     </>
                   )}
@@ -1949,11 +1953,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
                   <div className="save-modal-tips">
                     <div className="save-tip-item">
-                      <span className="save-tip-bullet">📸</span>
+                      <span className="save-tip-bullet"><FaCamera style={{ fontSize: '0.9rem' }} /></span>
                       <span><strong>On Mobile:</strong> Press <em>Power + Volume Down</em> to save an instant screenshot to your gallery.</span>
                     </div>
                     <div className="save-tip-item">
-                      <span className="save-tip-bullet">📥</span>
+                      <span className="save-tip-bullet"><FaDownload style={{ fontSize: '0.9rem' }} /></span>
                       <span><strong>Download / PDF:</strong> Tap the download button below to save a high-res PDF or print copy.</span>
                     </div>
                   </div>
@@ -2048,7 +2052,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   </div>
 
                   <p className="ticket-scan-hint">
-                    ⚡ Present this QR at the venue entrance. Admin & coordinators will scan this for participation check-in.
+                    <FaBolt style={{ marginRight: '0.3rem', verticalAlign: '-1px' }} /> Present this QR at the venue entrance. Admin & coordinators will scan this for participation check-in.
                   </p>
                 </div>
 
@@ -2118,7 +2122,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     {(ticketData.game || isEsports) && (
                       <div className="ticket-info-item">
                         <span className="ticket-label">GAME ARENA</span>
-                        <span className="ticket-val game-highlight">🔥 {ticketData.game || selectedGame} SQUAD</span>
+                        <span className="ticket-val game-highlight"><FaFire style={{ marginRight: '0.35rem' }} /> {ticketData.game || selectedGame} SQUAD</span>
                       </div>
                     )}
 
@@ -2138,9 +2142,9 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                       <span className="ticket-label">PAYMENT MODE</span>
                       <span className="ticket-val" style={{ color: '#00f5ff', fontWeight: '700' }}>
                         {ticketData.paymentMethod === 'RAZORPAY_UPI'
-                          ? '⚡ UPI (Razorpay)'
+                          ? 'UPI (Razorpay)'
                           : ticketData.paymentMethod === 'RAZORPAY'
-                          ? '💳 Cards / Netbanking (Razorpay)'
+                          ? 'Cards / Netbanking (Razorpay)'
                           : (ticketData.paymentMethod || 'ONLINE')}
                       </span>
                     </div>
@@ -2201,8 +2205,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 type="button"
                 className="btn btn-secondary btn-screenshot-tip"
                 onClick={() => {
-                  toast('📸 Tip: Press Power + Volume Down on mobile (or Win+Shift+S on PC) to screenshot your card!', {
-                    icon: '📸',
+                  toast('Tip: Press Power + Volume Down on mobile (or Win+Shift+S on PC) to screenshot your card!', {
                     duration: 5000,
                   });
                 }}
@@ -2291,8 +2294,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                         <div className="change-event-item-meta">
                           <span>{ev.teamSize || 'Individual'}</span>
                           {isSelected ? (
-                            <span style={{ color: '#39ff88', fontWeight: '800', fontSize: '0.72rem' }}>
-                              ✓ CURRENT
+                            <span style={{ color: '#39ff88', fontWeight: '800', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}>
+                              <FaCheck /> CURRENT
                             </span>
                           ) : (
                             <span style={{ color: 'var(--silver)', fontSize: '0.72rem' }}>SELECT →</span>

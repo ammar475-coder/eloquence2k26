@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaCircle } from 'react-icons/fa';
 import studentCoordinators from '../data/studentCoordinators.json';
 import ShaderCard from '../components/ShaderCard.jsx';
 import ScrollableMarquee from '../components/ScrollableMarquee.jsx';
@@ -178,7 +179,9 @@ function CoordinatorSlideCard({ item, index }) {
                     className="coordinator-name-item"
                     key={typeof member === 'string' ? member : member.name || i}
                   >
-                    <span className="coordinator-name-bullet">❖</span>
+                    <span className="coordinator-name-bullet">
+                      <FaCircle style={{ fontSize: '0.4rem' }} />
+                    </span>
                     <div className="coordinator-member-info">
                       <span className="coordinator-name-text">
                         {nameStr}
