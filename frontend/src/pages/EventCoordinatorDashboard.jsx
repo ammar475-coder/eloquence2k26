@@ -35,7 +35,9 @@ import {
   FaLock,
   FaSyncAlt,
   FaThLarge,
-  FaTable
+  FaTable,
+  FaCrown,
+  FaBolt
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
@@ -184,109 +186,12 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   }, []);
 
   // ── 4. Filtered Coordinators for ONLY this Allocated Event ──
-  const [teamSearch, setTeamSearch] = useState('');
-  const [teamRoleFilter, setTeamRoleFilter] = useState('all'); // all | lead | sub | faculty
-
   const currentEventTeam = useMemo(() => {
-    const matched = [];
-    const seenIds = new Set();
-    const curId = String(selectedEventId || '').toLowerCase().trim();
-    const curIdClean = curId.replace(/[-_]/g, '');
-    const curName = String(currentEvent?.name || '').toLowerCase().trim();
-
-    // 1. Match from live coordinatorsList (database & fallback json)
-    coordinatorsList.forEach(c => {
-      let assigned = [];
-      if (Array.isArray(c.assignedEvents)) assigned = c.assignedEvents;
-      else if (Array.isArray(c.assigned_events)) assigned = c.assigned_events;
-      else if (typeof c.assignedEvents === 'string') assigned = c.assignedEvents.split(',').map(s => s.trim());
-      else if (typeof c.assigned_events === 'string') assigned = c.assigned_events.split(',').map(s => s.trim());
-      else if (c.eventId || c.event_id) assigned = [c.eventId || c.event_id];
-
-      const isAssigned = assigned.some(a => {
-        const str = String(a || '').toLowerCase().trim();
-        const strClean = str.replace(/[-_]/g, '');
-        return (
-          str === curId ||
-          strClean === curIdClean ||
-          (curName && (str === curName || curName.includes(str) || str.includes(curName)))
-        );
-      });
-
-      const uniqueKey = c.id || `${c.name}-${c.phone}`;
-      if (isAssigned && !seenIds.has(uniqueKey)) {
-        seenIds.add(uniqueKey);
-        matched.push(c);
-      }
+    return coordinatorsList.filter(c => {
+      const assigned = Array.isArray(c.assignedEvents) ? c.assignedEvents : (c.assigned_events || []);
+      return assigned.some(a => String(a).toLowerCase().trim() === selectedEventId.toLowerCase().trim());
     });
-
-    // 2. Fallback: Merge default coordinators from currentEvent if none found or to ensure defaults present
-    if (Array.isArray(currentEvent?.coordinators)) {
-      currentEvent.coordinators.forEach((cc, i) => {
-        const ccName = cc.name || `Coordinator ${i + 1}`;
-        const alreadyIn = matched.some(m => String(m.name || '').toLowerCase() === ccName.toLowerCase());
-        if (!alreadyIn) {
-          const synth = {
-            id: `static-${selectedEventId}-${i}`,
-            name: ccName,
-            phone: cc.phone || '',
-            whatsapp: cc.whatsapp || cc.phone || '',
-            email: cc.email || '',
-            department: cc.department || 'CSE',
-            year: cc.year || '3rd Year',
-            role: cc.role || (i === 0 ? 'Lead Coordinator' : 'Sub Coordinator'),
-            assignedEvents: [selectedEventId],
-            isActive: true,
-            displayOrder: i + 1
-          };
-          matched.push(synth);
-        }
-      });
-    }
-
-    // 3. Sort by priority: Lead Coordinator first, then Sub Coordinator, then Student Coordinator, then displayOrder
-    matched.sort((a, b) => {
-      const getRoleRank = (r) => {
-        const role = String(r || '').toLowerCase();
-        if (role.includes('lead')) return 1;
-        if (role.includes('sub')) return 2;
-        if (role.includes('student')) return 3;
-        if (role.includes('faculty')) return 4;
-        return 5;
-      };
-      const rankA = getRoleRank(a.role);
-      const rankB = getRoleRank(b.role);
-      if (rankA !== rankB) return rankA - rankB;
-      return (Number(a.displayOrder) || 99) - (Number(b.displayOrder) || 99);
-    });
-
-    return matched;
-  }, [coordinatorsList, selectedEventId, currentEvent]);
-
-  // Filtered Event Team for Search and Role Pills
-  const filteredEventTeam = useMemo(() => {
-    return currentEventTeam.filter(c => {
-      const q = teamSearch.toLowerCase().trim();
-      const matchSearch = !q || 
-        (c.name && c.name.toLowerCase().includes(q)) ||
-        (c.phone && c.phone.includes(q)) ||
-        (c.department && c.department.toLowerCase().includes(q)) ||
-        (c.role && c.role.toLowerCase().includes(q));
-
-      const roleStr = String(c.role || '').toLowerCase();
-      const matchRole = 
-        teamRoleFilter === 'all' ? true :
-        teamRoleFilter === 'lead' ? roleStr.includes('lead') :
-        teamRoleFilter === 'sub' ? (roleStr.includes('sub') || roleStr.includes('student') || roleStr.includes('coord')) :
-        teamRoleFilter === 'faculty' ? roleStr.includes('faculty') :
-        true;
-
-      return matchSearch && matchRole;
-    });
-  }, [currentEventTeam, teamSearch, teamRoleFilter]);
-
-  // Current Event Coordinators / Conductors
-  const currentEventCoordinators = currentEventTeam;
+  }, [coordinatorsList, selectedEventId]);
 
   // Check if a participant list was dispatched specifically to this event or login
   const eventDispatch = useMemo(() => {
@@ -322,7 +227,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
     });
   }, [registrationsList, selectedEventId, currentEvent]);
 
-  // ── Participant Search & Filter State ──
+  // ── 5. Participant Search & Filter State ──
   const [partSearch, setPartSearch] = useState('');
   const [attendanceFilter, setAttendanceFilter] = useState('all'); // all | present | absent
   const [partViewMode, setPartViewMode] = useState('cards'); // 'cards' | 'table'
@@ -359,6 +264,14 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   const verifiedCount = useMemo(() => {
     return eventParticipants.filter(p => p.verified || p.attended || p.checkedIn).length;
   }, [eventParticipants]);
+
+  // Current Event Coordinators / Conductors
+  const currentEventCoordinators = useMemo(() => {
+    return coordinatorsList.filter(c => 
+      c.assignedEvents?.includes(selectedEventId) || 
+      c.assignedEvents?.includes(selectedEventId.replace('-', ''))
+    );
+  }, [coordinatorsList, selectedEventId]);
 
   // Current Event Winner Submission
   const currentWinnerSubmission = useMemo(() => {
@@ -864,7 +777,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
               </div>
             </button>
 
-            {/* 3. Event Team */}
+            {/* 3. Event Members */}
             <button
               type="button"
               style={activeTab === 'event-team' ? { ...S.navItem, ...S.navItemActive } : S.navItem}
@@ -872,8 +785,8 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <FaUserTie style={S.navIcon} />
-                  <span>Event Team</span>
+                  <FaUsers style={S.navIcon} />
+                  <span>Event Members</span>
                 </div>
                 <span style={S.badgeCount}>{currentEventTeam.length}</span>
               </div>
@@ -1210,60 +1123,27 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                   </div>
                   <div style={S.cardBody}>
                     {currentEventCoordinators.length > 0 ? (
-                      currentEventCoordinators.map(c => {
-                        const isLead = (c.role || '').toLowerCase().includes('lead');
-                        const isSub = (c.role || '').toLowerCase().includes('sub');
-                        return (
-                          <div key={c.id} style={{ ...S.conductorItem, marginBottom: '0.85rem' }}>
-                            <div style={{
-                              ...S.conductorAvatar,
-                              background: isLead ? 'rgba(245, 158, 11, 0.15)' : (isSub ? 'rgba(6, 182, 212, 0.15)' : 'rgba(57, 255, 136, 0.15)'),
-                              color: isLead ? '#f59e0b' : (isSub ? '#06b6d4' : '#39FF88')
-                            }}>
-                              {c.name.slice(0, 2).toUpperCase()}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                <div style={S.conductorName}>{c.name}</div>
-                                <span style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: '800',
-                                  padding: '0.15rem 0.5rem',
-                                  borderRadius: '999px',
-                                  background: isLead ? 'rgba(245, 158, 11, 0.15)' : (isSub ? 'rgba(6, 182, 212, 0.15)' : 'rgba(57, 255, 136, 0.15)'),
-                                  color: isLead ? '#f59e0b' : (isSub ? '#06b6d4' : '#39FF88')
-                                }}>
-                                  {isLead ? 'Lead' : (isSub ? 'Sub-Coord' : (c.role || 'Coord'))}
-                                </span>
-                              </div>
-                              <div style={S.conductorRole}>{c.role || 'Coordinator'} • {c.department || 'CSE'} ({c.year || '3rd Year'})</div>
-                              <div style={S.conductorContactRow}>
-                                {c.phone && (
-                                  <a href={`tel:${c.phone}`} style={S.contactChip} title="Direct Call">
-                                    <FaPhoneAlt size={10} /> {c.phone}
-                                  </a>
-                                )}
-                                {c.phone && (
-                                  <a 
-                                    href={`https://wa.me/91${(c.whatsapp || c.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${c.name}, regarding ${currentEvent.name}...`)}`} 
-                                    target="_blank" 
-                                    rel="noreferrer" 
-                                    style={{ ...S.contactChip, color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }} 
-                                    title="WhatsApp Direct"
-                                  >
-                                    <FaWhatsapp size={11} /> WA
-                                  </a>
-                                )}
-                                {c.email && (
-                                  <a href={`mailto:${c.email}`} style={S.contactChip} title="Send Email">
-                                    <FaEnvelope size={10} /> {c.email}
-                                  </a>
-                                )}
-                              </div>
+                      currentEventCoordinators.map(c => (
+                        <div key={c.id} style={{ ...S.conductorItem, marginBottom: '0.85rem' }}>
+                          <div style={S.conductorAvatar}>{c.name.slice(0, 2).toUpperCase()}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={S.conductorName}>{c.name}</div>
+                            <div style={S.conductorRole}>{c.role} • {c.department} ({c.year || '3rd Year'})</div>
+                            <div style={S.conductorContactRow}>
+                              {c.phone && (
+                                <a href={`tel:${c.phone}`} style={S.contactChip}>
+                                  <FaPhoneAlt size={10} /> Call ({c.phone})
+                                </a>
+                              )}
+                              {c.email && (
+                                <a href={`mailto:${c.email}`} style={S.contactChip}>
+                                  <FaEnvelope size={10} /> {c.email}
+                                </a>
+                              )}
                             </div>
                           </div>
-                        );
-                      })
+                        </div>
+                      ))
                     ) : (
                       <p style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: '0.88rem' }}>
                         You are managing this event as the lead coordinator.
@@ -2165,236 +2045,170 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           )}
 
           {/* ======================================================== */}
-          {/* TAB: EVENT TEAM (Assigned Lead Coordinator & Members)     */}
+          {/* TAB: EVENT MEMBERS (Assigned Coordinators & Sub-Coordinators) */}
           {/* ======================================================== */}
           {activeTab === 'event-team' && (
             <div style={S.tabView}>
               <div style={S.viewHeroBanner} className="coord-hero-banner">
                 <div style={S.heroBannerContent}>
                   <div style={S.heroBadge}>
-                    <FaUserTie /> EVENT TEAM ROSTER
+                    <FaUsers /> ALLOCATED EVENT MEMBERS
                   </div>
-                  <h1 style={S.heroTitle}>{currentEvent.name} — Coordinator Roster</h1>
+                  <h1 style={S.heroTitle}>{currentEvent.name} — Event Members Roster</h1>
                   <p style={S.heroDesc}>
-                    Official faculty, lead coordinators, and sub-coordinators allocated to lead and execute <strong>{currentEvent.name}</strong>. Instant calling and WhatsApp synchronization enabled.
+                    Official Lead Coordinators, Coordinators, and Sub-Coordinators allocated to lead and execute {currentEvent.name}. Direct calling and WhatsApp support enabled for instant team synchronization.
                   </p>
                   <div style={S.heroMetaRow}>
-                    <span style={{ ...S.metaChip, background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                      👑 {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('lead')).length} Lead Coordinator(s)
-                    </span>
-                    <span style={{ ...S.metaChip, background: 'rgba(6, 182, 212, 0.15)', color: '#06b6d4', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
-                      ⚡ {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('sub') || (c.role || '').toLowerCase().includes('student')).length} Sub / Student Coordinator(s)
+                    <span style={S.metaChip}>
+                      <FaCrown style={{ color: '#fbbf24' }} /> {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('lead')).length} Lead Coordinator(s)
                     </span>
                     <span style={S.metaChip}>
-                      <FaUsers style={{ color: '#39FF88' }} /> {currentEventTeam.length} Team Members Total
+                      <FaBolt style={{ color: '#38bdf8' }} /> {currentEventTeam.filter(c => !((c.role || '').toLowerCase().includes('lead')) && !((c.role || '').toLowerCase().includes('sub'))).length} Coordinator(s)
                     </span>
-                    <span style={{ ...S.metaChip, background: 'rgba(57, 255, 136, 0.12)', color: '#39FF88' }}>
-                      🔒 Scoped to {currentEvent.name}
+                    <span style={S.metaChip}>
+                      <FaShieldAlt style={{ color: '#c084fc' }} /> {currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('sub')).length} Sub-Coordinator(s)
+                    </span>
+                    <span style={{ ...S.metaChip, background: 'rgba(57, 255, 136, 0.12)', color: '#39FF88', fontWeight: '800' }}>
+                      <FaUsers /> {currentEventTeam.length} Allocated Members
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Search & Filter Toolbar */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', flex: 1, minWidth: '280px', maxWidth: '500px' }}>
-                  <div style={{ ...S.searchBox, width: '100%' }}>
-                    <FaSearch style={S.searchIcon} />
-                    <input 
-                      type="text" 
-                      placeholder="Search team member by name, phone, dept..." 
-                      value={teamSearch}
-                      onChange={(e) => setTeamSearch(e.target.value)}
-                      style={S.searchInput}
-                    />
-                    {teamSearch && (
-                      <button 
-                        onClick={() => setTeamSearch('')} 
-                        style={{ background: 'transparent', border: 'none', color: isDark ? '#94a3b8' : '#64748b', cursor: 'pointer', padding: '0 8px' }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[
-                    { id: 'all', label: `All Members (${currentEventTeam.length})` },
-                    { id: 'lead', label: `Lead (${currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('lead')).length})` },
-                    { id: 'sub', label: `Sub-Coordinators (${currentEventTeam.filter(c => (c.role || '').toLowerCase().includes('sub') || (c.role || '').toLowerCase().includes('student')).length})` }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setTeamRoleFilter(tab.id)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        borderRadius: '999px',
-                        fontSize: '0.82rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        background: teamRoleFilter === tab.id
-                          ? (isDark ? 'rgba(57, 255, 136, 0.2)' : '#0f172a')
-                          : (isDark ? 'rgba(255, 255, 255, 0.05)' : '#f1f5f9'),
-                        color: teamRoleFilter === tab.id
-                          ? (isDark ? '#39FF88' : '#ffffff')
-                          : (isDark ? '#94a3b8' : '#475569'),
-                        border: teamRoleFilter === tab.id
-                          ? (isDark ? '1px solid rgba(57, 255, 136, 0.4)' : '1px solid #0f172a')
-                          : `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : '#e2e8f0'}`
-                      }}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Coordinator Cards Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '1.25rem', marginTop: '1rem' }}>
-                {filteredEventTeam.map((coord, idx) => {
-                  const roleStr = String(coord.role || '').toLowerCase();
+              {/* Coordinator & Sub-Coordinator Cards Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem', marginTop: '1.5rem' }}>
+                {currentEventTeam.map((coord, idx) => {
+                  const roleStr = (coord.role || '').toLowerCase();
                   const isLead = roleStr.includes('lead');
                   const isSub = roleStr.includes('sub');
-                  const isFaculty = roleStr.includes('faculty');
+                  const cleanPhone = (coord.phone || '').replace(/[^0-9+]/g, '');
+                  const cleanWhatsapp = (coord.whatsapp || coord.phone || '').replace(/[^0-9]/g, '');
 
-                  const accentColor = isLead ? '#f59e0b' : (isSub ? '#06b6d4' : (isFaculty ? '#a855f7' : '#39FF88'));
+                  const cardBorder = isLead 
+                    ? '1.5px solid rgba(57, 255, 136, 0.5)' 
+                    : isSub 
+                    ? '1.5px solid rgba(192, 132, 252, 0.45)' 
+                    : `1.5px solid ${isDark ? 'rgba(56, 189, 248, 0.35)' : '#bae6fd'}`;
+
+                  const avatarBg = isLead 
+                    ? 'rgba(57, 255, 136, 0.15)' 
+                    : isSub 
+                    ? 'rgba(192, 132, 252, 0.15)' 
+                    : 'rgba(56, 189, 248, 0.15)';
+
+                  const avatarColor = isLead 
+                    ? '#39FF88' 
+                    : isSub 
+                    ? '#c084fc' 
+                    : '#38bdf8';
+
                   const badgeBg = isLead 
-                    ? (isDark ? 'rgba(245, 158, 11, 0.15)' : '#fef3c7')
-                    : (isSub
-                        ? (isDark ? 'rgba(6, 182, 212, 0.15)' : '#cffafe')
-                        : (isFaculty
-                            ? (isDark ? 'rgba(168, 85, 247, 0.15)' : '#f3e8ff')
-                            : (isDark ? 'rgba(57, 255, 136, 0.15)' : '#ecfdf5')));
-                  const borderStyle = isLead 
-                    ? '1.5px solid rgba(245, 158, 11, 0.45)' 
-                    : (isSub 
-                        ? '1.5px solid rgba(6, 182, 212, 0.4)' 
-                        : `1px solid ${isDark ? 'rgba(57, 255, 136, 0.2)' : '#e2e8f0'}`);
-                  const glowShadow = isLead 
-                    ? '0 0 24px rgba(245, 158, 11, 0.12)' 
-                    : (isSub ? '0 0 20px rgba(6, 182, 212, 0.1)' : '0 4px 12px rgba(0,0,0,0.04)');
+                    ? (isDark ? 'rgba(57, 255, 136, 0.15)' : '#ecfdf5') 
+                    : isSub 
+                    ? (isDark ? 'rgba(192, 132, 252, 0.15)' : '#f5f3ff') 
+                    : (isDark ? 'rgba(56, 189, 248, 0.15)' : '#f0f9ff');
+
+                  const badgeColor = isLead 
+                    ? (isDark ? '#39FF88' : '#047857') 
+                    : isSub 
+                    ? (isDark ? '#c084fc' : '#7e22ce') 
+                    : (isDark ? '#38bdf8' : '#0369a1');
+
+                  const badgeBorder = isLead 
+                    ? '1px solid rgba(57, 255, 136, 0.35)' 
+                    : isSub 
+                    ? '1px solid rgba(192, 132, 252, 0.35)' 
+                    : '1px solid rgba(56, 189, 248, 0.35)';
 
                   return (
                     <div 
                       key={coord.id || idx} 
                       style={{
-                        background: isDark ? 'rgba(8, 18, 10, 0.88)' : '#ffffff',
-                        border: borderStyle,
+                        background: isDark ? 'rgba(8, 18, 10, 0.85)' : '#ffffff',
+                        border: cardBorder,
                         borderRadius: '16px',
                         padding: '1.5rem',
-                        boxShadow: glowShadow,
+                        boxShadow: isLead 
+                          ? '0 0 20px rgba(57, 255, 136, 0.12)' 
+                          : isSub 
+                          ? '0 0 15px rgba(192, 132, 252, 0.1)' 
+                          : '0 4px 12px rgba(0,0,0,0.03)',
                         position: 'relative',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        backdropFilter: 'blur(10px)'
+                        justifyContent: 'space-between'
                       }}
                     >
                       <div>
-                        {/* Header Row: Avatar, Role Badge & Online Status */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '50px',
-                              height: '50px',
-                              borderRadius: '14px',
-                              background: badgeBg,
-                              border: `1.5px solid ${accentColor}40`,
-                              color: accentColor,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: '800',
-                              fontSize: '1.15rem'
-                            }}>
-                              {(coord.name || 'EC').slice(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <div style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '0.25rem 0.75rem',
-                                borderRadius: '20px',
-                                background: badgeBg,
-                                color: accentColor,
-                                border: `1px solid ${accentColor}50`,
-                                fontSize: '0.72rem',
-                                fontWeight: '800',
-                                letterSpacing: '0.04em',
-                                textTransform: 'uppercase'
-                              }}>
-                                {isLead ? '👑 Lead Coordinator' : (isSub ? '⚡ Sub Coordinator' : (coord.role || 'Event Coordinator'))}
-                              </div>
-                            </div>
+                          <div style={{
+                            width: '48px',
+                            height: '48px',
+                            borderRadius: '12px',
+                            background: avatarBg,
+                            border: `1px solid ${avatarColor}40`,
+                            color: avatarColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: '800',
+                            fontSize: '1.1rem'
+                          }}>
+                            {coord.name.slice(0, 2).toUpperCase()}
                           </div>
 
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '0.72rem',
-                            fontWeight: '700',
-                            color: coord.isActive !== false ? '#10b981' : '#ef4444'
+                            gap: '4px',
+                            padding: '0.35rem 0.75rem',
+                            borderRadius: '20px',
+                            background: badgeBg,
+                            color: badgeColor,
+                            border: badgeBorder,
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            letterSpacing: '0.03em',
+                            textTransform: 'uppercase'
                           }}>
-                            <span style={{
-                              width: '7px',
-                              height: '7px',
-                              borderRadius: '50%',
-                              background: coord.isActive !== false ? '#10b981' : '#ef4444'
-                            }}></span>
-                            {coord.isActive !== false ? 'Active' : 'Inactive'}
+                            {isLead && <FaCrown size={11} />}
+                            {isSub && <FaShieldAlt size={11} />}
+                            {!isLead && !isSub && <FaBolt size={11} />}
+                            {coord.role || (isLead ? 'Lead Coordinator' : isSub ? 'Sub-Coordinator' : 'Coordinator')}
                           </span>
                         </div>
 
-                        {/* Coordinator Name & Department */}
-                        <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.2rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
+                        <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
                           {coord.name}
                         </h3>
                         
-                        <div style={{ fontSize: '0.84rem', color: isDark ? '#94a3b8' : '#64748b', marginBottom: '1.15rem' }}>
+                        <div style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b', marginBottom: '1rem' }}>
                           {coord.department || 'CSE'} Department • {coord.year || '3rd Year'}
                         </div>
 
-                        {/* Contact Information List */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.84rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
                           {coord.phone && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDark ? '#e2e8f0' : '#1e293b' }}>
-                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: isDark ? 'rgba(57, 255, 136, 0.1)' : '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#39FF88', flexShrink: 0 }}>
-                                <FaPhoneAlt size={11} />
-                              </div>
-                              <span style={{ fontWeight: '600' }}>+91 {coord.phone}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#f1f5f9' : '#0f172a', fontWeight: '700' }}>
+                              <FaPhoneAlt size={12} style={{ color: '#39FF88', flexShrink: 0 }} />
+                              <a href={`tel:${cleanPhone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                {coord.phone}
+                              </a>
                             </div>
                           )}
-
-                          {coord.whatsapp && coord.whatsapp !== coord.phone && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDark ? '#e2e8f0' : '#1e293b' }}>
-                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: isDark ? 'rgba(16, 185, 129, 0.1)' : '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0 }}>
-                                <FaWhatsapp size={12} />
-                              </div>
-                              <span style={{ fontWeight: '600' }}>WA: +91 {coord.whatsapp}</span>
-                            </div>
-                          )}
-
                           {coord.email && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isDark ? '#cbd5e1' : '#334155' }}>
-                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: isDark ? 'rgba(56, 189, 248, 0.1)' : '#f0f9ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#38bdf8', flexShrink: 0 }}>
-                                <FaEnvelope size={11} />
-                              </div>
-                              <span style={{ wordBreak: 'break-all', fontSize: '0.8rem' }}>{coord.email}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: isDark ? '#cbd5e1' : '#334155' }}>
+                              <FaEnvelope size={12} style={{ color: '#38bdf8', flexShrink: 0 }} />
+                              <span style={{ wordBreak: 'break-all' }}>{coord.email}</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Direct Contact Buttons */}
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '1.25rem', paddingTop: '1rem', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9'}` }}>
-                        {coord.phone && (
+                      {/* Direct Contact Buttons (Call & WhatsApp) */}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '1.25rem', paddingTop: '1rem', borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9'}` }}>
+                        {cleanPhone ? (
                           <a
-                            href={`tel:${coord.phone}`}
+                            href={`tel:${cleanPhone}`}
                             style={{
                               flex: 1,
                               display: 'flex',
@@ -2402,22 +2216,24 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                               justifyContent: 'center',
                               gap: '6px',
                               padding: '0.65rem 0.85rem',
-                              borderRadius: '10px',
-                              background: isDark ? 'rgba(57, 255, 136, 0.12)' : '#ecfdf5',
+                              borderRadius: '8px',
+                              background: isDark ? 'rgba(57, 255, 136, 0.15)' : '#ecfdf5',
                               color: isDark ? '#39FF88' : '#047857',
                               border: '1px solid rgba(57, 255, 136, 0.35)',
-                              fontWeight: '700',
+                              fontWeight: '800',
                               fontSize: '0.82rem',
                               textDecoration: 'none',
                               transition: 'all 0.2s ease'
                             }}
+                            title={`Call ${coord.name} (${cleanPhone})`}
                           >
-                            <FaPhoneAlt size={11} /> Call Direct
+                            <FaPhoneAlt size={12} /> CALL NOW
                           </a>
-                        )}
-                        {coord.phone && (
+                        ) : null}
+
+                        {cleanWhatsapp ? (
                           <a
-                            href={`https://wa.me/91${(coord.whatsapp || coord.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${coord.name}, regarding ${currentEvent.name} coordination...`)}`}
+                            href={`https://wa.me/${cleanWhatsapp}`}
                             target="_blank"
                             rel="noreferrer"
                             style={{
@@ -2427,43 +2243,32 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                               justifyContent: 'center',
                               gap: '6px',
                               padding: '0.65rem 0.85rem',
-                              borderRadius: '10px',
+                              borderRadius: '8px',
                               background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#f0fdf4',
                               color: '#10b981',
                               border: '1px solid rgba(16, 185, 129, 0.35)',
-                              fontWeight: '700',
+                              fontWeight: '800',
                               fontSize: '0.82rem',
                               textDecoration: 'none',
                               transition: 'all 0.2s ease'
                             }}
+                            title="Chat on WhatsApp"
                           >
-                            <FaWhatsapp size={14} /> WhatsApp
+                            <FaWhatsapp size={14} /> WHATSAPP
                           </a>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   );
                 })}
 
-                {filteredEventTeam.length === 0 && (
-                  <div style={{ gridColumn: '1 / -1', padding: '3.5rem 1.5rem', textAlign: 'center', background: isDark ? 'rgba(8, 18, 10, 0.6)' : '#ffffff', borderRadius: '16px', border: `1px solid ${isDark ? 'rgba(57, 255, 136, 0.15)' : '#e2e8f0'}` }}>
-                    <FaUserTie size={40} style={{ color: '#39FF88', opacity: 0.5, marginBottom: '0.75rem' }} />
-                    <h3 style={{ margin: '0 0 0.5rem 0', color: isDark ? '#ffffff' : '#0f172a', fontSize: '1.2rem' }}>
-                      {teamSearch ? 'No matching team members found' : 'No Coordinators Configured Yet'}
-                    </h3>
+                {currentEventTeam.length === 0 && (
+                  <div style={{ gridColumn: '1 / -1', padding: '3rem 1.5rem', textAlign: 'center', background: isDark ? 'rgba(8, 18, 10, 0.6)' : '#ffffff', borderRadius: '16px', border: `1px solid ${isDark ? 'rgba(57, 255, 136, 0.15)' : '#e2e8f0'}` }}>
+                    <FaUserTie size={36} style={{ color: '#39FF88', opacity: 0.5, marginBottom: '0.75rem' }} />
+                    <h3 style={{ margin: '0 0 0.5rem 0', color: isDark ? '#ffffff' : '#0f172a' }}>No Coordinators Configured Yet</h3>
                     <p style={{ margin: 0, fontSize: '0.88rem', color: isDark ? '#94a3b8' : '#64748b' }}>
-                      {teamSearch 
-                        ? `No coordinator matches "${teamSearch}". Try resetting the search query.`
-                        : `Symposium administrators have not allocated coordinator profiles to ${currentEvent.name} yet.`}
+                      Symposium administrators have not assigned coordinator profiles to {currentEvent.name} yet. Coordinators can be added in the Admin Dashboard under the Members tab.
                     </p>
-                    {teamSearch && (
-                      <button 
-                        onClick={() => { setTeamSearch(''); setTeamRoleFilter('all'); }} 
-                        style={{ ...S.btnPrimarySmall, marginTop: '1rem', display: 'inline-flex' }}
-                      >
-                        Reset Filter
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
