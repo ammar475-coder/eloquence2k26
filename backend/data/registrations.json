@@ -438,13 +438,13 @@
     "timing_snapshot": "10:30 AM – 12:30 PM",
     "created_at": "2026-09-15T06:13:05.726692+00:00",
     "updated_at": "2026-09-15T06:13:05.726692+00:00",
-    "is_verified": true,
-    "isVerified": true,
-    "attendance_status": "verified",
-    "attendanceStatus": "verified",
-    "verified_at": "2026-09-15T06:24:13.756Z",
-    "verifiedAt": "2026-09-15T06:24:13.756Z",
-    "verified_by": "shahid_admin",
-    "verifiedBy": "shahid_admin"
+    "is_verified": false,
+    "isVerified": false,
+    "attendance_status": "pending",
+    "attendanceStatus": "pending",
+    "verified_at": null,
+    "verifiedAt": null,
+    "verified_by": null,
+    "verifiedBy": null
   }
 ]

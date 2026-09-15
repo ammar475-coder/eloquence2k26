@@ -80,5 +80,11 @@
       "tech-06"
     ],
     "eventId": "tech-06"
+  },
+  {
+    "id": 1789462542706,
+    "username": "shahid_cert",
+    "password": "admin",
+    "role": "certification team"
   }
 ]

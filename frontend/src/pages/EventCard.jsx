@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { FaArrowRight, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaArrowRight, FaChevronDown, FaChevronUp, FaCamera } from 'react-icons/fa';
 import { getEventBanner } from '../data/eventImages.js';
 import rulesData from '../data/rules.js';
 import { getEventSticker } from '../data/eventStickers.js';
+import VenueImageModal from '../components/VenueImageModal.jsx';
 
 function getEventIllustration(event) {
   const bannerSrc = getEventBanner(event);
@@ -29,34 +30,34 @@ function getEventIllustration(event) {
 
 function getEventIcon(id) {
   switch (id) {
-    case 'tech-02':
-      return (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#39FF88" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="event-title-icon-svg">
-          <polyline points="16 18 22 12 16 6" />
-          <polyline points="8 6 2 12 8 18" />
-        </svg>
-      );
     case 'tech-01':
       return (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#39FF88" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="event-title-icon-svg">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
+        </svg>
+      );
+    case 'tech-02':
+      return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+        </svg>
+      );
+    case 'tech-03':
+      return (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
         </svg>
       );
     case 'tech-04':
       return (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#39FF88" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="event-title-icon-svg">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="2" y1="12" x2="22" y2="12" />
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
       );
     default:
       return (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#39FF88" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="event-title-icon-svg">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       );
   }
@@ -64,6 +65,7 @@ function getEventIcon(id) {
 
 export default function EventCard({ event, onRegister, onViewRules }) {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const [showVenueModal, setShowVenueModal] = useState(false);
 
   const handleToggleRules = (e) => {
     if (e) e.stopPropagation();
@@ -135,9 +137,41 @@ export default function EventCard({ event, onRegister, onViewRules }) {
         </div>
 
         <div className="event-card-meta-list">
-          <div className="meta-line">
-            <span className="meta-key">Venue:</span>
-            <span className="meta-val">{event.venue || 'CSE Department Labs'}</span>
+          <div className="meta-line" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+              <span className="meta-key">Venue:</span>
+              <span className="meta-val" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                {event.venue || 'CSE Department Labs'}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="event-card-venue-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowVenueModal(true);
+              }}
+              title={`View Venue Photo for ${event.name}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '0.68rem',
+                fontWeight: '700',
+                padding: '0.2rem 0.55rem',
+                borderRadius: '6px',
+                background: (event.venueImage || event.venue_image) ? 'rgba(57, 255, 136, 0.14)' : 'rgba(255, 255, 255, 0.07)',
+                color: (event.venueImage || event.venue_image) ? '#39FF88' : '#94a3b8',
+                border: (event.venueImage || event.venue_image) ? '1px solid rgba(57, 255, 136, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+                marginLeft: '0.5rem'
+              }}
+            >
+              <FaCamera size={10} />
+              <span>{(event.venueImage || event.venue_image) ? 'Photo' : 'Venue'}</span>
+            </button>
           </div>
           <div className="meta-line">
             <span className="meta-key">Time:</span>
@@ -211,6 +245,13 @@ export default function EventCard({ event, onRegister, onViewRules }) {
           </button>
         </div>
       </div>
+
+      {/* Venue Photo Modal */}
+      <VenueImageModal
+        isOpen={showVenueModal}
+        onClose={() => setShowVenueModal(false)}
+        event={event}
+      />
     </div>
   );
 }

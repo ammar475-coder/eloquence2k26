@@ -1469,7 +1469,8 @@ exports.submitEventWinners = async (req, res) => {
 exports.updateEventCoordinatorDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rounds, rules, venue, time, conductorNotes } = req.body;
+    const { rounds, rules, venue, time, conductorNotes, venueImage, venue_image } = req.body;
+    const finalVenueImage = venueImage !== undefined ? venueImage : venue_image;
 
     const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
     let events = [];
@@ -1484,6 +1485,10 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       if (venue) events[idx].venue = venue;
       if (time) events[idx].time = time;
       if (conductorNotes !== undefined) events[idx].conductorNotes = conductorNotes;
+      if (finalVenueImage !== undefined) {
+        events[idx].venueImage = finalVenueImage ? finalVenueImage.trim() : '';
+        events[idx].venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+      }
       events[idx].updatedAt = new Date().toISOString();
       fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf-8');
     }
@@ -1494,15 +1499,20 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       if (rules) updateData.rules = rules;
       if (venue) updateData.venue = venue;
       if (time) updateData.time = time;
-      await supabase.from('events').update(updateData).eq('id', id);
+      if (finalVenueImage !== undefined) {
+        updateData.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+      }
+      if (Object.keys(updateData).length > 0) {
+        await supabase.from('events').update(updateData).eq('id', id);
+      }
     } catch (dbErr) {
       console.warn('Supabase update event coordinator details fallback:', dbErr.message);
     }
 
     res.json({
       success: true,
-      message: 'Event rounds and coordinator details updated successfully',
-      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time }
+      message: 'Event venue and coordinator details updated successfully',
+      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time, venueImage: finalVenueImage }
     });
   } catch (err) {
     console.error('Error updating event coordinator details:', err);
