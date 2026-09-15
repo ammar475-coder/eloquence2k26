@@ -231,9 +231,6 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     ? event.rules
     : [];
 
-  const highlights = (event && Array.isArray(event.highlights) && event.highlights.length > 0)
-    ? event.highlights
-    : [];
 
   const rounds = (event && Array.isArray(event.rounds) && event.rounds.length > 0)
     ? event.rounds
@@ -245,6 +242,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
         ? event.coordinators
         : []);
 
+  const [showMobileStickyBar, setShowMobileStickyBar] = useState(false);
   // ONLY show Lead Coordinators publicly on Event Details (Coordinators & Sub-Coordinators are visible only in internal Coordinator login)
   const coordsList = allCoords.filter(c => {
     const roleStr = String(c.role || '').toLowerCase().trim();
@@ -255,6 +253,21 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [eventId]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // In mobile view: show sticky bottom bar only when user scrolls down past the top nav
+      if (window.scrollY > 85) {
+        setShowMobileStickyBar(true);
+      } else {
+        setShowMobileStickyBar(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const isEsports = event && (event.id === 'nontech-05' || event.name?.toLowerCase().includes('gaming') || event.name?.toLowerCase().includes('battle of champions'));
   const eventSticker = getEventSticker(event);
@@ -413,22 +426,22 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
               <span className="rules-sub-tag-badge">{event.tag}</span>
             )}
           </div>
-          <h1 className="rules-clean-main-title">
-            {event.name}
+          <div className="rules-hero-title-row">
+            <h1 className="rules-clean-main-title">{event.name}</h1>
             {eventSticker && (
-              <span className="rules-title-sticker-wrap" title={eventSticker.title}>
+              <div className="rules-hero-sticker-container" title={eventSticker.title}>
                 <img
                   src={eventSticker.src}
                   alt={eventSticker.alt}
-                  className="rules-title-sticker-img"
+                  className="rules-hero-sticker-img"
                   style={{
                     '--rules-sticker-scale': eventSticker.scale || 1,
                     '--rules-sticker-origin': eventSticker.cropPosition === 'top' ? 'top center' : 'center center'
                   }}
                 />
-              </span>
+              </div>
             )}
-          </h1>
+          </div>
           {event.alias && event.alias.toLowerCase() !== event.name.toLowerCase() && (
             <p className="rules-alias-sub">// {event.alias}</p>
           )}
@@ -436,7 +449,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
 
         {/* 2-Column Split: Overview (Left) & Rules (Right) */}
         <div className="rules-split-grid">
-          {/* Left Side: Overview Stack (4 Small Boxes + 1 Long Diagonal Card + CTA) */}
+          {/* Left Side: Overview Stack (4 Small Boxes + 1 Long Diagonal Card) */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -523,98 +536,6 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
                 )}
               </div>
             </div>
-
-            {/* Quick Highlights (if available) */}
-            {highlights.length > 0 && (
-              <div className="rules-highlights-box">
-                <div className="rules-highlights-title">
-                  <FaBolt className="rules-highlight-bolt-icon" /> QUICK HIGHLIGHTS
-                </div>
-                <div className="rules-highlights-tags">
-                  {highlights.map((h, idx) => (
-                    <span key={idx} className="rules-highlight-pill">
-                      <FaBolt style={{ marginRight: '0.3rem', fontSize: '0.75rem' }} /> {h}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Registration CTA Actions */}
-            {isEsports ? (
-              <div className="overview-card-cta-wrap esports-cta-wrap">
-                <div className="esports-cta-heading">
-                  {isRegClosed ? 'REGISTRATIONS STATUS' : 'REGISTRATION FOR THIS EVENT'}
-                </div>
-                {isRegClosed ? (
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-full-width"
-                    disabled={true}
-                    style={{
-                      background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
-                      borderColor: '#ef4444',
-                      color: '#fca5a5',
-                      cursor: 'not-allowed',
-                      boxShadow: 'none',
-                      transform: 'none',
-                      opacity: 0.95
-                    }}
-                  >
-                    <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
-                  </button>
-                ) : (
-                  <div className="esports-buttons-grid">
-                    <button
-                      type="button"
-                      className="esports-action-btn esports-btn-freefire"
-                      onClick={() => handleRegisterGame('FREE FIRE')}
-                      id="btn-register-freefire"
-                    >
-                      <span>FREE FIRE</span>
-                      <FaArrowRight className="esports-btn-arrow" />
-                    </button>
-                    <button
-                      type="button"
-                      className="esports-action-btn esports-btn-bgmi"
-                      onClick={() => handleRegisterGame('BGMI')}
-                      id="btn-register-bgmi"
-                    >
-                      <span>BGMI</span>
-                      <FaArrowRight className="esports-btn-arrow" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="overview-card-cta-wrap">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-full-width"
-                  onClick={isRegClosed ? undefined : handleRegister}
-                  disabled={isRegClosed}
-                  style={isRegClosed ? {
-                    background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
-                    borderColor: '#ef4444',
-                    color: '#fca5a5',
-                    cursor: 'not-allowed',
-                    boxShadow: 'none',
-                    transform: 'none',
-                    opacity: 0.95
-                  } : {}}
-                >
-                  {isRegClosed ? (
-                    <>
-                      <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
-                    </>
-                  ) : (
-                    <>
-                      REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.4rem' }} />
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
           </motion.div>
 
           {/* Right Side: Separate Rules Card and Coordinator Contact Card */}
@@ -723,15 +644,113 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
             )}
           </div>
         </div>
+
+        {/* Bottom Primary Register CTA (shown lastly, after all rules & details) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.35 }}
+          className="rules-bottom-cta-section"
+        >
+          {isEsports ? (
+            <div className="overview-card-cta-wrap esports-cta-wrap">
+              <div className="esports-cta-heading">
+                {isRegClosed ? 'REGISTRATIONS STATUS' : 'CHOOSE GAME TO REGISTER'}
+              </div>
+              {isRegClosed ? (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-full-width"
+                  disabled={true}
+                  style={{
+                    background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
+                    borderColor: '#ef4444',
+                    color: '#fca5a5',
+                    cursor: 'not-allowed',
+                    boxShadow: 'none',
+                    transform: 'none',
+                    opacity: 0.95
+                  }}
+                >
+                  <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
+                </button>
+              ) : (
+                <div className="esports-buttons-grid">
+                  <button
+                    type="button"
+                    className="esports-action-btn esports-btn-freefire"
+                    onClick={() => handleRegisterGame('FREE FIRE')}
+                    id="btn-register-freefire"
+                  >
+                    <span>FREE FIRE</span>
+                    <FaArrowRight className="esports-btn-arrow" />
+                  </button>
+                  <button
+                    type="button"
+                    className="esports-action-btn esports-btn-bgmi"
+                    onClick={() => handleRegisterGame('BGMI')}
+                    id="btn-register-bgmi"
+                  >
+                    <span>BGMI</span>
+                    <FaArrowRight className="esports-btn-arrow" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="overview-card-cta-wrap">
+              <button
+                type="button"
+                className="btn btn-primary btn-full-width btn-rules-main-register"
+                onClick={isRegClosed ? undefined : handleRegister}
+                disabled={isRegClosed}
+                style={isRegClosed ? {
+                  background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
+                  borderColor: '#ef4444',
+                  color: '#fca5a5',
+                  cursor: 'not-allowed',
+                  boxShadow: 'none',
+                  transform: 'none',
+                  opacity: 0.95
+                } : {}}
+              >
+                {isRegClosed ? (
+                  <>
+                    <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
+                  </>
+                ) : (
+                  <>
+                    REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.45rem' }} />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </motion.div>
       </div>
 
-      {/* Mobile Sticky Action Bar */}
-      <div className="rules-mobile-sticky-bar">
+      {/* Mobile Sticky Action Bar - Appears when scrolling down */}
+      <div className={`rules-mobile-sticky-bar ${showMobileStickyBar ? 'is-visible' : ''}`}>
         <button className="rules-mobile-back-btn" onClick={handleBackToEvents}>
           <FaArrowLeft style={{ marginRight: '0.45rem', verticalAlign: '-1px' }} /> Back
         </button>
-        <button className="rules-mobile-register-btn" onClick={handleRegister}>
-          Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+        <button
+          className="rules-mobile-register-btn"
+          onClick={isRegClosed ? undefined : handleTopRegisterClick}
+          disabled={isRegClosed}
+          style={isRegClosed ? {
+            background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
+            borderColor: '#ef4444',
+            color: '#fca5a5',
+            cursor: 'not-allowed',
+            boxShadow: 'none'
+          } : {}}
+        >
+          {isRegClosed ? 'Closed' : (
+            <>
+              Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+            </>
+          )}
         </button>
       </div>
 
