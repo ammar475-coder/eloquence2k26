@@ -24,7 +24,7 @@ export const EVENT_STICKERS = {
     src: professorXSticker,
     alt: 'Professor X Mascot Sticker',
     title: 'Professor X — PPT Presentation',
-    scale: 1.05,
+    scale: 1.06,
     cropPosition: 'center'
   },
 
@@ -34,7 +34,7 @@ export const EVENT_STICKERS = {
     src: beastSticker,
     alt: 'X-Men Beast Mascot Sticker',
     title: 'X-Men Beast — Crack The Code',
-    scale: 1.0,
+    scale: 1.02,
     cropPosition: 'center'
   },
 
@@ -44,28 +44,28 @@ export const EVENT_STICKERS = {
     src: blackPantherSticker,
     alt: 'Black Panther Mascot Sticker',
     title: 'Black Panther — Tech Quiz Online',
-    scale: 1.25,
-    cropPosition: 'top'
+    scale: 1.15,
+    cropPosition: 'center'
   },
 
-  // 4. WEB / PROMPT : Mister Fantastic (Slender full-body - boosted optical scale)
+  // 4. WEB / PROMPT : Mister Fantastic
   'tech-04': {
     character: 'Mister Fantastic',
     src: mrFantasticSticker,
     alt: 'Mister Fantastic Mascot Sticker',
     title: 'Mister Fantastic — Web / Prompt Design',
-    scale: 1.5,
-    cropPosition: 'top'
+    scale: 1.12,
+    cropPosition: 'center'
   },
 
-  // 5. UI/UX : Invisible Woman (Slender full-body - boosted optical scale)
+  // 5. UI/UX : Invisible Woman
   'tech-06': {
     character: 'Invisible Woman',
     src: invisibleWomanSticker,
     alt: 'Invisible Woman Mascot Sticker',
     title: 'Invisible Woman — UI/UX Design',
-    scale: 1.52,
-    cropPosition: 'top'
+    scale: 1.15,
+    cropPosition: 'center'
   },
 
   // 6. SNAP & REEL : Ant Man
@@ -74,8 +74,8 @@ export const EVENT_STICKERS = {
     src: antManSticker,
     alt: 'Ant-Man Mascot Sticker',
     title: 'Ant-Man — Snap & Reel',
-    scale: 1.22,
-    cropPosition: 'top'
+    scale: 1.05,
+    cropPosition: 'center'
   },
 
   // 7. LINK UP – CONNECTION : Loki
@@ -84,8 +84,8 @@ export const EVENT_STICKERS = {
     src: lokiSticker,
     alt: 'Loki Mascot Sticker',
     title: 'Loki — Link Up (Connection)',
-    scale: 1.22,
-    cropPosition: 'top'
+    scale: 1.1,
+    cropPosition: 'center'
   },
 
   // 8. HUNT ZONE – TREASURE HUNT : Captain America
@@ -94,7 +94,7 @@ export const EVENT_STICKERS = {
     src: captainAmericaSticker,
     alt: 'Captain America Mascot Sticker',
     title: 'Captain America — Hunt Zone (Treasure Hunt)',
-    scale: 1.1,
+    scale: 1.02,
     cropPosition: 'center'
   },
 
@@ -104,8 +104,8 @@ export const EVENT_STICKERS = {
     src: yelenaBelovaSticker,
     alt: 'Yelena Belova Mascot Sticker',
     title: 'Yelena Belova — Henna Heist (Mehandi)',
-    scale: 1.34,
-    cropPosition: 'top'
+    scale: 1.12,
+    cropPosition: 'center'
   },
 
   // 10. BATTLE OF CHAMPIONS – E-SPORTS : Thor
@@ -114,8 +114,8 @@ export const EVENT_STICKERS = {
     src: thorSticker,
     alt: 'Thor Mascot Sticker',
     title: 'Thor — Battle of Champions (E-Sports)',
-    scale: 1.12,
-    cropPosition: 'top'
+    scale: 1.05,
+    cropPosition: 'center'
   },
 
   // 11. 64 SQUARES – CHESS : Magneto
@@ -124,8 +124,8 @@ export const EVENT_STICKERS = {
     src: magnetoSticker,
     alt: 'Magneto Mascot Sticker',
     title: 'Magneto — 64 Squares (Chess)',
-    scale: 1.22,
-    cropPosition: 'top'
+    scale: 1.1,
+    cropPosition: 'center'
   },
 
   // 12. BATTLEWORLD BIDDING : Doctor Doom
@@ -134,8 +134,8 @@ export const EVENT_STICKERS = {
     src: doctorDoomSticker,
     alt: 'Doctor Doom Mascot Sticker',
     title: 'Doctor Doom — Battleworld Bidding',
-    scale: 1.22,
-    cropPosition: 'top'
+    scale: 1.12,
+    cropPosition: 'center'
   }
 };
 
