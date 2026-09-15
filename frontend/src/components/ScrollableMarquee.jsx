@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
  */
 export default function ScrollableMarquee({
   children,
-  speed = 36, // px per second
+  speed = 46, // px per second
   direction = 'left', // 'left' moves cards left (increasing scrollLeft), 'right' moves cards right (decreasing scrollLeft)
   baseCount, // Number of items in 1 set (out of 3 sets)
   className = '',
@@ -211,9 +211,9 @@ export default function ScrollableMarquee({
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
 
-      // Lock in gesture intent once finger moves beyond threshold
+      // Lock in gesture intent once finger moves beyond threshold (min 12px for clear swipe intent)
       if (dragAxis === null) {
-        if (absDx > 6 || absDy > 6) {
+        if (absDx > 12 || absDy > 12) {
           if (absDx > absDy) {
             dragAxis = 'x';
             setIsDragging(true);
@@ -264,10 +264,11 @@ export default function ScrollableMarquee({
       if (!isTouchActive) return;
       isTouchActive = false;
       const wasHorizontalDrag = dragAxis === 'x';
+      const touchDist = Math.abs((e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : lastTouchX) - touchStartX);
       setIsDragging(false);
 
-      if (wasHorizontalDrag) {
-        // Suppress accidental click/flip triggers if user swiped
+      if (wasHorizontalDrag && touchDist > 14) {
+        // Suppress accidental click/flip triggers ONLY if user actually dragged
         const captureClick = (clickEvent) => {
           clickEvent.stopPropagation();
           clickEvent.preventDefault();
@@ -345,7 +346,6 @@ export default function ScrollableMarquee({
       if (e.button !== 0) return; // Left mouse button only
       stopMomentum();
       isMouseDown = true;
-      setIsDragging(true);
       startX = e.pageX;
       startScroll = container.scrollLeft;
       dragDist = 0;
@@ -357,6 +357,9 @@ export default function ScrollableMarquee({
       if (!isMouseDown) return;
       const dx = e.pageX - startX;
       dragDist += Math.abs(dx);
+      if (dragDist > 6 && !isDragging) {
+        setIsDragging(true);
+      }
       let targetScroll = startScroll - dx;
 
       if (setWidth > 0) {

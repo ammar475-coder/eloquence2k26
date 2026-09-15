@@ -614,7 +614,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         const data = await response.json();
         if (data.success) {
           toast.success('Congratulations, you are an Avenger now!', {
-            icon: '🛡️',
             duration: 5000,
             id: 'avenger-success-toast'
           });
