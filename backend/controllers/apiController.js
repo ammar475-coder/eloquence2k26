@@ -254,7 +254,8 @@ exports.getRegistrationStatus = (req, res) => {
       success: true,
       data: settings,
       isRegistrationClosed: Boolean(settings.isRegistrationClosed),
-      closedReason: settings.closedReason || 'Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!',
+      closedReason: settings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+      onSpotNotice: settings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
       closedAt: settings.closedAt || null
     });
   } catch (err) {
