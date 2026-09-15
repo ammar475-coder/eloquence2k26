@@ -62,7 +62,10 @@ import {
   FaExclamationTriangle,
   FaSpinner,
   FaBuilding,
-  FaCamera
+  FaCamera,
+  FaCrown,
+  FaWhatsapp,
+  FaPhoneAlt
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
@@ -803,6 +806,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [coordinators, setCoordinators] = useState([]);
   const [coordSearch, setCoordSearch] = useState('');
   const [coordEventFilter, setCoordEventFilter] = useState('all');
+  const [memberViewTab, setMemberViewTab] = useState('events'); // 'events' | 'table'
   const [isCoordFormVisible, setIsCoordFormVisible] = useState(false);
   const [editingCoordId, setEditingCoordId] = useState(null);
 
@@ -1961,8 +1965,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setIsCoordFormVisible(false);
   };
 
-  const handleOpenCreateCoordForm = () => {
+  const handleOpenCreateCoordForm = (preselectedEventId = null) => {
     resetCoordForm();
+    if (preselectedEventId && typeof preselectedEventId === 'string') {
+      setCoordEvents([preselectedEventId]);
+    }
     setIsCoordFormVisible(true);
   };
 
@@ -2636,7 +2643,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
-          {/* Event Team Tab */}
+          {/* Members (Event Team & Coordinators) Tab */}
           <button 
             type="button"
             style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
@@ -2644,8 +2651,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaUserTie style={S.navIcon} />
-                <span>Event Team</span>
+                <FaUsers style={S.navIcon} />
+                <span>Members</span>
               </div>
               <span style={S.badgeCount}>{coordinators.length}</span>
             </div>
@@ -2782,7 +2789,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-users' && 'User Management'}
               {activeTab === 'manage-roles' && 'Role Management'}
               {activeTab === 'manage-sponsors' && 'Sponsor Management'}
-              {activeTab === 'manage-coordinators' && 'Event Coordinators Management'}
+              {activeTab === 'manage-coordinators' && 'Event Members & Coordinators'}
               {activeTab === 'allocate-events' && 'Event Coordinator Allocation'}
               {activeTab === 'homepage-coordinators' && 'Homepage Student-Coordinator Team'}
               {activeTab === 'registrations' && 'Participant Registrations & Verification'}
@@ -2796,7 +2803,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'manage-users' && 'Create, edit, assign roles, and remove system user accounts.'}
               {activeTab === 'manage-roles' && 'Configure custom access roles, permissions, and security hierarchy.'}
               {activeTab === 'manage-sponsors' && (isLeadCoordinator ? 'View event partners, sponsorship categories, and contact information.' : 'Manage event partners, categories, logos, contact info, and public visibility.')}
-              {activeTab === 'manage-coordinators' && (isLeadCoordinator ? 'View student coordinators assigned across symposium events.' : 'Assign student leads and coordinators dynamically to symposium events.')}
+              {activeTab === 'manage-coordinators' && (isLeadCoordinator ? 'View student coordinators and sub-coordinators allocated across symposium events.' : 'Allocate Lead Coordinators, Coordinators, and Sub-Coordinators with phone numbers across all symposium events.')}
               {activeTab === 'allocate-events' && 'Allocate specific events to coordinator accounts. Coordinators can only see and manage their allocated event(s).'}
               {activeTab === 'homepage-coordinators' && (isLeadCoordinator ? 'View student coordinator teams displayed on the symposium homepage marquee.' : 'Manage student coordinator teams (Main Coordinator Team, Website Coordinator Team, etc.) displayed dynamically on the homepage marquee.')}
               {activeTab === 'registrations' && (isLeadCoordinator ? 'View all registered participants, verify ticket codes, and audit payment status.' : 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.')}
@@ -3730,12 +3737,60 @@ export default function AdminDashboard({ token, user, onLogout }) {
           {/* ======================================================== */}
           {activeTab === 'manage-coordinators' && (
             <div style={S.viewContainer}>
-              <div style={S.viewHeader}>
-                <div style={{ display: 'flex', gap: '1rem', flex: 1, maxWidth: '650px', flexWrap: 'wrap' }}>
+              {/* Header Controls & View Switcher */}
+              <div style={{ ...S.viewHeader, flexWrap: 'wrap', gap: '1rem' }}>
+                {/* View Mode Toggle: Events View vs All Table */}
+                <div style={{ display: 'flex', gap: '8px', background: isDark ? '#1f2937' : '#f1f5f9', padding: '4px', borderRadius: '10px', border: `1px solid ${isDark ? '#374151' : '#e2e8f0'}` }}>
+                  <button
+                    type="button"
+                    onClick={() => setMemberViewTab('events')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '0.55rem 1.1rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: '800',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: memberViewTab === 'events' ? '#2563eb' : 'transparent',
+                      color: memberViewTab === 'events' ? '#ffffff' : (isDark ? '#cbd5e1' : '#64748b'),
+                      boxShadow: memberViewTab === 'events' ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <FaThLarge size={13} /> By Event View ({eventsList.length} Events)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMemberViewTab('table')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '0.55rem 1.1rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: '800',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: memberViewTab === 'table' ? '#2563eb' : 'transparent',
+                      color: memberViewTab === 'table' ? '#ffffff' : (isDark ? '#cbd5e1' : '#64748b'),
+                      boxShadow: memberViewTab === 'table' ? '0 2px 8px rgba(37, 99, 235, 0.35)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <FaTable size={13} /> All Members Table ({coordinators.length})
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', flex: 1, maxWidth: '650px', flexWrap: 'wrap', marginLeft: 'auto' }}>
                   <div style={S.searchBox}>
                     <input 
                       type="text" 
-                      placeholder="Search by name, phone, dept, event, role..." 
+                      placeholder="Search member, phone, event, role..." 
                       value={coordSearch}
                       onChange={(e) => setCoordSearch(e.target.value)}
                       style={S.searchInput}
@@ -3754,180 +3809,548 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     ))}
                   </select>
                 </div>
+
                 {!isLeadCoordinator && (
-                  <button onClick={handleOpenCreateCoordForm} style={S.createBtn}>
-                    <FaPlus style={{ marginRight: '8px' }} /> Add Coordinator
+                  <button onClick={() => handleOpenCreateCoordForm()} style={S.createBtn}>
+                    <FaPlus style={{ marginRight: '8px' }} /> Add Member / Coordinator
                   </button>
                 )}
               </div>
 
-              <div style={S.card}>
-                <div style={S.cardHeaderFlex}>
-                  <h3 style={S.cardTitle}>Student Coordinators ({filteredCoordinators.length})</h3>
-                  <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                    {isLeadCoordinator 
-                      ? 'Student coordinators and leads assigned across symposium events.'
-                      : 'Coordinators assigned here dynamically appear on the Registration page for their respective events.'}
-                  </span>
+              {/* Quick Metric Stats Banner */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: `1px solid ${isDark ? '#1f2937' : '#e2e8f0'}`,
+                  borderRadius: '12px',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDark ? '#1e3a8a' : '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaCalendarAlt size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '700' }}>TOTAL EVENTS</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>{eventsList.length}</div>
+                  </div>
                 </div>
-                <div style={S.tableResponsive}>
-                  <table style={S.table}>
-                    <thead>
-                      <tr>
-                        <th style={S.th}>Coordinator</th>
-                        <th style={S.th}>Contact Info</th>
-                        <th style={S.th}>Role</th>
-                        <th style={S.th}>Assigned Events</th>
-                        <th style={S.th}>Status</th>
-                        <th style={{ ...S.th, textAlign: isLeadCoordinator ? 'center' : 'right' }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredCoordinators.map(coord => (
-                        <tr key={coord.id} style={S.tr}>
-                          <td style={S.td}>
-                            <div style={S.userCell}>
-                              <div style={{ ...S.userAvatarSm, background: isDark ? '#1e3a8a' : '#eff6ff', color: '#2563eb' }}>
-                                {coord.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <span style={S.strongText}>{coord.name}</span>
-                                <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                                  {coord.department || 'CSE'} • {coord.year || '3rd Year'}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={S.td}>
-                            <div style={{ fontSize: '0.85rem' }}>
-                              <div style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <FaPhone size={11} color="#2563eb" /> {coord.phone}
-                              </div>
-                              {coord.email && (
-                                <div style={{ color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                                  <FaEnvelope size={10} /> {coord.email}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td style={S.td}>
-                            <span style={{
-                              display: 'inline-block',
-                              padding: '0.25rem 0.65rem',
-                              borderRadius: '999px',
-                              fontSize: '0.75rem',
-                              fontWeight: '700',
-                              background: coord.role === 'Lead Coordinator'
-                                ? (isDark ? 'rgba(245, 158, 11, 0.18)' : '#fef3c7')
-                                : (coord.role === 'Sub Coordinator'
-                                    ? (isDark ? 'rgba(6, 182, 212, 0.18)' : '#cffafe')
-                                    : (coord.role === 'Faculty Coordinator'
-                                        ? (isDark ? 'rgba(168, 85, 247, 0.18)' : '#f3e8ff')
-                                        : (isDark ? 'rgba(16, 185, 129, 0.18)' : '#d1fae5'))),
-                              color: coord.role === 'Lead Coordinator'
-                                ? '#f59e0b'
-                                : (coord.role === 'Sub Coordinator'
-                                    ? '#06b6d4'
-                                    : (coord.role === 'Faculty Coordinator'
-                                        ? '#a855f7'
-                                        : '#10b981')),
-                              border: '1px solid ' + (coord.role === 'Lead Coordinator'
-                                ? 'rgba(245, 158, 11, 0.35)'
-                                : (coord.role === 'Sub Coordinator'
-                                    ? 'rgba(6, 182, 212, 0.35)'
-                                    : (coord.role === 'Faculty Coordinator'
-                                        ? 'rgba(168, 85, 247, 0.35)'
-                                        : 'rgba(16, 185, 129, 0.35)')))
-                            }}>
-                              {coord.role || 'Coordinator'}
-                            </span>
-                          </td>
-                          <td style={S.td}>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '300px' }}>
-                              {Array.isArray(coord.assignedEvents) && coord.assignedEvents.map(eventId => {
-                                const ev = eventsList.find(e => e.id.toLowerCase() === eventId.toLowerCase());
-                                return (
-                                  <span key={eventId} style={{
-                                    background: ev?.category === 'technical' ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#831843' : '#fdf2f8'),
-                                    color: ev?.category === 'technical' ? (isDark ? '#bfdbfe' : '#1d4ed8') : (isDark ? '#fbcfe8' : '#be185d'),
-                                    border: '1px solid ' + (ev?.category === 'technical' ? (isDark ? '#1e40af' : '#bfdbfe') : (isDark ? '#9d174d' : '#fbcfe8')),
-                                    padding: '0.15rem 0.5rem',
-                                    borderRadius: '6px',
-                                    fontSize: '0.72rem',
-                                    fontWeight: '600'
-                                  }}>
-                                    {ev ? ev.name : eventId}
-                                  </span>
-                                );
-                              })}
-                              {(!coord.assignedEvents || coord.assignedEvents.length === 0) && (
-                                <span style={{ color: '#ef4444', fontSize: '0.78rem', fontStyle: 'italic' }}>No event assigned</span>
-                              )}
-                            </div>
-                          </td>
-                          <td style={S.td}>
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              fontSize: '0.82rem',
-                              fontWeight: '700',
-                              color: coord.isActive !== false ? '#10b981' : '#dc2626'
-                            }}>
-                              <span style={{
-                                width: '8px',
-                                height: '8px',
-                                borderRadius: '50%',
-                                background: coord.isActive !== false ? '#10b981' : '#ef4444'
-                              }}></span>
-                              {coord.isActive !== false ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td style={{ ...S.td, textAlign: isLeadCoordinator ? 'center' : 'right', whiteSpace: 'nowrap' }}>
-                            {isLeadCoordinator ? (
-                              <button 
-                                onClick={() => handleOpenEditCoordForm(coord)} 
-                                style={S.actionBtnView} 
-                                title="View Student Coordinator Details"
-                              >
-                                <FaInfoCircle style={{ marginRight: '4px' }} /> Details
-                              </button>
-                            ) : (
-                              <>
-                                <button 
-                                  onClick={() => handleToggleCoord(coord)} 
-                                  style={{ 
-                                    background: coord.isActive !== false ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
-                                    border: '1px solid ' + (coord.isActive !== false ? (isDark ? '#047857' : '#a7f3d0') : (isDark ? '#991b1b' : '#fecaca')),
-                                    color: coord.isActive !== false ? '#10b981' : '#dc2626',
-                                    cursor: 'pointer',
-                                    fontSize: '0.9rem',
-                                    padding: '0.45rem 0.65rem',
-                                    borderRadius: '6px',
-                                    marginRight: '0.5rem'
-                                  }}
-                                  title={coord.isActive !== false ? 'Deactivate Coordinator' : 'Activate Coordinator'}
-                                >
-                                  {coord.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
-                                </button>
-                                <button onClick={() => handleOpenEditCoordForm(coord)} style={S.actionBtnEdit} title="Edit Coordinator">
-                                  <FaEdit />
-                                </button>
-                                <button onClick={() => handleDeleteCoord(coord.id, coord.name)} style={S.actionBtnDelete} title="Delete Coordinator">
-                                  <FaTrash />
-                                </button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      {!filteredCoordinators.length && (
-                        <tr><td colSpan={6} style={S.emptyState}>No coordinators found.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
+
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: `1px solid ${isDark ? '#1f2937' : '#e2e8f0'}`,
+                  borderRadius: '12px',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDark ? '#064e3b' : '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaUsers size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '700' }}>TOTAL MEMBERS</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>{coordinators.length}</div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: `1px solid ${isDark ? '#1f2937' : '#e2e8f0'}`,
+                  borderRadius: '12px',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDark ? '#312e81' : '#eef2ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaCrown size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '700' }}>LEAD COORDINATORS</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                      {coordinators.filter(c => (c.role || '').toLowerCase().includes('lead')).length}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: isDark ? '#111827' : '#ffffff',
+                  border: `1px solid ${isDark ? '#1f2937' : '#e2e8f0'}`,
+                  borderRadius: '12px',
+                  padding: '1rem 1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDark ? '#581c87' : '#f5f3ff', color: '#a855f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaShieldAlt size={18} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '700' }}>SUB-COORDINATORS</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                      {coordinators.filter(c => (c.role || '').toLowerCase().includes('sub')).length}
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* ──────────────────────────────────────────────────────── */}
+              {/* VIEW 1: BY EVENT VIEW (All Events Roster Cards)          */}
+              {/* ──────────────────────────────────────────────────────── */}
+              {memberViewTab === 'events' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}>
+                  {eventsList
+                    .filter(ev => coordEventFilter === 'all' || ev.id === coordEventFilter)
+                    .filter(ev => {
+                      if (!coordSearch.trim()) return true;
+                      const q = coordSearch.toLowerCase();
+                      const matchEvent = ev.name.toLowerCase().includes(q) || ev.id.toLowerCase().includes(q);
+                      const matchMember = coordinators.some(c => 
+                        Array.isArray(c.assignedEvents) && 
+                        c.assignedEvents.includes(ev.id) && 
+                        (c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.role && c.role.toLowerCase().includes(q)))
+                      );
+                      return matchEvent || matchMember;
+                    })
+                    .map(ev => {
+                      const eventMembers = coordinators.filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.includes(ev.id));
+                      const isTech = ev.category === 'technical';
+                      const leads = eventMembers.filter(c => (c.role || '').toLowerCase().includes('lead'));
+                      const coords = eventMembers.filter(c => !((c.role || '').toLowerCase().includes('lead')) && !((c.role || '').toLowerCase().includes('sub')));
+                      const subs = eventMembers.filter(c => (c.role || '').toLowerCase().includes('sub'));
+
+                      return (
+                        <div 
+                          key={ev.id}
+                          style={{
+                            background: isDark ? '#111827' : '#ffffff',
+                            border: `1px solid ${isDark ? (isTech ? 'rgba(37,99,235,0.3)' : 'rgba(219,39,119,0.3)') : (isTech ? '#bfdbfe' : '#fbcfe8')}`,
+                            borderRadius: '16px',
+                            padding: '1.25rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            boxShadow: '0 4px 15px rgba(0,0,0,0.03)'
+                          }}
+                        >
+                          <div>
+                            {/* Card Top Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                              <div>
+                                <span style={{
+                                  display: 'inline-block',
+                                  padding: '0.2rem 0.6rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '800',
+                                  background: isTech ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#831843' : '#fdf2f8'),
+                                  color: isTech ? (isDark ? '#bfdbfe' : '#1d4ed8') : (isDark ? '#fbcfe8' : '#be185d'),
+                                  marginBottom: '4px'
+                                }}>
+                                  {isTech ? '⚡ TECHNICAL' : '🎨 NON-TECHNICAL'} • {ev.id.toUpperCase()}
+                                </span>
+                                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                                  {ev.name}
+                                </h3>
+                              </div>
+
+                              <span style={{
+                                padding: '0.25rem 0.65rem',
+                                borderRadius: '999px',
+                                fontSize: '0.75rem',
+                                fontWeight: '800',
+                                background: eventMembers.length > 0 ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
+                                color: eventMembers.length > 0 ? '#10b981' : '#ef4444'
+                              }}>
+                                {eventMembers.length} {eventMembers.length === 1 ? 'Member' : 'Members'}
+                              </span>
+                            </div>
+
+                            {/* Summary Pills */}
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                👑 Leads: {leads.length}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                ⚡ Coords: {coords.length}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                🛡️ Sub-Coords: {subs.length}
+                              </span>
+                            </div>
+
+                            {/* Allocated Members List */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1rem' }}>
+                              {eventMembers.map(coord => {
+                                const isLead = (coord.role || '').toLowerCase().includes('lead');
+                                const isSub = (coord.role || '').toLowerCase().includes('sub');
+                                const roleBadgeBg = isLead 
+                                  ? (isDark ? '#1e3a8a' : '#dbeafe') 
+                                  : isSub 
+                                  ? (isDark ? '#581c87' : '#f5f3ff') 
+                                  : (isDark ? '#064e3b' : '#f0fdf4');
+                                const roleBadgeColor = isLead 
+                                  ? (isDark ? '#bfdbfe' : '#1e40af') 
+                                  : isSub 
+                                  ? (isDark ? '#e9d5ff' : '#7e22ce') 
+                                  : (isDark ? '#a7f3d0' : '#166534');
+
+                                return (
+                                  <div 
+                                    key={coord.id}
+                                    style={{
+                                      background: isDark ? '#1f2937' : '#f8fafc',
+                                      border: `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                                      borderRadius: '10px',
+                                      padding: '0.75rem',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                      <div style={{
+                                        width: '34px',
+                                        height: '34px',
+                                        borderRadius: '8px',
+                                        background: roleBadgeBg,
+                                        color: roleBadgeColor,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontWeight: '800',
+                                        fontSize: '0.85rem',
+                                        flexShrink: 0
+                                      }}>
+                                        {coord.name.charAt(0).toUpperCase()}
+                                      </div>
+
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                          <span style={{ fontWeight: '800', fontSize: '0.88rem', color: isDark ? '#f9fafb' : '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {coord.name}
+                                          </span>
+                                          <span style={{
+                                            fontSize: '0.68rem',
+                                            fontWeight: '800',
+                                            padding: '0.1rem 0.45rem',
+                                            borderRadius: '999px',
+                                            background: roleBadgeBg,
+                                            color: roleBadgeColor
+                                          }}>
+                                            {isLead ? '👑 Lead' : isSub ? '🛡️ Sub-Coord' : '⚡ Coord'}
+                                          </span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.78rem' }}>
+                                          {coord.phone && (
+                                            <a 
+                                              href={`tel:${coord.phone}`} 
+                                              style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#2563eb', textDecoration: 'none', fontWeight: '700' }}
+                                              title={`Call ${coord.name}`}
+                                            >
+                                              <FaPhoneAlt size={10} /> {coord.phone}
+                                            </a>
+                                          )}
+                                          {coord.whatsapp && (
+                                            <a 
+                                              href={`https://wa.me/${coord.whatsapp.replace(/[^0-9]/g, '')}`} 
+                                              target="_blank" 
+                                              rel="noreferrer" 
+                                              style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#10b981', textDecoration: 'none', fontWeight: '700' }}
+                                              title="WhatsApp"
+                                            >
+                                              <FaWhatsapp size={11} /> WA
+                                            </a>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Buttons for Member */}
+                                    {!isLeadCoordinator && (
+                                      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                                        <button 
+                                          onClick={() => handleToggleCoord(coord)} 
+                                          style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            color: coord.isActive !== false ? '#10b981' : '#ef4444',
+                                            padding: '4px'
+                                          }}
+                                          title={coord.isActive !== false ? 'Active (Click to Deactivate)' : 'Inactive (Click to Activate)'}
+                                        >
+                                          {coord.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
+                                        </button>
+                                        <button 
+                                          onClick={() => handleOpenEditCoordForm(coord)} 
+                                          style={{
+                                            background: isDark ? '#374151' : '#e2e8f0',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '0.35rem',
+                                            cursor: 'pointer',
+                                            color: isDark ? '#f9fafb' : '#334155'
+                                          }}
+                                          title="Edit Member"
+                                        >
+                                          <FaEdit size={12} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteCoord(coord.id, coord.name)} 
+                                          style={{
+                                            background: isDark ? '#451a1a' : '#fee2e2',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '0.35rem',
+                                            cursor: 'pointer',
+                                            color: '#ef4444'
+                                          }}
+                                          title="Delete Member"
+                                        >
+                                          <FaTrash size={12} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+
+                              {eventMembers.length === 0 && (
+                                <div style={{
+                                  padding: '1.25rem 1rem',
+                                  textAlign: 'center',
+                                  borderRadius: '10px',
+                                  background: isDark ? '#1f2937' : '#f8fafc',
+                                  border: `1px dashed ${isDark ? '#374151' : '#cbd5e1'}`
+                                }}>
+                                  <div style={{ fontSize: '0.82rem', color: isDark ? '#9ca3af' : '#64748b', marginBottom: '8px' }}>
+                                    No coordinators or sub-coordinators allocated yet.
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Add Member Button directly on Event Card */}
+                          {!isLeadCoordinator && (
+                            <button
+                              onClick={() => handleOpenCreateCoordForm(ev.id)}
+                              style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '0.6rem',
+                                borderRadius: '8px',
+                                background: isDark ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff',
+                                color: '#2563eb',
+                                border: '1px solid rgba(37, 99, 235, 0.3)',
+                                fontWeight: '700',
+                                fontSize: '0.82rem',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                              }}
+                            >
+                              <FaPlus size={11} /> Allocate Member to {ev.name}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {/* ──────────────────────────────────────────────────────── */}
+              {/* VIEW 2: ALL MEMBERS DIRECTORY TABLE VIEW                 */}
+              {/* ──────────────────────────────────────────────────────── */}
+              {memberViewTab === 'table' && (
+                <div style={S.card}>
+                  <div style={S.cardHeaderFlex}>
+                    <div>
+                      <h3 style={S.cardTitle}>Coordinators & Sub-Coordinators Directory ({filteredCoordinators.length})</h3>
+                      <span style={{ fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                        {isLeadCoordinator 
+                          ? 'Student coordinators and sub-coordinators assigned across symposium events.'
+                          : 'Members allocated here dynamically appear in event coordinators portal and registration workflows.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={S.tableResponsive}>
+                    <table style={S.table}>
+                      <thead>
+                        <tr>
+                          <th style={S.th}>Member Name</th>
+                          <th style={S.th}>Contact Phone & WA</th>
+                          <th style={S.th}>Role</th>
+                          <th style={S.th}>Assigned Events</th>
+                          <th style={S.th}>Status</th>
+                          <th style={{ ...S.th, textAlign: isLeadCoordinator ? 'center' : 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCoordinators.map(coord => {
+                          const isLead = (coord.role || '').toLowerCase().includes('lead');
+                          const isSub = (coord.role || '').toLowerCase().includes('sub');
+                          const roleBg = isLead ? (isDark ? '#1e3a8a' : '#dbeafe') : isSub ? (isDark ? '#581c87' : '#f5f3ff') : (isDark ? '#064e3b' : '#f0fdf4');
+                          const roleColor = isLead ? (isDark ? '#bfdbfe' : '#1e40af') : isSub ? (isDark ? '#e9d5ff' : '#7e22ce') : (isDark ? '#a7f3d0' : '#166534');
+
+                          return (
+                            <tr key={coord.id} style={S.tr}>
+                              <td style={S.td}>
+                                <div style={S.userCell}>
+                                  <div style={{ ...S.userAvatarSm, background: roleBg, color: roleColor }}>
+                                    {coord.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span style={S.strongText}>{coord.name}</span>
+                                    <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                      {coord.department || 'CSE'} • {coord.year || '3rd Year'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={S.td}>
+                                <div style={{ fontSize: '0.85rem' }}>
+                                  <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <FaPhoneAlt size={11} color="#2563eb" />
+                                    <a href={`tel:${coord.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                      {coord.phone}
+                                    </a>
+                                  </div>
+                                  {coord.whatsapp && (
+                                    <div style={{ color: '#10b981', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', fontWeight: '600' }}>
+                                      <FaWhatsapp size={11} />
+                                      <a href={`https://wa.me/${coord.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                        WhatsApp: {coord.whatsapp}
+                                      </a>
+                                    </div>
+                                  )}
+                                  {coord.email && (
+                                    <div style={{ color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                      <FaEnvelope size={10} /> {coord.email}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={S.td}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '0.25rem 0.65rem',
+                                  borderRadius: '999px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '800',
+                                  background: roleBg,
+                                  color: roleColor,
+                                  border: '1px solid rgba(0,0,0,0.05)'
+                                }}>
+                                  {isLead && <FaCrown size={10} />}
+                                  {isSub && <FaShieldAlt size={10} />}
+                                  {!isLead && !isSub && <FaBolt size={10} />}
+                                  {coord.role || 'Coordinator'}
+                                </span>
+                              </td>
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '300px' }}>
+                                  {Array.isArray(coord.assignedEvents) && coord.assignedEvents.map(eventId => {
+                                    const ev = eventsList.find(e => e.id.toLowerCase() === eventId.toLowerCase());
+                                    return (
+                                      <span key={eventId} style={{
+                                        background: ev?.category === 'technical' ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#831843' : '#fdf2f8'),
+                                        color: ev?.category === 'technical' ? (isDark ? '#bfdbfe' : '#1d4ed8') : (isDark ? '#fbcfe8' : '#be185d'),
+                                        border: '1px solid ' + (ev?.category === 'technical' ? (isDark ? '#1e40af' : '#bfdbfe') : (isDark ? '#9d174d' : '#fbcfe8')),
+                                        padding: '0.15rem 0.5rem',
+                                        borderRadius: '6px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: '600'
+                                      }}>
+                                        {ev ? ev.name : eventId}
+                                      </span>
+                                    );
+                                  })}
+                                  {(!coord.assignedEvents || coord.assignedEvents.length === 0) && (
+                                    <span style={{ color: '#ef4444', fontSize: '0.78rem', fontStyle: 'italic' }}>No event assigned</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={S.td}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  fontSize: '0.82rem',
+                                  fontWeight: '700',
+                                  color: coord.isActive !== false ? '#10b981' : '#dc2626'
+                                }}>
+                                  <span style={{
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: coord.isActive !== false ? '#10b981' : '#ef4444'
+                                  }}></span>
+                                  {coord.isActive !== false ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                              <td style={{ ...S.td, textAlign: isLeadCoordinator ? 'center' : 'right', whiteSpace: 'nowrap' }}>
+                                {isLeadCoordinator ? (
+                                  <button 
+                                    onClick={() => handleOpenEditCoordForm(coord)} 
+                                    style={S.actionBtnView} 
+                                    title="View Coordinator Details"
+                                  >
+                                    <FaInfoCircle style={{ marginRight: '4px' }} /> Details
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button 
+                                      onClick={() => handleToggleCoord(coord)} 
+                                      style={{ 
+                                        background: coord.isActive !== false ? (isDark ? '#064e3b' : '#ecfdf5') : (isDark ? '#451a1a' : '#fef2f2'),
+                                        border: '1px solid ' + (coord.isActive !== false ? (isDark ? '#047857' : '#a7f3d0') : (isDark ? '#991b1b' : '#fecaca')),
+                                        color: coord.isActive !== false ? '#10b981' : '#dc2626',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        padding: '0.45rem 0.65rem',
+                                        borderRadius: '6px',
+                                        marginRight: '0.5rem'
+                                      }}
+                                      title={coord.isActive !== false ? 'Deactivate Coordinator' : 'Activate Coordinator'}
+                                    >
+                                      {coord.isActive !== false ? <FaToggleOn size={16} /> : <FaToggleOff size={16} />}
+                                    </button>
+                                    <button onClick={() => handleOpenEditCoordForm(coord)} style={S.actionBtnEdit} title="Edit Coordinator">
+                                      <FaEdit />
+                                    </button>
+                                    <button onClick={() => handleDeleteCoord(coord.id, coord.name)} style={S.actionBtnDelete} title="Delete Coordinator">
+                                      <FaTrash />
+                                    </button>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {!filteredCoordinators.length && (
+                          <tr><td colSpan={6} style={S.emptyState}>No coordinators or sub-coordinators found.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -7266,13 +7689,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div>
                   <h3 style={S.modalTitle}>
                     {isLeadCoordinator 
-                      ? `Coordinator Details: ${coordName || 'Student Coordinator'}` 
-                      : (editingCoordId ? 'Edit Student Coordinator' : 'Add Student Coordinator')}
+                      ? `Member Details: ${coordName || 'Event Member'}` 
+                      : (editingCoordId ? 'Edit Event Coordinator / Sub-Coordinator' : 'Add Event Coordinator / Sub-Coordinator')}
                   </h3>
                   <p style={S.modalSubtitle}>
                     {isLeadCoordinator 
-                      ? 'View student coordinator assignment, contact info, and role' 
-                      : 'Assign lead student coordinators to one or multiple symposium events'}
+                      ? 'View coordinator/sub-coordinator assignment, contact phone, and allocated event' 
+                      : 'Allocate Lead Coordinators, Coordinators, and Sub-Coordinators with phone numbers to symposium events'}
                   </p>
                 </div>
               </div>
@@ -7377,11 +7800,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       disabled={isLeadCoordinator}
                       required
                     >
-                      <option value="Lead Coordinator">Lead Coordinator</option>
-                      <option value="Sub Coordinator">Sub Coordinator</option>
-                      <option value="Student Coordinator">Student Coordinator</option>
-                      <option value="Faculty Coordinator">Faculty Coordinator</option>
-                      <option value="Coordinator">Event Coordinator</option>
+                      <option value="Lead Coordinator">👑 Lead Coordinator</option>
+                      <option value="Coordinator">⚡ Coordinator</option>
+                      <option value="Sub-Coordinator">🛡️ Sub-Coordinator</option>
                     </select>
                   </div>
                 </div>

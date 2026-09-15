@@ -21,7 +21,11 @@
     "id": 1788800000000,
     "username": "lead_coordinator",
     "password": "leadcoordinator",
-    "role": "lead coordinator"
+    "role": "lead coordinator",
+    "assignedEvents": [
+      "tech-06"
+    ],
+    "eventId": "tech-06"
   },
   {
     "id": 1788929069120,
@@ -58,5 +62,23 @@
       "nontech-02"
     ],
     "eventId": "nontech-02"
+  },
+  {
+    "id": 1788337851969,
+    "username": "shahid_reg",
+    "password": "coordinator123",
+    "role": "Event Coordinator",
+    "assignedEvents": [],
+    "eventId": null
+  },
+  {
+    "id": 1789211005481,
+    "username": "shahid_event1",
+    "password": "coordinator123",
+    "role": "Event Coordinator",
+    "assignedEvents": [
+      "tech-06"
+    ],
+    "eventId": "tech-06"
   }
 ]
