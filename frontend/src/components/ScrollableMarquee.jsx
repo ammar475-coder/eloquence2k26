@@ -147,11 +147,23 @@ export default function ScrollableMarquee({
     };
 
     // Wheel listener: support horizontal trackpad scroll or Shift+Wheel
+    // Momentum animation reference
+    let momentumRafId = null;
+
+    const stopMomentum = () => {
+      if (momentumRafId) {
+        cancelAnimationFrame(momentumRafId);
+        momentumRafId = null;
+      }
+    };
+
+    // Wheel listener: support horizontal trackpad scroll or Shift+Wheel
     const handleWheel = (e) => {
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey) {
         const delta = e.shiftKey ? e.deltaY : e.deltaX;
         if (Math.abs(delta) > 0) {
           e.preventDefault();
+          stopMomentum();
           container.scrollLeft += delta;
           handleScroll();
           isUserInteracting = true;
@@ -163,16 +175,164 @@ export default function ScrollableMarquee({
       }
     };
 
-    // Touch listeners
-    const handleTouchStart = () => {
+    // Touch gesture implementation for phones and mobile devices
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastTouchX = 0;
+    let lastTouchTime = 0;
+    let touchStartScroll = 0;
+    let touchVelocity = 0;
+    let dragAxis = null; // 'x' for horizontal swipe, 'y' for vertical page scroll, or null
+    let isTouchActive = false;
+
+    const handleTouchStart = (e) => {
+      if (!e.touches || e.touches.length !== 1) return;
+      stopMomentum();
+      isTouchActive = true;
       isUserInteracting = true;
       clearTimeout(interactionTimer);
+
+      const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      lastTouchX = touch.clientX;
+      lastTouchTime = performance.now();
+      touchStartScroll = container.scrollLeft;
+      touchVelocity = 0;
+      dragAxis = null;
     };
-    const handleTouchEnd = () => {
+
+    const handleTouchMove = (e) => {
+      if (!isTouchActive || !e.touches || e.touches.length !== 1) return;
+
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+
+      // Lock in gesture intent once finger moves beyond threshold
+      if (dragAxis === null) {
+        if (absDx > 6 || absDy > 6) {
+          if (absDx > absDy) {
+            dragAxis = 'x';
+            setIsDragging(true);
+          } else {
+            dragAxis = 'y';
+          }
+        }
+      }
+
+      // If user is scrolling vertically down the page, let the browser handle it naturally
+      if (dragAxis === 'y') {
+        return;
+      }
+
+      // If user is swiping horizontally across the cards, take control
+      if (dragAxis === 'x') {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+
+        const now = performance.now();
+        const dt = now - lastTouchTime;
+        if (dt > 0) {
+          touchVelocity = (touch.clientX - lastTouchX) / dt;
+          lastTouchX = touch.clientX;
+          lastTouchTime = now;
+        }
+
+        let targetScroll = touchStartScroll - dx;
+
+        // Seamless wrap while dragging
+        if (setWidth > 0) {
+          if (targetScroll >= endOffset) {
+            targetScroll -= setWidth;
+            touchStartScroll -= setWidth;
+          } else if (targetScroll < startOffset) {
+            targetScroll += setWidth;
+            touchStartScroll += setWidth;
+          }
+        }
+
+        container.scrollLeft = targetScroll;
+        currentScroll = targetScroll;
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (!isTouchActive) return;
+      isTouchActive = false;
+      const wasHorizontalDrag = dragAxis === 'x';
+      setIsDragging(false);
+
+      if (wasHorizontalDrag) {
+        // Suppress accidental click/flip triggers if user swiped
+        const captureClick = (clickEvent) => {
+          clickEvent.stopPropagation();
+          clickEvent.preventDefault();
+          window.removeEventListener('click', captureClick, true);
+        };
+        window.addEventListener('click', captureClick, true);
+        setTimeout(() => {
+          window.removeEventListener('click', captureClick, true);
+        }, 120);
+
+        // Apply smooth momentum glide if user flicked with velocity
+        if (Math.abs(touchVelocity) > 0.12) {
+          let velocity = touchVelocity * 1000; // convert to px/s
+          velocity = Math.max(Math.min(velocity, 2400), -2400);
+
+          let lastMomentumTime = performance.now();
+          const stepMomentum = (now) => {
+            const dt = Math.min((now - lastMomentumTime) / 1000, 0.05);
+            lastMomentumTime = now;
+
+            // Exponential friction deceleration
+            velocity *= Math.pow(0.91, dt * 60);
+
+            if (Math.abs(velocity) > 18 && isUserInteracting) {
+              currentScroll -= velocity * dt;
+
+              if (setWidth > 0) {
+                if (currentScroll >= endOffset) {
+                  currentScroll -= setWidth;
+                } else if (currentScroll < startOffset) {
+                  currentScroll += setWidth;
+                }
+              }
+
+              container.scrollLeft = currentScroll;
+              momentumRafId = requestAnimationFrame(stepMomentum);
+            } else {
+              // Momentum finished; wait a comfortable reading buffer before resuming auto-scroll
+              interactionTimer = setTimeout(() => {
+                isUserInteracting = false;
+              }, 1800);
+            }
+          };
+
+          momentumRafId = requestAnimationFrame(stepMomentum);
+          dragAxis = null;
+          return;
+        }
+      }
+
+      dragAxis = null;
       clearTimeout(interactionTimer);
       interactionTimer = setTimeout(() => {
         isUserInteracting = false;
-      }, 1500);
+      }, wasHorizontalDrag ? 1800 : 1200);
+    };
+
+    const handleTouchCancel = () => {
+      isTouchActive = false;
+      dragAxis = null;
+      setIsDragging(false);
+      clearTimeout(interactionTimer);
+      interactionTimer = setTimeout(() => {
+        isUserInteracting = false;
+      }, 1000);
     };
 
     // Mouse drag-to-scroll implementation
@@ -183,6 +343,7 @@ export default function ScrollableMarquee({
 
     const handleMouseDown = (e) => {
       if (e.button !== 0) return; // Left mouse button only
+      stopMomentum();
       isMouseDown = true;
       setIsDragging(true);
       startX = e.pageX;
@@ -246,7 +407,9 @@ export default function ScrollableMarquee({
     container.addEventListener('scroll', handleScroll, { passive: true });
     container.addEventListener('wheel', handleWheel, { passive: false });
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
     container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
     container.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -254,6 +417,7 @@ export default function ScrollableMarquee({
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
+      stopMomentum();
       clearTimeout(interactionTimer);
       observer.disconnect();
       if (resizeObserver) resizeObserver.disconnect();
@@ -263,7 +427,9 @@ export default function ScrollableMarquee({
       container.removeEventListener('scroll', handleScroll);
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchCancel);
       container.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
