@@ -145,9 +145,11 @@ export const EVENT_STICKERS = {
  */
 export function getEventSticker(eventOrId) {
   if (!eventOrId) return null;
-  const id = typeof eventOrId === 'object' ? eventOrId.id : eventOrId;
-  const name = typeof eventOrId === 'object' ? (eventOrId.name || '').toUpperCase() : '';
-  const alias = typeof eventOrId === 'object' ? (eventOrId.alias || '').toUpperCase() : '';
+  const isObj = typeof eventOrId === 'object';
+  const id = isObj ? (eventOrId.id || eventOrId.eventId || eventOrId.event_id) : eventOrId;
+  const rawStr = isObj ? '' : String(eventOrId).toUpperCase();
+  const name = isObj ? ((eventOrId.name || eventOrId.eventName || '').toUpperCase()) : rawStr;
+  const alias = isObj ? ((eventOrId.alias || '').toUpperCase()) : rawStr;
 
   // 1. Direct ID match
   if (id && EVENT_STICKERS[id]) {
@@ -155,34 +157,34 @@ export function getEventSticker(eventOrId) {
   }
 
   // 2. Name / Alias fallback matches
-  if (name.includes('PPT') || alias.includes('SLIDE CRAFT') || name.includes('PRESENTATION')) {
+  if (name.includes('PPT') || alias.includes('SLIDE CRAFT') || name.includes('SLIDE') || name.includes('PRESENTATION')) {
     return EVENT_STICKERS['tech-01'];
   }
   if (name.includes('CRACK') || name.includes('CODE') || alias.includes('CRACK') || alias.includes('CODE') || alias.includes('DEBUG')) {
     return EVENT_STICKERS['tech-02'];
   }
-  if (name.includes('TECH QUIZ') || alias.includes('TECH QUIZ') || alias.includes('TECH BATTLE') || name.includes('QUIZ')) {
+  if (name.includes('TECH QUIZ') || alias.includes('TECH QUIZ') || alias.includes('TECH BATTLE') || name.includes('QUIZ') || name.includes('BATTLE')) {
     return EVENT_STICKERS['tech-03'];
   }
   if (name.includes('WEB') || name.includes('PROMPT') || alias.includes('PROMPT') || alias.includes('WEB')) {
     return EVENT_STICKERS['tech-04'];
   }
-  if (name.includes('UI/UX') || alias.includes('UI/UX') || name.includes('UI') || alias.includes('DESIGN')) {
+  if (name.includes('UI/UX') || alias.includes('UI/UX') || name.includes('UI') || alias.includes('DESIGN') || name.includes('PROTOTYPE')) {
     return EVENT_STICKERS['tech-06'];
   }
-  if (name.includes('SNAP') || alias.includes('SNAP') || name.includes('REEL') || alias.includes('REEL')) {
+  if (name.includes('SNAP') || alias.includes('SNAP') || name.includes('REEL') || alias.includes('REEL') || name.includes('MEDIA')) {
     return EVENT_STICKERS['nontech-01'];
   }
-  if (name.includes('LINK UP') || alias.includes('LINK UP') || name.includes('CONNECTION') || alias.includes('CONNECTION')) {
+  if (name.includes('LINK UP') || alias.includes('LINK UP') || name.includes('CONNECTION') || alias.includes('CONNECTION') || name.includes('LINK')) {
     return EVENT_STICKERS['nontech-02'];
   }
-  if (name.includes('HUNT ZONE') || alias.includes('HUNT ZONE') || name.includes('TREASURE HUNT') || alias.includes('TREASURE')) {
+  if (name.includes('HUNT ZONE') || alias.includes('HUNT ZONE') || name.includes('TREASURE HUNT') || alias.includes('TREASURE') || name.includes('HUNT')) {
     return EVENT_STICKERS['nontech-03'];
   }
   if (name.includes('HENNA') || name.includes('MEHANDI') || alias.includes('HENNA') || alias.includes('MEHANDI') || name.includes('HEIST')) {
     return EVENT_STICKERS['nontech-04'];
   }
-  if (name.includes('BATTLE OF CHAMPIONS') || name.includes('ESPORTS') || name.includes('GAMING') || alias.includes('BATTLE OF CHAMPIONS') || alias.includes('ESPORTS')) {
+  if (name.includes('BATTLE OF CHAMPIONS') || name.includes('ESPORTS') || name.includes('E-SPORTS') || name.includes('GAMING') || alias.includes('BATTLE OF CHAMPIONS') || alias.includes('ESPORTS')) {
     return EVENT_STICKERS['nontech-05'];
   }
   if (name.includes('64 SQUARES') || name.includes('CHESS') || alias.includes('CHESS') || alias.includes('64 SQUARES')) {

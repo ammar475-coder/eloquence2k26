@@ -3853,7 +3853,6 @@ img {
 
 .marquee-scroll-container.is-dragging * {
   cursor: grabbing !important;
-  pointer-events: none !important;
 }
 
 .marquee-scroll-container * {
@@ -5002,6 +5001,10 @@ img {
   cursor: pointer;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.35s ease;
   transform-origin: center center;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
 }
 
 /* Tiered card sizes — Elite > Premium > Standard */
@@ -5099,6 +5102,7 @@ img {
   height: 100%;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 /* ONLY flip when .sponsor-flipped is active (clicked by user!) */
@@ -5114,6 +5118,7 @@ img {
 .sponsor-face {
   position: absolute;
   inset: 0;
+  -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   border: 1.5px solid rgba(57, 255, 136, 0.2);
   background: linear-gradient(160deg, rgba(8, 22, 14, 0.96) 0%, rgba(4, 14, 9, 0.98) 100%);
@@ -5131,6 +5136,15 @@ img {
   justify-content: space-between;
   position: absolute;
   inset: 0;
+  transform: rotateY(0deg);
+  -webkit-transform: rotateY(0deg);
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.sponsor-card-inner.sponsor-flipped .sponsor-front {
+  z-index: 1;
+  pointer-events: none;
 }
 
 /* Floating Corner Tag */
@@ -5380,17 +5394,28 @@ img {
 
 .sponsor-flip-hint {
   font-family: var(--font-display);
-  font-size: 0.56rem;
+  font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: rgba(57, 255, 136, 0.8);
+  color: rgba(57, 255, 136, 0.88);
   text-transform: uppercase;
-  margin: 0;
-  display: flex;
+  margin: 0.2rem 0 0;
+  display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.18rem 0.35rem;
-  border-radius: 4px;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(57, 255, 136, 0.1);
+  border: 1px solid rgba(57, 255, 136, 0.28);
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.sponsor-card:hover .sponsor-flip-hint {
+  background: rgba(57, 255, 136, 0.22);
+  color: #FFFFFF;
+  border-color: rgba(57, 255, 136, 0.55);
+  box-shadow: 0 0 10px rgba(57, 255, 136, 0.35);
 }
 
 .sponsor-flip-back-hint {
@@ -5417,6 +5442,9 @@ img {
 /* Back Face */
 .sponsor-back {
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   border-color: rgba(57, 255, 136, 0.35);
   background: linear-gradient(160deg, rgba(8, 22, 14, 0.98) 0%, rgba(4, 14, 9, 0.97) 100%);
   padding: 1.15rem 1.15rem 1rem;
@@ -5427,6 +5455,13 @@ img {
   overflow: hidden;
   box-sizing: border-box;
   border-radius: 14px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.sponsor-card-inner.sponsor-flipped .sponsor-back {
+  z-index: 2;
+  pointer-events: auto;
 }
 
 .sponsor-back-header {
@@ -9406,6 +9441,61 @@ img {
   justify-content: center;
   margin: 0 auto 1.25rem;
   box-shadow: 0 0 25px rgba(57, 255, 136, 0.6);
+}
+
+.success-character-badge {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.success-character-img {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.85));
+  transform: scale(var(--sticker-scale, 1));
+  transform-origin: var(--sticker-origin, center center);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+  user-select: none;
+  animation: successCharacterFloat 3.5s ease-in-out infinite alternate;
+  cursor: pointer;
+}
+
+.success-character-badge:hover .success-character-img {
+  transform: scale(calc(var(--sticker-scale, 1) * 1.08)) translateY(-3px);
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(57, 255, 136, 0.4));
+}
+
+@keyframes successCharacterFloat {
+  0% {
+    transform: translateY(0px) scale(var(--sticker-scale, 1));
+  }
+  100% {
+    transform: translateY(-5px) scale(calc(var(--sticker-scale, 1) * 1.03));
+  }
+}
+
+@media (max-width: 640px) {
+  .success-character-badge {
+    width: 105px;
+    height: 105px;
+    margin-bottom: 1rem;
+  }
+  .success-character-img {
+    max-width: 105px;
+    max-height: 105px;
+  }
 }
 
 .success-pre-title {
