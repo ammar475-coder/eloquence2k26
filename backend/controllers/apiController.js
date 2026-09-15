@@ -1017,6 +1017,7 @@ exports.getActiveCoordinators = async (req, res) => {
 exports.getCoordinatorsByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { role } = req.query;
     if (!eventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
@@ -1029,9 +1030,17 @@ exports.getCoordinatorsByEvent = async (req, res) => {
         .order('display_order', { ascending: true });
 
       if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-        const matching = dbCoords
+        let matching = dbCoords
           .map(dbToCoordinator)
           .filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase()));
+
+        if (role) {
+          const rLower = role.toLowerCase().trim();
+          matching = matching.filter(c => {
+            const cRole = String(c.role || '').toLowerCase();
+            return cRole.includes(rLower);
+          });
+        }
 
         return res.json({
           success: true,
@@ -1045,11 +1054,19 @@ exports.getCoordinatorsByEvent = async (req, res) => {
     }
 
     const coordinators = readCoordinators();
-    const matching = coordinators.filter(c => 
+    let matching = coordinators.filter(c => 
       c.isActive !== false && 
       Array.isArray(c.assignedEvents) && 
       c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase())
     );
+
+    if (role) {
+      const rLower = role.toLowerCase().trim();
+      matching = matching.filter(c => {
+        const cRole = String(c.role || '').toLowerCase();
+        return cRole.includes(rLower);
+      });
+    }
 
     matching.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
 

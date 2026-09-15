@@ -67,8 +67,14 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
   const isTech = event.category === 'technical';
   const rules = Array.isArray(event.rules) ? event.rules : [];
   const rounds = Array.isArray(event.rounds) ? event.rounds : [];
-  const highlights = Array.isArray(event.highlights) ? event.highlights : [];
   const isEsports = event.id === 'nontech-05';
+
+  // Only show Lead Coordinators publicly on Event Rules Modal
+  const leadCoordinators = coordinators.filter((c) => {
+    const roleStr = String(c.role || '').toLowerCase().trim();
+    if (!roleStr) return true;
+    return roleStr.includes('lead');
+  });
 
   const handleRegisterClick = () => {
     onClose();
@@ -258,17 +264,17 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
                 </div>
               )}
 
-              {/* Coordinators Contact Section */}
-              {coordinators.length > 0 && (
+              {/* Coordinators Contact Section - Lead Coordinators Only */}
+              {leadCoordinators.length > 0 && (
                 <div className="rules-modal-section">
                   <div className="rules-section-title">
-                    <FaHeadset className="rules-sec-icon" /> STUDENT COORDINATORS
+                    <FaHeadset className="rules-sec-icon" /> LEAD COORDINATORS & CONTACT
                   </div>
                   <div className="rules-coords-chips">
-                    {coordinators.map((c, i) => (
+                    {leadCoordinators.map((c, i) => (
                       <div key={i} className="rules-coord-card">
                         <div className="coord-info">
-                          <span className="coord-role-badge">{c.role || `Coordinator ${i + 1}`}</span>
+                          <span className="coord-role-badge">{c.role || 'Lead Coordinator'}</span>
                           <strong className="coord-name-text">{c.name}</strong>
                         </div>
                         <a
