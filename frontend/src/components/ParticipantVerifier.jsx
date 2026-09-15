@@ -248,7 +248,20 @@ export default function ParticipantVerifier({
       const currentCode = getTicketCode(selectedParticipant);
       const updated = registrations.find(r => getTicketCode(r) === currentCode || (r.id && r.id === selectedParticipant.id));
       if (updated) {
-        setSelectedParticipant(updated);
+        // Prevent regression if currently marked verified locally
+        if (isVerifiedRecord(selectedParticipant) && !isVerifiedRecord(updated)) {
+          setSelectedParticipant(prev => ({
+            ...updated,
+            is_verified: true,
+            isVerified: true,
+            attendance_status: 'verified',
+            attendanceStatus: 'verified',
+            verified_at: prev?.verified_at || prev?.verifiedAt || new Date().toISOString(),
+            verified_by: prev?.verified_by || prev?.verifiedBy || 'Coordinator'
+          }));
+        } else {
+          setSelectedParticipant(updated);
+        }
       }
     }
   }, [registrations]);
@@ -477,10 +490,28 @@ export default function ParticipantVerifier({
   const handleToggleVerification = async (participant, desiredStatus = true) => {
     if (!participant) return;
     const participantId = participant.id || getTicketCode(participant);
+    const code = getTicketCode(participant);
     setIsVerifying(true);
 
+    const verifiedAt = desiredStatus ? new Date().toISOString() : null;
+    const verifiedBy = desiredStatus ? (user?.username || user?.role || 'Coordinator') : null;
+
+    // 1. Optimistic Update immediately so the badge flips to VERIFIED without any lag
+    const updatedObj = {
+      ...participant,
+      is_verified: desiredStatus,
+      isVerified: desiredStatus,
+      attendance_status: desiredStatus ? 'verified' : 'pending',
+      attendanceStatus: desiredStatus ? 'verified' : 'pending',
+      verified_at: verifiedAt,
+      verifiedAt: verifiedAt,
+      verified_by: verifiedBy,
+      verifiedBy: verifiedBy
+    };
+    setSelectedParticipant(updatedObj);
+
     try {
-      const res = await fetch(getApiUrl(`/api/admin/registrations/${participantId}/verify`), {
+      const res = await fetch(getApiUrl(`/api/admin/registrations/${encodeURIComponent(participantId)}/verify`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -497,31 +528,22 @@ export default function ParticipantVerifier({
           desiredStatus 
             ? `🎉 ${getParticipantName(participant)} verified & admitted!`
             : `Verification reset for ${getParticipantName(participant)}`,
-          { duration: 4000 }
+          { id: `verify-status-${code}`, duration: 4000 }
         );
 
-        // Update local object immediately
-        const updatedObj = {
-          ...participant,
-          is_verified: desiredStatus,
-          isVerified: desiredStatus,
-          verified_at: desiredStatus ? new Date().toISOString() : null,
-          verifiedAt: desiredStatus ? new Date().toISOString() : null,
-          verified_by: desiredStatus ? (user?.username || user?.role || 'Coordinator') : null,
-          verifiedBy: desiredStatus ? (user?.username || user?.role || 'Coordinator') : null
-        };
-        setSelectedParticipant(updatedObj);
+        const finalRecord = data.data ? { ...updatedObj, ...data.data } : updatedObj;
+        setSelectedParticipant(finalRecord);
 
         // Trigger global dashboard refresh if provided
         if (typeof onRefreshRegistrations === 'function') {
           onRefreshRegistrations();
         }
       } else {
-        toast.error(data.message || 'Failed to update verification status');
+        toast.error(data.message || 'Failed to update verification status', { id: `verify-err-${code}` });
       }
     } catch (err) {
       console.error('Verification request error:', err);
-      toast.error('Server error updating verification');
+      toast.error('Server error updating verification', { id: `verify-err-${code}` });
     } finally {
       setIsVerifying(false);
     }
