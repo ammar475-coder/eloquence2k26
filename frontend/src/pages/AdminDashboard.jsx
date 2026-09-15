@@ -1180,6 +1180,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     fetchRegistrations();
     fetchRegistrationSettings();
     fetchAllocations();
+    fetchDispatches();
   }, [token]);
 
   // Handle ESC key to close modal overlays
@@ -3816,9 +3817,27 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               borderRadius: '999px',
                               fontSize: '0.75rem',
                               fontWeight: '700',
-                              background: coord.role === 'Lead Coordinator' ? (isDark ? '#1e3a8a' : '#dbeafe') : (isDark ? '#064e3b' : '#f0fdf4'),
-                              color: coord.role === 'Lead Coordinator' ? (isDark ? '#bfdbfe' : '#1e40af') : (isDark ? '#a7f3d0' : '#166534'),
-                              border: '1px solid rgba(0,0,0,0.05)'
+                              background: coord.role === 'Lead Coordinator'
+                                ? (isDark ? 'rgba(245, 158, 11, 0.18)' : '#fef3c7')
+                                : (coord.role === 'Sub Coordinator'
+                                    ? (isDark ? 'rgba(6, 182, 212, 0.18)' : '#cffafe')
+                                    : (coord.role === 'Faculty Coordinator'
+                                        ? (isDark ? 'rgba(168, 85, 247, 0.18)' : '#f3e8ff')
+                                        : (isDark ? 'rgba(16, 185, 129, 0.18)' : '#d1fae5'))),
+                              color: coord.role === 'Lead Coordinator'
+                                ? '#f59e0b'
+                                : (coord.role === 'Sub Coordinator'
+                                    ? '#06b6d4'
+                                    : (coord.role === 'Faculty Coordinator'
+                                        ? '#a855f7'
+                                        : '#10b981')),
+                              border: '1px solid ' + (coord.role === 'Lead Coordinator'
+                                ? 'rgba(245, 158, 11, 0.35)'
+                                : (coord.role === 'Sub Coordinator'
+                                    ? 'rgba(6, 182, 212, 0.35)'
+                                    : (coord.role === 'Faculty Coordinator'
+                                        ? 'rgba(168, 85, 247, 0.35)'
+                                        : 'rgba(16, 185, 129, 0.35)')))
                             }}>
                               {coord.role || 'Coordinator'}
                             </span>
@@ -7359,7 +7378,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       required
                     >
                       <option value="Lead Coordinator">Lead Coordinator</option>
-                      <option value="Coordinator">Coordinator</option>
+                      <option value="Sub Coordinator">Sub Coordinator</option>
+                      <option value="Student Coordinator">Student Coordinator</option>
+                      <option value="Faculty Coordinator">Faculty Coordinator</option>
+                      <option value="Coordinator">Event Coordinator</option>
                     </select>
                   </div>
                 </div>
