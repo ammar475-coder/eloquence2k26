@@ -1,0 +1,6 @@
+# ELOQUENCE '26 Frontend Environment Variables
+# In local development (localhost:5173), leave empty so Vite automatically proxies API requests to http://localhost:5000:
+VITE_API_URL=
+
+# To point to production backend on Render directly, uncomment below:
+# VITE_API_URL=https://eloquence2k26.onrender.com

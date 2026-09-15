@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FaGlobe, FaMapMarkerAlt, FaPhoneAlt, FaUser } from 'react-icons/fa';
+import { FaGlobe, FaMapMarkerAlt, FaPhoneAlt, FaUser, FaExternalLinkAlt, FaRedoAlt } from 'react-icons/fa';
 import { getApiUrl } from '../config/api';
 import { getCachedSponsors, fetchSponsorsData, groupSponsorsByTier } from '../services/api.js';
 import ScrollableMarquee from '../components/ScrollableMarquee.jsx';
@@ -137,11 +137,11 @@ function SponsorCard({ sponsor, tier }) {
                   aria-label={`Website of ${sponsor.name}`}
                 >
                   <FaGlobe size={10} />
-                  <span>Website ↗</span>
+                  <span>Website <FaExternalLinkAlt size={8} style={{ marginLeft: '0.2rem' }} /></span>
                 </a>
               )}
               <span className="sponsor-flip-hint">
-                DETAILS ↻
+                DETAILS <FaRedoAlt size={9} style={{ marginLeft: '0.25rem' }} />
               </span>
             </div>
           </div>
@@ -195,7 +195,7 @@ function SponsorCard({ sponsor, tier }) {
                     onClick={(e) => e.stopPropagation()}
                     title={`Visit ${sponsor.name} official website (${websiteLink})`}
                   >
-                    {websiteDisplay} ↗
+                    {websiteDisplay} <FaExternalLinkAlt size={9} style={{ marginLeft: '0.2rem' }} />
                   </a>
                 </div>
               )}
@@ -212,7 +212,7 @@ function SponsorCard({ sponsor, tier }) {
                     onClick={(e) => e.stopPropagation()}
                     title={`Open ${sponsor.name} in Google Maps`}
                   >
-                    View on Map ↗
+                    View on Map <FaExternalLinkAlt size={9} style={{ marginLeft: '0.2rem' }} />
                   </a>
                 </div>
               )}
@@ -244,7 +244,7 @@ function SponsorCard({ sponsor, tier }) {
                   aria-label={`Website of ${sponsor.name}`}
                 >
                   <FaGlobe size={12} />
-                  <span>Website ↗</span>
+                  <span>Website <FaExternalLinkAlt size={8} style={{ marginLeft: '0.2rem' }} /></span>
                 </a>
               )}
               {locationLink && (
@@ -258,7 +258,7 @@ function SponsorCard({ sponsor, tier }) {
                   aria-label={`Location of ${sponsor.name}`}
                 >
                   <FaMapMarkerAlt size={12} />
-                  <span>Map ↗</span>
+                  <span>Map <FaExternalLinkAlt size={8} style={{ marginLeft: '0.2rem' }} /></span>
                 </a>
               )}
             </div>
@@ -273,7 +273,7 @@ function SponsorCard({ sponsor, tier }) {
             }}
             title="Return to front view"
           >
-            CLICK TO FLIP BACK ↻
+            CLICK TO FLIP BACK <FaRedoAlt size={9} style={{ marginLeft: '0.25rem' }} />
           </button>
         </div>
       </div>

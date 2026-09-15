@@ -1,4 +1,4 @@
-import professorXSticker from '../assets/sticker_ppt_professorx.png';
+import doctorStrangeSticker from '../assets/sticker_ppt_doctorstrange.png';
 import beastSticker from '../assets/sticker_crackcode_beast.png';
 import blackPantherSticker from '../assets/sticker_techquiz_blackpanther.png';
 import mrFantasticSticker from '../assets/sticker_webprompt_mrfantastic.png';
@@ -18,13 +18,13 @@ import doctorDoomSticker from '../assets/sticker_bidding_doctordoom.png';
  */
 
 export const EVENT_STICKERS = {
-  // 1. PPT PRESENTATION : Professor X
+  // 1. PPT PRESENTATION : Doctor Strange
   'tech-01': {
-    character: 'Professor X',
-    src: professorXSticker,
-    alt: 'Professor X Mascot Sticker',
-    title: 'Professor X — PPT Presentation',
-    scale: 1.06,
+    character: 'Doctor Strange',
+    src: doctorStrangeSticker,
+    alt: 'Doctor Strange Mascot Sticker',
+    title: 'Doctor Strange — PPT Presentation',
+    scale: 1.08,
     cropPosition: 'center'
   },
 

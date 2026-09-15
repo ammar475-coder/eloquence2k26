@@ -1,13 +1,7 @@
 [
   {
     "id": 1,
-    "username": "admin",
-    "password": "eloquenceadmin",
-    "role": "superadmin"
-  },
-  {
-    "id": 1788444045593,
-    "username": "shahid",
+    "username": "admin_Faazil",
     "password": "eloquenceadmin",
     "role": "superadmin"
   },
@@ -28,12 +22,6 @@
     "eventId": "tech-06"
   },
   {
-    "id": 1788929069120,
-    "username": "Faazil",
-    "password": "admin",
-    "role": "web-coordinator"
-  },
-  {
     "id": 1789212394030,
     "username": "Mohammed Saad ",
     "password": "coordinator123",
@@ -46,16 +34,6 @@
   {
     "id": 1789207567321,
     "username": "shahid_event",
-    "password": "coordinator123",
-    "role": "Event Coordinator",
-    "assignedEvents": [
-      "nontech-02"
-    ],
-    "eventId": "nontech-02"
-  },
-  {
-    "id": 1789109931245,
-    "username": "Musthafa",
     "password": "coordinator123",
     "role": "Event Coordinator",
     "assignedEvents": [
@@ -80,5 +58,11 @@
       "tech-06"
     ],
     "eventId": "tech-06"
+  },
+  {
+    "id": 1789462542706,
+    "username": "shahid_cert",
+    "password": "admin",
+    "role": "certification team"
   }
 ]

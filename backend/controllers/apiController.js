@@ -254,7 +254,8 @@ exports.getRegistrationStatus = (req, res) => {
       success: true,
       data: settings,
       isRegistrationClosed: Boolean(settings.isRegistrationClosed),
-      closedReason: settings.closedReason || 'Registrations for ELOQUENCE 2026 are officially closed. Thank you for your overwhelming interest!',
+      closedReason: settings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+      onSpotNotice: settings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
       closedAt: settings.closedAt || null
     });
   } catch (err) {
@@ -743,6 +744,15 @@ const enrichRegistrationRecord = (r) => {
   copy.registrationStatus = (copy.registration_status || copy.registrationStatus || 'ACTIVE').toUpperCase();
   copy.paymentMethod = copy.payment_method || copy.paymentMethod || 'ONLINE';
 
+  copy.is_verified = Boolean(copy.is_verified || copy.isVerified || copy.attendance_status === 'verified' || copy.attendanceStatus === 'verified');
+  copy.isVerified = copy.is_verified;
+  copy.attendance_status = copy.is_verified ? 'verified' : (copy.attendance_status || copy.attendanceStatus || 'pending');
+  copy.attendanceStatus = copy.attendance_status;
+  copy.verified_at = copy.verified_at || copy.verifiedAt || null;
+  copy.verifiedAt = copy.verified_at;
+  copy.verified_by = copy.verified_by || copy.verifiedBy || null;
+  copy.verifiedBy = copy.verified_by;
+
   if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(copy.venue_snapshot);
@@ -810,9 +820,21 @@ exports.getRegistrations = async (req, res) => {
 
       if (mergedMap.has(key)) {
         const existing = mergedMap.get(key);
+        const isVerifiedCombined = Boolean(existing.is_verified || existing.isVerified || loc.is_verified || loc.isVerified || existing.attendance_status === 'verified' || loc.attendance_status === 'verified');
+        const verifiedAtCombined = existing.verified_at || existing.verifiedAt || loc.verified_at || loc.verifiedAt || null;
+        const verifiedByCombined = existing.verified_by || existing.verifiedBy || loc.verified_by || loc.verifiedBy || null;
+
         mergedMap.set(key, {
           ...loc,
           ...existing,
+          is_verified: isVerifiedCombined,
+          isVerified: isVerifiedCombined,
+          attendance_status: isVerifiedCombined ? 'verified' : (existing.attendance_status || loc.attendance_status || 'pending'),
+          attendanceStatus: isVerifiedCombined ? 'verified' : (existing.attendanceStatus || loc.attendanceStatus || 'pending'),
+          verified_at: verifiedAtCombined,
+          verifiedAt: verifiedAtCombined,
+          verified_by: verifiedByCombined,
+          verifiedBy: verifiedByCombined,
           payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
           paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
           razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,
@@ -995,6 +1017,7 @@ exports.getActiveCoordinators = async (req, res) => {
 exports.getCoordinatorsByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { role } = req.query;
     if (!eventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
@@ -1007,9 +1030,17 @@ exports.getCoordinatorsByEvent = async (req, res) => {
         .order('display_order', { ascending: true });
 
       if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-        const matching = dbCoords
+        let matching = dbCoords
           .map(dbToCoordinator)
           .filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase()));
+
+        if (role) {
+          const rLower = role.toLowerCase().trim();
+          matching = matching.filter(c => {
+            const cRole = String(c.role || '').toLowerCase();
+            return cRole.includes(rLower);
+          });
+        }
 
         return res.json({
           success: true,
@@ -1023,11 +1054,19 @@ exports.getCoordinatorsByEvent = async (req, res) => {
     }
 
     const coordinators = readCoordinators();
-    const matching = coordinators.filter(c => 
+    let matching = coordinators.filter(c => 
       c.isActive !== false && 
       Array.isArray(c.assignedEvents) && 
       c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase())
     );
+
+    if (role) {
+      const rLower = role.toLowerCase().trim();
+      matching = matching.filter(c => {
+        const cRole = String(c.role || '').toLowerCase();
+        return cRole.includes(rLower);
+      });
+    }
 
     matching.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
 
@@ -1430,7 +1469,8 @@ exports.submitEventWinners = async (req, res) => {
 exports.updateEventCoordinatorDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rounds, rules, venue, time, conductorNotes } = req.body;
+    const { rounds, rules, venue, time, conductorNotes, venueImage, venue_image } = req.body;
+    const finalVenueImage = venueImage !== undefined ? venueImage : venue_image;
 
     const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
     let events = [];
@@ -1445,6 +1485,10 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       if (venue) events[idx].venue = venue;
       if (time) events[idx].time = time;
       if (conductorNotes !== undefined) events[idx].conductorNotes = conductorNotes;
+      if (finalVenueImage !== undefined) {
+        events[idx].venueImage = finalVenueImage ? finalVenueImage.trim() : '';
+        events[idx].venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+      }
       events[idx].updatedAt = new Date().toISOString();
       fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf-8');
     }
@@ -1455,15 +1499,20 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       if (rules) updateData.rules = rules;
       if (venue) updateData.venue = venue;
       if (time) updateData.time = time;
-      await supabase.from('events').update(updateData).eq('id', id);
+      if (finalVenueImage !== undefined) {
+        updateData.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+      }
+      if (Object.keys(updateData).length > 0) {
+        await supabase.from('events').update(updateData).eq('id', id);
+      }
     } catch (dbErr) {
       console.warn('Supabase update event coordinator details fallback:', dbErr.message);
     }
 
     res.json({
       success: true,
-      message: 'Event rounds and coordinator details updated successfully',
-      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time }
+      message: 'Event venue and coordinator details updated successfully',
+      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time, venueImage: finalVenueImage }
     });
   } catch (err) {
     console.error('Error updating event coordinator details:', err);

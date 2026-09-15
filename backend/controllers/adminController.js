@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
+const JWT_SECRET = process.env.JWT_SECRET || 'eloquence2k26_default_secure_jwt_secret_key';
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const rolesFilePath = path.join(__dirname, '../data/roles.json');
@@ -404,7 +405,7 @@ exports.login = async (req, res) => {
 
         const token = jwt.sign(
           { id: matchedDbUser.id, username: matchedDbUser.username, role: matchedDbUser.role, assignedEvents },
-          process.env.JWT_SECRET,
+          JWT_SECRET,
           { expiresIn: '1d' }
         );
         return res.json({ 
@@ -445,7 +446,7 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username, role: user.role, assignedEvents }, 
-      process.env.JWT_SECRET, 
+      JWT_SECRET, 
       { expiresIn: '1d' }
     );
     return res.json({ 
@@ -472,7 +473,7 @@ exports.login = async (req, res) => {
     const assignedEvents = Array.isArray(matchedCoord.assignedEvents) ? matchedCoord.assignedEvents : [];
     const token = jwt.sign(
       { id: Date.now(), username: matchedCoord.name, role: matchedCoord.role || 'Event Coordinator', assignedEvents }, 
-      process.env.JWT_SECRET, 
+      JWT_SECRET, 
       { expiresIn: '1d' }
     );
     return res.json({ 
@@ -496,7 +497,7 @@ exports.verifyToken = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // Attach user info to request
     next();
   } catch (err) {
@@ -582,9 +583,21 @@ exports.getDashboardData = async (req, res) => {
         if (!k) continue;
         if (mergedMap.has(k)) {
           const existing = mergedMap.get(k);
+          const isVerifiedCombined = Boolean(existing.is_verified || existing.isVerified || loc.is_verified || loc.isVerified || existing.attendance_status === 'verified' || loc.attendance_status === 'verified');
+          const verifiedAtCombined = existing.verified_at || existing.verifiedAt || loc.verified_at || loc.verifiedAt || null;
+          const verifiedByCombined = existing.verified_by || existing.verifiedBy || loc.verified_by || loc.verifiedBy || null;
+
           mergedMap.set(k, {
             ...loc,
             ...existing,
+            is_verified: isVerifiedCombined,
+            isVerified: isVerifiedCombined,
+            attendance_status: isVerifiedCombined ? 'verified' : (existing.attendance_status || loc.attendance_status || 'pending'),
+            attendanceStatus: isVerifiedCombined ? 'verified' : (existing.attendanceStatus || loc.attendanceStatus || 'pending'),
+            verified_at: verifiedAtCombined,
+            verifiedAt: verifiedAtCombined,
+            verified_by: verifiedByCombined,
+            verifiedBy: verifiedByCombined,
             payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
             paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
             razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,
@@ -1951,37 +1964,70 @@ exports.verifyRegistration = async (req, res) => {
   const { isVerified = true } = req.body;
   const verifiedBy = req.user?.username || req.user?.role || 'Coordinator';
   const verifiedAt = isVerified ? new Date().toISOString() : null;
+  const normId = String(id || '').trim();
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
+
+  let supabaseUpdated = null;
 
   try {
     // 1. Update in Supabase if present
     try {
-      await supabase
-        .from('registrations')
-        .update({
-          is_verified: Boolean(isVerified),
-          verified_at: verifiedAt,
-          verified_by: isVerified ? verifiedBy : null
-        })
-        .or(`id.eq.${id},ticket_code.eq.${id}`);
+      const updatePayload = {
+        is_verified: Boolean(isVerified),
+        verified_at: verifiedAt,
+        verified_by: isVerified ? verifiedBy : null,
+        attendance_status: isVerified ? 'verified' : 'pending'
+      };
+
+      if (isUUID) {
+        const { data: dbData } = await supabase
+          .from('registrations')
+          .update(updatePayload)
+          .eq('id', normId)
+          .select();
+        if (Array.isArray(dbData) && dbData.length > 0) supabaseUpdated = dbData[0];
+      } else {
+        const { data: dbData } = await supabase
+          .from('registrations')
+          .update(updatePayload)
+          .ilike('ticket_code', normId)
+          .select();
+        if (Array.isArray(dbData) && dbData.length > 0) supabaseUpdated = dbData[0];
+      }
     } catch (e) {
-      console.warn('Supabase verifyRegistration fallback:', e.message);
+      console.warn('Supabase verifyRegistration error:', e.message);
     }
 
-    // 2. Update in local file
+    // If not returned by update, attempt select
+    if (!supabaseUpdated) {
+      try {
+        const query = isUUID
+          ? supabase.from('registrations').select('*').eq('id', normId).single()
+          : supabase.from('registrations').select('*').ilike('ticket_code', normId).single();
+        const { data: singleItem } = await query;
+        if (singleItem) supabaseUpdated = singleItem;
+      } catch (e) {}
+    }
+
+    // 2. Update in local file (Case-insensitive & string safe)
     let registrations = getRegistrationsData();
     let updatedRecord = null;
+    const normLower = normId.toLowerCase();
+
     registrations = registrations.map(r => {
-      const match = (
-        r.id === id || 
-        r.registrationId === id || 
-        r.ticket_code === id ||
-        r.ticketCode === id
-      );
+      const rId = String(r.id || '').toLowerCase();
+      const rRegId = String(r.registrationId || '').toLowerCase();
+      const rTicket = String(r.ticket_code || r.ticketCode || '').toLowerCase();
+
+      const match = rId === normLower || rRegId === normLower || rTicket === normLower;
+
       if (match) {
         updatedRecord = {
           ...r,
           is_verified: Boolean(isVerified),
           isVerified: Boolean(isVerified),
+          attendance_status: isVerified ? 'verified' : 'pending',
+          attendanceStatus: isVerified ? 'verified' : 'pending',
           verified_at: verifiedAt,
           verifiedAt: verifiedAt,
           verified_by: isVerified ? verifiedBy : null,
@@ -1991,6 +2037,22 @@ exports.verifyRegistration = async (req, res) => {
       }
       return r;
     });
+
+    // If record was found in Supabase but not in local JSON, add it to local JSON
+    if (!updatedRecord && supabaseUpdated) {
+      updatedRecord = {
+        ...supabaseUpdated,
+        is_verified: Boolean(isVerified),
+        isVerified: Boolean(isVerified),
+        attendance_status: isVerified ? 'verified' : 'pending',
+        attendanceStatus: isVerified ? 'verified' : 'pending',
+        verified_at: verifiedAt,
+        verifiedAt: verifiedAt,
+        verified_by: isVerified ? verifiedBy : null,
+        verifiedBy: isVerified ? verifiedBy : null
+      };
+      registrations.push(updatedRecord);
+    }
 
     if (updatedRecord) {
       saveRegistrationsData(registrations);
@@ -2006,9 +2068,13 @@ exports.verifyRegistration = async (req, res) => {
       success: true,
       message: isVerified ? 'Participant verified and confirmed successfully!' : 'Participant verification reset',
       data: {
-        id,
+        id: normId,
+        ticket_code: normId,
+        ticketCode: normId,
         is_verified: Boolean(isVerified),
         isVerified: Boolean(isVerified),
+        attendance_status: isVerified ? 'verified' : 'pending',
+        attendanceStatus: isVerified ? 'verified' : 'pending',
         verified_at: verifiedAt,
         verified_by: isVerified ? verifiedBy : null
       }
@@ -2248,14 +2314,15 @@ exports.getAdminRegistrationStatus = async (req, res) => {
 
 exports.updateRegistrationStatus = async (req, res) => {
   try {
-    const { isRegistrationClosed, closedReason } = req.body;
+    const { isRegistrationClosed, closedReason, onSpotNotice } = req.body;
     const current = getSettingsData();
     const shouldClose = Boolean(isRegistrationClosed);
 
     const updated = {
       ...current,
       isRegistrationClosed: shouldClose,
-      closedReason: typeof closedReason === 'string' && closedReason.trim() ? closedReason.trim() : current.closedReason,
+      closedReason: typeof closedReason === 'string' && closedReason.trim() ? closedReason.trim() : (current.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED'),
+      onSpotNotice: typeof onSpotNotice === 'string' && onSpotNotice.trim() ? onSpotNotice.trim() : (current.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM'),
       closedAt: shouldClose ? (current.isRegistrationClosed ? current.closedAt : new Date().toISOString()) : null,
       closedBy: shouldClose ? (req.user?.username || 'admin') : null,
       updatedAt: new Date().toISOString()

@@ -8,14 +8,6 @@
     "name": "admin"
   },
   {
-    "id": 4,
-    "name": "coordinator"
-  },
-  {
-    "id": 5,
-    "name": "web-coordinator"
-  },
-  {
     "id": 6,
     "name": "registration coordinator"
   },

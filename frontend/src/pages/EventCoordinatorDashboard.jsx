@@ -37,12 +37,20 @@ import {
   FaThLarge,
   FaTable,
   FaCrown,
-  FaBolt
+  FaBolt,
+  FaCamera,
+  FaUpload,
+  FaTrash,
+  FaEye,
+  FaImage,
+  FaGlobe,
+  FaBuilding
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
+import VenueImageModal from '../components/VenueImageModal.jsx';
 import { 
   fetchEventWinners, 
   submitEventWinners, 
@@ -56,6 +64,14 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('coord_theme') || 'dark');
   const isDark = theme === 'dark';
+
+  // ── Venue Photos Management State ──
+  const [venuePhotoInput, setVenuePhotoInput] = useState('');
+  const [venuePhotoPreview, setVenuePhotoPreview] = useState('');
+  const [venueHallName, setVenueHallName] = useState('');
+  const [isUploadingVenuePhoto, setIsUploadingVenuePhoto] = useState(false);
+  const [isSavingVenuePhoto, setIsSavingVenuePhoto] = useState(false);
+  const [showCoordinatorVenueModal, setShowCoordinatorVenueModal] = useState(false);
 
   const toggleTheme = () => {
     const next = isDark ? 'light' : 'dark';
@@ -277,6 +293,118 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
   const currentWinnerSubmission = useMemo(() => {
     return winnersList.find(w => w.eventId === selectedEventId) || null;
   }, [winnersList, selectedEventId]);
+
+  // ── Venue Photo Synchronization & Handlers ──
+  useEffect(() => {
+    if (currentEvent) {
+      const currentPhoto = currentEvent.venueImage || currentEvent.venue_image || '';
+      setVenuePhotoInput(currentPhoto);
+      setVenuePhotoPreview(currentPhoto);
+      setVenueHallName(currentEvent.venue || '');
+    }
+  }, [currentEvent?.id, currentEvent?.venueImage, currentEvent?.venue_image, currentEvent?.venue]);
+
+  const handlePhotoFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file (PNG, JPG, JPEG, WEBP)');
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('Image size must be under 8MB');
+      return;
+    }
+
+    setIsUploadingVenuePhoto(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result;
+      setVenuePhotoPreview(base64);
+      setVenuePhotoInput(base64);
+      setIsUploadingVenuePhoto(false);
+      toast.success('Photo loaded! Click "Save & Publish Venue Photo" to apply.');
+    };
+    reader.onerror = () => {
+      setIsUploadingVenuePhoto(false);
+      toast.error('Failed to read image file');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveVenuePhoto = async () => {
+    if (!currentEvent?.id) return;
+    setIsSavingVenuePhoto(true);
+    try {
+      const payload = {
+        venueImage: venuePhotoInput.trim(),
+        venue_image: venuePhotoInput.trim(),
+        venue: venueHallName.trim() || currentEvent.venue || 'Designated Campus Venue'
+      };
+
+      const result = await updateEventCoordinatorDetails(currentEvent.id, payload);
+      if (result.success) {
+        setEventsList(prev => prev.map(ev => {
+          if (ev.id === currentEvent.id) {
+            return {
+              ...ev,
+              venueImage: payload.venueImage,
+              venue_image: payload.venueImage,
+              venue: payload.venue
+            };
+          }
+          return ev;
+        }));
+        toast.success(`Venue photo for ${currentEvent.name} updated successfully!`);
+      } else {
+        toast.error(result.message || 'Failed to update venue photo');
+      }
+    } catch (err) {
+      console.error('Error saving venue photo:', err);
+      toast.error('Network error saving venue photo');
+    } finally {
+      setIsSavingVenuePhoto(false);
+    }
+  };
+
+  const handleRemoveVenuePhoto = async () => {
+    if (!window.confirm(`Are you sure you want to remove the venue photo for ${currentEvent.name}?`)) {
+      return;
+    }
+    setIsSavingVenuePhoto(true);
+    try {
+      const payload = {
+        venueImage: '',
+        venue_image: '',
+        venue: venueHallName.trim() || currentEvent.venue || ''
+      };
+      const result = await updateEventCoordinatorDetails(currentEvent.id, payload);
+      if (result.success) {
+        setVenuePhotoInput('');
+        setVenuePhotoPreview('');
+        setEventsList(prev => prev.map(ev => {
+          if (ev.id === currentEvent.id) {
+            return {
+              ...ev,
+              venueImage: '',
+              venue_image: '',
+              venue: payload.venue
+            };
+          }
+          return ev;
+        }));
+        toast.success(`Venue photo removed for ${currentEvent.name}`);
+      } else {
+        toast.error(result.message || 'Failed to remove venue photo');
+      }
+    } catch (err) {
+      toast.error('Error removing venue photo');
+    } finally {
+      setIsSavingVenuePhoto(false);
+    }
+  };
 
   // ── 6. Attendance Toggle Handler ──
   const handleToggleAttendance = async (participant) => {
@@ -852,6 +980,29 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                 {currentWinnerSubmission && (
                   <span style={{ ...S.badgeCount, background: '#10b981', color: '#ffffff', fontSize: '0.62rem' }}>
                     SUBMITTED
+                  </span>
+                )}
+              </div>
+            </button>
+
+            {/* 7. Venue Photos Management */}
+            <button
+              type="button"
+              style={activeTab === 'venue-photos' ? { ...S.navItem, ...S.navItemActive } : S.navItem}
+              onClick={() => { setActiveTab('venue-photos'); setMobileSidebarOpen(false); }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <FaCamera style={{ ...S.navIcon, color: '#ec4899' }} />
+                  <span>Venue Photos</span>
+                </div>
+                {currentEvent?.venueImage || currentEvent?.venue_image ? (
+                  <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857' }}>
+                    LIVE
+                  </span>
+                ) : (
+                  <span style={{ ...S.badgeCount, background: isDark ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2', color: isDark ? '#f87171' : '#dc2626', fontSize: '0.62rem' }}>
+                    NO PHOTO
                   </span>
                 )}
               </div>
@@ -2011,21 +2162,27 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                           <div style={S.winnerPlacesList}>
                             {w.firstPlace && (
                               <div style={S.winnerPlaceItem}>
-                                <span style={{ color: '#eab308', fontWeight: '800' }}>🥇 1st Place:</span>
+                                <span style={{ color: '#eab308', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <FaTrophy style={{ color: '#eab308' }} /> 1st Place:
+                                </span>
                                 <span style={{ fontWeight: '700' }}>{w.firstPlace.name}</span>
                                 <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>({w.firstPlace.college})</span>
                               </div>
                             )}
                             {w.secondPlace && (
                               <div style={S.winnerPlaceItem}>
-                                <span style={{ color: '#94a3b8', fontWeight: '800' }}>🥈 2nd Place:</span>
+                                <span style={{ color: '#94a3b8', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <FaMedal style={{ color: '#94a3b8' }} /> 2nd Place:
+                                </span>
                                 <span style={{ fontWeight: '700' }}>{w.secondPlace.name}</span>
                                 <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>({w.secondPlace.college})</span>
                               </div>
                             )}
                             {w.thirdPlace && (
                               <div style={S.winnerPlaceItem}>
-                                <span style={{ color: '#b45309', fontWeight: '800' }}>🥉 3rd Place:</span>
+                                <span style={{ color: '#b45309', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                                  <FaMedal style={{ color: '#b45309' }} /> 3rd Place:
+                                </span>
                                 <span style={{ fontWeight: '700' }}>{w.thirdPlace.name}</span>
                                 <span style={{ color: isDark ? '#94a3b8' : '#64748b' }}>({w.thirdPlace.college})</span>
                               </div>
@@ -2274,6 +2431,369 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
               </div>
             </div>
           )}
+
+          {/* ======================================================== */}
+          {/* TAB: VENUE PHOTOS MANAGEMENT (Allocated Event Only) */}
+          {/* ======================================================== */}
+          {activeTab === 'venue-photos' && (
+            <div style={S.tabView}>
+              <div style={S.viewHeroBanner} className="coord-hero-banner">
+                <div style={S.heroBannerContent}>
+                  <div style={{ ...S.heroBadge, background: 'rgba(236, 72, 153, 0.15)', color: '#ec4899', borderColor: 'rgba(236, 72, 153, 0.35)' }}>
+                    <FaCamera /> VENUE PHOTOS MANAGEMENT
+                  </div>
+                  <h1 style={S.heroTitle}>{currentEvent.name} — Venue Hall Photos</h1>
+                  <p style={S.heroDesc}>
+                    Upload, preview, and update the official venue arena photograph and exact hall details for your allocated event <strong>{currentEvent.name}</strong>. Updates made here are immediately published on public event cards and the venue popup modal for all participants.
+                  </p>
+                  <div style={S.heroMetaRow}>
+                    <span style={S.metaChip}>
+                      <FaMapMarkerAlt style={{ color: '#39FF88' }} /> {venueHallName || currentEvent.venue || 'Designated Campus Venue'}
+                    </span>
+                    <span style={{
+                      ...S.metaChip,
+                      background: venuePhotoPreview ? 'rgba(57, 255, 136, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                      color: venuePhotoPreview ? '#39FF88' : '#f87171',
+                      borderColor: venuePhotoPreview ? 'rgba(57, 255, 136, 0.4)' : 'rgba(239, 68, 68, 0.35)'
+                    }}>
+                      <FaCamera /> {venuePhotoPreview ? 'Photo Live & Published' : 'No Photo Uploaded'}
+                    </span>
+                    <span style={S.metaChip}>
+                      <FaBuilding style={{ color: '#38bdf8' }} /> {currentEvent.category === 'technical' ? 'Technical Lab' : 'Non-Technical Arena'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCoordinatorVenueModal(true)}
+                      style={{
+                        ...S.metaChip,
+                        background: 'rgba(56, 189, 248, 0.16)',
+                        color: '#38bdf8',
+                        borderColor: 'rgba(56, 189, 248, 0.4)',
+                        cursor: 'pointer',
+                        fontWeight: '700'
+                      }}
+                      title="Test how participants see this photo"
+                    >
+                      <FaEye /> Preview Public Modal
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Two-Column Management Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+                {/* Column 1: Live Public Photo Preview */}
+                <div style={S.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: `1px solid ${isDark ? 'rgba(57, 255, 136, 0.15)' : '#e2e8f0'}` }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', color: isDark ? '#ffffff' : '#0f172a' }}>
+                      <FaEye style={{ color: '#39FF88' }} /> Public Participant Preview
+                    </h3>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.2rem 0.55rem', borderRadius: '6px', background: isDark ? 'rgba(57, 255, 136, 0.1)' : '#ecfdf5', color: isDark ? '#39FF88' : '#047857' }}>
+                      LIVE SYNC
+                    </span>
+                  </div>
+
+                  <p style={{ margin: '0 0 1rem 0', fontSize: '0.84rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                    Participants viewing <strong>{currentEvent.name}</strong> on the website will see this venue photo when clicking the "Photo" button on the event card.
+                  </p>
+
+                  {venuePhotoPreview ? (
+                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid rgba(57, 255, 136, 0.35)', background: '#000000' }}>
+                      <img
+                        src={venuePhotoPreview}
+                        alt={venueHallName || currentEvent.name}
+                        style={{
+                          width: '100%',
+                          height: '240px',
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, transparent 100%)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        padding: '1rem',
+                        pointerEvents: 'none'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{
+                            background: 'rgba(57, 255, 136, 0.9)',
+                            color: '#000000',
+                            fontSize: '0.7rem',
+                            fontWeight: '800',
+                            padding: '0.25rem 0.65rem',
+                            borderRadius: '999px',
+                            letterSpacing: '0.5px'
+                          }}>
+                            OFFICIAL VENUE
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowCoordinatorVenueModal(true)}
+                            style={{
+                              pointerEvents: 'auto',
+                              background: 'rgba(0, 0, 0, 0.65)',
+                              backdropFilter: 'blur(8px)',
+                              border: '1px solid rgba(255, 255, 255, 0.25)',
+                              color: '#ffffff',
+                              borderRadius: '6px',
+                              padding: '0.3rem 0.65rem',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <FaEye size={11} /> Enlarge
+                          </button>
+                        </div>
+
+                        <div>
+                          <div style={{ color: '#39FF88', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {currentEvent.name}
+                          </div>
+                          <h4 style={{ margin: '0.2rem 0 0 0', color: '#ffffff', fontSize: '1.1rem', fontWeight: '800' }}>
+                            {venueHallName || currentEvent.venue || 'Designated Campus Venue'}
+                          </h4>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '2.5rem 1.5rem',
+                      textAlign: 'center',
+                      background: isDark ? 'rgba(0, 0, 0, 0.4)' : '#f8fafc',
+                      borderRadius: '12px',
+                      border: `1.5px dashed ${isDark ? 'rgba(57, 255, 136, 0.25)' : '#cbd5e1'}`
+                    }}>
+                      <div style={{
+                        width: '54px',
+                        height: '54px',
+                        borderRadius: '50%',
+                        background: 'rgba(236, 72, 153, 0.12)',
+                        border: '1px solid rgba(236, 72, 153, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 0.75rem auto'
+                      }}>
+                        <FaCamera size={22} style={{ color: '#ec4899' }} />
+                      </div>
+                      <h4 style={{ margin: '0 0 0.35rem 0', color: isDark ? '#ffffff' : '#0f172a', fontWeight: '800' }}>
+                        No Venue Photo Set
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b', maxWidth: '320px', marginInline: 'auto' }}>
+                        Upload a photo on the right so participants can easily recognize the room, lab, or arena on symposium day.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Event Card Simulation Preview */}
+                  <div style={{ marginTop: '1.25rem', padding: '1rem', background: isDark ? 'rgba(0, 0, 0, 0.25)' : '#f1f5f9', borderRadius: '10px', border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : '#e2e8f0'}` }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: isDark ? '#94a3b8' : '#64748b', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.5px' }}>
+                      Card Preview on Homepage & Events Page
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isDark ? '#060d08' : '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(57, 255, 136, 0.2)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>Venue:</span>
+                        <span style={{ fontSize: '0.8rem', color: isDark ? '#cbd5e1' : '#475569', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                          {venueHallName || currentEvent.venue || 'CSE Department Labs'}
+                        </span>
+                      </div>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.68rem',
+                        fontWeight: '700',
+                        padding: '0.2rem 0.55rem',
+                        borderRadius: '6px',
+                        background: venuePhotoPreview ? 'rgba(57, 255, 136, 0.14)' : 'rgba(255, 255, 255, 0.07)',
+                        color: venuePhotoPreview ? '#39FF88' : '#94a3b8',
+                        border: venuePhotoPreview ? '1px solid rgba(57, 255, 136, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
+                        flexShrink: 0
+                      }}>
+                        <FaCamera size={10} />
+                        <span>{venuePhotoPreview ? 'Photo' : 'Venue'}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 2: Upload & Management Form */}
+                <div style={S.card}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: `1px solid ${isDark ? 'rgba(57, 255, 136, 0.15)' : '#e2e8f0'}` }}>
+                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem', color: isDark ? '#ffffff' : '#0f172a' }}>
+                      <FaUpload style={{ color: '#ec4899' }} /> Upload & Edit Venue Details
+                    </h3>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#94a3b8' : '#64748b' }}>
+                      {currentEvent.id.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                    {/* Venue Hall Name Input */}
+                    <div>
+                      <label style={S.formLabel}>
+                        <FaMapMarkerAlt style={{ color: '#39FF88', marginRight: '4px' }} /> Venue Hall Name & Floor / Arena
+                      </label>
+                      <input
+                        type="text"
+                        value={venueHallName}
+                        onChange={(e) => setVenueHallName(e.target.value)}
+                        placeholder="e.g. Main CSE Lab 1 (Ground Floor, Room 104)"
+                        style={S.formInput}
+                      />
+                      <div style={{ fontSize: '0.72rem', color: isDark ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                        Specific hall or room name where participants must report.
+                      </div>
+                    </div>
+
+                    {/* File Upload Drop Area */}
+                    <div>
+                      <label style={S.formLabel}>
+                        <FaImage style={{ color: '#ec4899', marginRight: '4px' }} /> Upload Image File from Device
+                      </label>
+                      <label style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '1.25rem 1rem',
+                        borderRadius: '10px',
+                        background: isDark ? 'rgba(236, 72, 153, 0.06)' : '#fdf2f8',
+                        border: `1.5px dashed ${isDark ? 'rgba(236, 72, 153, 0.35)' : '#f472b6'}`,
+                        cursor: isUploadingVenuePhoto ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        textAlign: 'center'
+                      }}>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/webp"
+                          onChange={handlePhotoFileSelect}
+                          disabled={isUploadingVenuePhoto}
+                          style={{ display: 'none' }}
+                        />
+                        <FaUpload size={22} style={{ color: '#ec4899', marginBottom: '0.5rem' }} />
+                        <div style={{ fontSize: '0.85rem', fontWeight: '700', color: isDark ? '#ffffff' : '#0f172a' }}>
+                          {isUploadingVenuePhoto ? 'Reading image...' : 'Click to Browse or Drag Image Here'}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: isDark ? '#94a3b8' : '#64748b', marginTop: '2px' }}>
+                          Supports PNG, JPG, JPEG, WEBP (Max 8MB)
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Image URL Input */}
+                    <div>
+                      <label style={S.formLabel}>
+                        <FaGlobe style={{ color: '#38bdf8', marginRight: '4px' }} /> Or Paste Image Web URL
+                      </label>
+                      <input
+                        type="url"
+                        value={venuePhotoInput.startsWith('data:') ? '' : venuePhotoInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setVenuePhotoInput(val);
+                          setVenuePhotoPreview(val);
+                        }}
+                        placeholder="https://images.unsplash.com/... or https://..."
+                        style={S.formInput}
+                      />
+                      <div style={{ fontSize: '0.72rem', color: isDark ? '#64748b' : '#94a3b8', marginTop: '4px' }}>
+                        Paste any high-resolution image link from Unsplash, Imgur, or college CDN.
+                      </div>
+                    </div>
+
+                    {/* Action Buttons Row */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem', paddingTop: '1rem', borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : '#f1f5f9'}` }}>
+                      <button
+                        type="button"
+                        onClick={handleSaveVenuePhoto}
+                        disabled={isSavingVenuePhoto || isUploadingVenuePhoto}
+                        style={{
+                          ...S.btnPrimary,
+                          flex: '1 1 180px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FaCheck /> {isSavingVenuePhoto ? 'Publishing...' : 'Save & Publish Venue Photo'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowCoordinatorVenueModal(true)}
+                        style={{
+                          ...S.btnSecondary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FaEye /> Test Modal
+                      </button>
+
+                      {venuePhotoPreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveVenuePhoto}
+                          disabled={isSavingVenuePhoto}
+                          style={{
+                            background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#fee2e2',
+                            color: isDark ? '#f87171' : '#dc2626',
+                            border: '1px solid rgba(239, 68, 68, 0.35)',
+                            borderRadius: '8px',
+                            padding: '0.65rem 0.95rem',
+                            fontSize: '0.84rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                          title="Remove venue photo"
+                        >
+                          <FaTrash size={12} /> Remove
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const original = currentEvent.venueImage || currentEvent.venue_image || '';
+                          setVenuePhotoInput(original);
+                          setVenuePhotoPreview(original);
+                          setVenueHallName(currentEvent.venue || '');
+                          toast.success('Reset to saved values');
+                        }}
+                        style={{
+                          background: 'transparent',
+                          color: isDark ? '#94a3b8' : '#64748b',
+                          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : '#cbd5e1'}`,
+                          borderRadius: '8px',
+                          padding: '0.65rem 0.85rem',
+                          fontSize: '0.84rem',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <FaSyncAlt size={11} style={{ marginRight: '4px' }} /> Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
@@ -2370,6 +2890,17 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           </div>
         </div>
       )}
+
+      {/* ── Coordinator Venue Photo Test Modal ── */}
+      <VenueImageModal
+        isOpen={showCoordinatorVenueModal}
+        onClose={() => setShowCoordinatorVenueModal(false)}
+        event={{
+          ...currentEvent,
+          venue: venueHallName || currentEvent.venue,
+          venueImage: venuePhotoPreview || currentEvent.venueImage
+        }}
+      />
     </div>
   );
 }

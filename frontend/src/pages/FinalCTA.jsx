@@ -1,9 +1,48 @@
 import { useEffect, useRef, useState } from 'react';
+import { getApiUrl, getWsUrl } from '../config/api';
 
 export default function FinalCTA({ onRegister }) {
   const sectionRef = useRef(null);
   const canvasRef = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [isRegClosed, setIsRegClosed] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    let ws = null;
+
+    const checkStatus = () => {
+      fetch(getApiUrl('/api/registration-status'))
+        .then((res) => res.json())
+        .then((data) => {
+          if (isMounted && data.success) {
+            setIsRegClosed(Boolean(data.isRegistrationClosed));
+          }
+        })
+        .catch(() => {});
+    };
+
+    checkStatus();
+
+    try {
+      ws = new WebSocket(getWsUrl('/ws/registrations'));
+      ws.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
+            if (isMounted) setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+          }
+        } catch (e) {}
+      };
+    } catch (e) {}
+
+    return () => {
+      isMounted = false;
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -100,10 +139,14 @@ export default function FinalCTA({ onRegister }) {
       <canvas ref={canvasRef} className="cta-canvas" />
       <div className="cta-glow" />
       <div className="cta-content">
-        <h2 className="cta-heading">ARE YOU READY?</h2>
-        <p className="cta-sub">Your challenge awaits.</p>
+        <h2 className="cta-heading">{isRegClosed ? 'ONLINE REGISTRATIONS CLOSED' : 'ARE YOU READY?'}</h2>
+        <p className="cta-sub">
+          {isRegClosed 
+            ? 'Direct On-Site Spot Registrations accepted at the CAHCET Campus Desk on September 26, 2026.' 
+            : 'Your challenge awaits.'}
+        </p>
         <button className="btn btn-primary btn-large" onClick={onRegister}>
-          REGISTER FOR ELOQUENCE26
+          {isRegClosed ? 'EXPLORE EVENTS & GUIDELINES' : 'REGISTER FOR ELOQUENCE26'}
         </button>
       </div>
     </section>

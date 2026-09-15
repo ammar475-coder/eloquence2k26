@@ -1,1 +1,29 @@
-[]
+[
+  {
+    "id": "winner-tech-06-1789461237474",
+    "eventId": "tech-06",
+    "eventName": "UI/UX",
+    "eventCategory": "technical",
+    "submittedBy": "shahid_event",
+    "submittedAt": "2026-09-15T08:33:57.474Z",
+    "status": "submitted",
+    "firstPlace": {
+      "registrationId": "ELQ26-TCH-76950",
+      "name": "nabeel  ",
+      "college": "anna university",
+      "dept": "eee",
+      "year": "2nd Year",
+      "phone": "9898989800",
+      "email": "nabeel@gmail.com",
+      "teamName": "",
+      "teamMembers": [],
+      "score": "",
+      "remarks": ""
+    },
+    "secondPlace": null,
+    "thirdPlace": null,
+    "specialMentions": [],
+    "notes": "",
+    "updatedAt": "2026-09-15T08:33:57.474Z"
+  }
+]

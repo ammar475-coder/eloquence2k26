@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env'), quiet: true });
+// Load backend environment variables
+const envPath = fs.existsSync(path.join(__dirname, '.env'))
+  ? path.join(__dirname, '.env')
+  : path.join(__dirname, 'env');
+require('dotenv').config({ path: envPath, quiet: true });
 const express = require('express');
 const cors = require('cors');
 
