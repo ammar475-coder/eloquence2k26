@@ -36,7 +36,7 @@ import {
   FaChevronRight,
   FaInfoCircle
 } from 'react-icons/fa';
-import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
+import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData } from '../services/api.js';
 
 // Helper to dynamically load official Razorpay Checkout SDK
 const loadRazorpayScript = () => {
@@ -73,8 +73,13 @@ const createEmptyMember = (defaultCollege = '') => ({
 });
 
 export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
-  const [eventsList, setEventsList] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const initialEvents = getCachedEvents() || [];
+  const initialSelected = eventId
+    ? initialEvents.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase())
+    : (initialEvents.length > 0 ? initialEvents[0] : null);
+
+  const [eventsList, setEventsList] = useState(initialEvents);
+  const [selectedEvent, setSelectedEvent] = useState(initialSelected);
 
   // Registration Closed Status State
   const [isRegClosed, setIsRegClosed] = useState(false);
@@ -176,13 +181,14 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   }, []);
 
   useEffect(() => {
-    fetch(getApiUrl('/api/events'))
-      .then((res) => res.json())
-      .then((result) => {
-        if (result.success && Array.isArray(result.data)) {
-          setEventsList(result.data);
+    let isMounted = true;
+    fetchEventsData()
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setEventsList(data);
           if (eventId) {
-            const found = result.data.find(
+            const found = data.find(
               (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
             );
             if (found) setSelectedEvent(found);
@@ -192,7 +198,19 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       .catch((err) => {
         console.error('Failed to load events in registration page:', err);
       });
+    return () => {
+      isMounted = false;
+    };
   }, [eventId]);
+
+  useEffect(() => {
+    if (eventId && eventsList.length > 0) {
+      const found = eventsList.find(
+        (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
+      );
+      if (found) setSelectedEvent(found);
+    }
+  }, [eventId, eventsList]);
 
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');

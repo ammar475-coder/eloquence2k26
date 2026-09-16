@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { 
   FaChartBar, 
@@ -20,12 +20,40 @@ import {
   FaTable,
   FaTimes,
   FaBars,
-  FaQrcode
+  FaQrcode,
+  FaCheckCircle,
+  FaCopy,
+  FaPrint,
+  FaWhatsapp,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaGraduationCap,
+  FaUser,
+  FaMoneyBillWave,
+  FaCrown,
+  FaLayerGroup,
+  FaClock,
+  FaMapMarkerAlt,
+  FaInfoCircle,
+  FaUndo,
+  FaSearch,
+  FaCheck,
+  FaIdCard
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 
+const createEmptyTeamMember = (defaultCollege = '') => ({
+  fullName: '',
+  email: '',
+  phone: '',
+  whatsapp: '',
+  sameAsPhone: true,
+  college: defaultCollege || 'C. Abdul Hakeem College of Engineering & Technology',
+  department: 'CSE',
+  year: '3rd Year'
+});
 
 export default function RegistrationCoordinatorDashboard({ token, user, onLogout }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -61,17 +89,29 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
   const [selectedCoordName, setSelectedCoordName] = useState('');
   const [isSendingList, setIsSendingList] = useState(false);
 
-  // On-Site Registration Form State
+  // On-Site Registration Form State (Full Online-Matching Form Structure)
   const [onSiteEventId, setOnSiteEventId] = useState('');
-  const [onSiteFullName, setOnSiteFullName] = useState('');
-  const [onSiteEmail, setOnSiteEmail] = useState('');
-  const [onSitePhone, setOnSitePhone] = useState('');
-  const [onSiteCollege, setOnSiteCollege] = useState('C. Abdul Hakeem College of Engineering & Technology');
-  const [onSiteDept, setOnSiteDept] = useState('CSE');
-  const [onSiteYear, setOnSiteYear] = useState('3rd Year');
-  const [onSiteTeamName, setOnSiteTeamName] = useState('');
-  const [onSiteTeamMembers, setOnSiteTeamMembers] = useState(['']);
+  const [onSiteGame, setOnSiteGame] = useState('FREE FIRE'); // 'FREE FIRE' | 'BGMI'
+  const [onSiteCategoryFilter, setOnSiteCategoryFilter] = useState('all');
+  
+  const initialOnSiteFields = {
+    fullName: '',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    sameAsPhone: true,
+    college: 'C. Abdul Hakeem College of Engineering & Technology',
+    department: 'CSE',
+    year: '3rd Year',
+    teamName: '',
+    teamMembers: []
+  };
+
+  const [onSiteFields, setOnSiteFields] = useState(initialOnSiteFields);
+  const [onSiteErrors, setOnSiteErrors] = useState({});
   const [isRegisteringOnSite, setIsRegisteringOnSite] = useState(false);
+  const [onSiteTicketResult, setOnSiteTicketResult] = useState(null);
+  const [copiedTicket, setCopiedTicket] = useState(false);
 
   useEffect(() => {
     fetchEvents();
@@ -250,67 +290,183 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
       .finally(() => setIsSendingList(false));
   };
 
-  // On-Site Registration Submission
-  const handleOnSiteRegisterSubmit = (e) => {
-    e.preventDefault();
-    if (!onSiteEventId) return toast.error('Please select an event');
-    if (!onSiteFullName.trim()) return toast.error('Participant name is required');
-    if (!onSitePhone.trim() || !/^[6-9]\d{9}$/.test(onSitePhone.trim().replace(/\s+/g, ''))) {
-      return toast.error('Valid 10-digit phone number is required');
+  // Selected On-Site Event
+  const selectedOnSiteEvent = eventsList.find(evt => evt.id === onSiteEventId) || null;
+  const isOnSiteEsports = selectedOnSiteEvent ? (selectedOnSiteEvent.id === 'nontech-05' || selectedOnSiteEvent.name?.toLowerCase().includes('battle of champions') || selectedOnSiteEvent.name?.toLowerCase().includes('gaming')) : false;
+
+  // Auto-synchronize team members when event changes
+  useEffect(() => {
+    if (!selectedOnSiteEvent) return;
+    if (selectedOnSiteEvent.isTeam) {
+      const minMembers = Number(selectedOnSiteEvent.minMembers) || 2;
+      const maxMembers = Number(selectedOnSiteEvent.maxMembers) || 4;
+      const isSquad = selectedOnSiteEvent.feeType === 'per_squad' && maxMembers > 1;
+      const targetCount = isSquad ? (maxMembers - 1) : Math.max(1, minMembers - 1);
+
+      setOnSiteFields(prev => {
+        const currentMems = Array.isArray(prev.teamMembers) ? prev.teamMembers : [];
+        let nextMems = [...currentMems];
+        while (nextMems.length < targetCount) {
+          nextMems.push(createEmptyTeamMember(prev.college));
+        }
+        if (nextMems.length > maxMembers - 1) {
+          nextMems = nextMems.slice(0, maxMembers - 1);
+        }
+        return {
+          ...prev,
+          teamMembers: nextMems
+        };
+      });
+    } else {
+      setOnSiteFields(prev => ({ ...prev, teamMembers: [], teamName: '' }));
     }
-    if (!onSiteEmail.trim()) return toast.error('Email address is required');
+  }, [onSiteEventId, selectedOnSiteEvent]);
 
-    const selectedEvt = eventsList.find(evt => evt.id === onSiteEventId);
-    if (!selectedEvt) return toast.error('Event not found');
+  // Dynamic On-Site Fee Calculation
+  const getOnSiteValidMembersCount = () => {
+    if (!selectedOnSiteEvent?.isTeam) return 1;
+    const validExtra = (onSiteFields.teamMembers || []).filter(m => m.fullName && m.fullName.trim().length > 0).length;
+    return 1 + validExtra;
+  };
 
-    const validMembers = onSiteTeamMembers.filter(m => m.trim().length > 0);
-    const memberCount = 1 + validMembers.length;
-    const feePerHead = selectedEvt.feePerHead || 50;
-    const totalFee = selectedEvt.isTeam && selectedEvt.feeType === 'fixed' ? feePerHead : (feePerHead * memberCount);
+  const onSiteTotalMemberCount = selectedOnSiteEvent?.isTeam ? (1 + (onSiteFields.teamMembers || []).length) : 1;
+
+  const calculateOnSiteFee = () => {
+    if (!selectedOnSiteEvent) return 0;
+    if (selectedOnSiteEvent.feeType === 'per_squad' || selectedOnSiteEvent.feeType === 'fixed') {
+      return Number(selectedOnSiteEvent.feePerHead) || 200;
+    }
+    const perHead = Number(selectedOnSiteEvent.feePerHead) || 50;
+    return perHead * getOnSiteValidMembersCount();
+  };
+
+  // Validation
+  const validateOnSiteForm = () => {
+    const errs = {};
+    if (!onSiteEventId) errs.eventId = 'Please select a symposium event';
+    if (!onSiteFields.fullName.trim()) errs.fullName = 'Lead participant full name is required';
+
+    const cleanPhone = onSiteFields.phone.trim().replace(/\s+/g, '');
+    if (!cleanPhone || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      errs.phone = 'Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9';
+    }
+
+    if (!onSiteFields.sameAsPhone) {
+      const cleanWa = (onSiteFields.whatsapp || '').trim().replace(/\s+/g, '');
+      if (!cleanWa || !/^[6-9]\d{9}$/.test(cleanWa)) {
+        errs.whatsapp = 'Enter a valid 10-digit WhatsApp number';
+      }
+    }
+
+    if (!onSiteFields.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(onSiteFields.email.trim())) {
+      errs.email = 'Enter a valid email address';
+    }
+
+    if (!onSiteFields.college.trim()) errs.college = 'College name is required';
+    if (!onSiteFields.department.trim()) errs.department = 'Department is required';
+    if (!onSiteFields.year) errs.year = 'Year of study is required';
+
+    if (selectedOnSiteEvent?.isTeam) {
+      if (!onSiteFields.teamName.trim()) {
+        errs.teamName = 'Team name is required for team events';
+      }
+      const minMembers = Number(selectedOnSiteEvent.minMembers) || 2;
+      const totalEntered = 1 + (onSiteFields.teamMembers || []).filter(m => m.fullName && m.fullName.trim()).length;
+      if (totalEntered < minMembers) {
+        errs.teamMembers = `Minimum ${minMembers} members (including team leader) are required for ${selectedOnSiteEvent.name}`;
+      }
+    }
+
+    setOnSiteErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  // On-Site Registration Submission
+  const handleOnSiteRegisterSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateOnSiteForm()) {
+      toast.error('Please complete all required fields correctly');
+      return;
+    }
+
+    const totalFee = calculateOnSiteFee();
+    const validMembersList = (onSiteFields.teamMembers || [])
+      .filter(m => m.fullName && m.fullName.trim().length > 0)
+      .map(m => m.fullName.trim());
 
     const payload = {
-      currentEvent: selectedEvt,
+      currentEvent: selectedOnSiteEvent,
       fields: {
-        fullName: onSiteFullName.trim(),
-        email: onSiteEmail.trim(),
-        phone: onSitePhone.trim(),
-        college: onSiteCollege.trim(),
-        department: onSiteDept.trim(),
-        year: onSiteYear,
-        teamName: selectedEvt.isTeam ? onSiteTeamName.trim() : null,
-        teamMembers: validMembers
+        fullName: onSiteFields.fullName.trim(),
+        email: onSiteFields.email.trim(),
+        phone: onSiteFields.phone.trim(),
+        whatsapp: onSiteFields.sameAsPhone ? onSiteFields.phone.trim() : (onSiteFields.whatsapp || '').trim(),
+        college: onSiteFields.college.trim(),
+        department: onSiteFields.department.trim(),
+        year: onSiteFields.year,
+        teamName: selectedOnSiteEvent.isTeam ? onSiteFields.teamName.trim() : null,
+        teamMembers: validMembersList,
+        teamMembersDetails: (onSiteFields.teamMembers || []).filter(m => m.fullName && m.fullName.trim().length > 0)
       },
-      totalFee
+      totalFee,
+      game: isOnSiteEsports ? onSiteGame : null,
+      paymentMethod: 'ON_SITE_DESK',
+      paymentStatus: 'paid'
     };
 
     setIsRegisteringOnSite(true);
-    const toastId = toast.loading('Processing on-site registration...');
+    const toastId = toast.loading(`Generating official on-site pass for ${onSiteFields.fullName}...`);
 
-    fetch(getApiUrl('/api/register'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then(res => res.json())
-      .then(resData => {
-        if (resData.success) {
-          const ticketCode = resData.ticketData?.ticketCode || 'ELQ26-REG';
-          toast.success(`Registration successful! Ticket Code: ${ticketCode}`, { id: toastId, duration: 6000 });
-          setOnSiteFullName('');
-          setOnSiteEmail('');
-          setOnSitePhone('');
-          setOnSiteTeamName('');
-          setOnSiteTeamMembers(['']);
-          fetchRegistrations();
-        } else {
-          toast.error(resData.message || 'Registration failed', { id: toastId });
-        }
-      })
-      .catch(err => {
-        console.error('Registration API error:', err);
-        toast.error('Network error during registration', { id: toastId });
-      })
-      .finally(() => setIsRegisteringOnSite(false));
+    try {
+      const res = await fetch(getApiUrl('/api/register'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        const ticket = resData.ticketData || {
+          ticketCode: `ELQ26-${selectedOnSiteEvent.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(10000 + Math.random() * 90000)}`,
+          eventName: selectedOnSiteEvent.name,
+          category: selectedOnSiteEvent.category,
+          leadName: onSiteFields.fullName,
+          fullName: onSiteFields.fullName,
+          college: onSiteFields.college,
+          department: onSiteFields.department,
+          year: onSiteFields.year,
+          email: onSiteFields.email,
+          phone: onSiteFields.phone,
+          whatsapp: onSiteFields.sameAsPhone ? onSiteFields.phone : onSiteFields.whatsapp,
+          teamName: onSiteFields.teamName,
+          membersCount: getOnSiteValidMembersCount(),
+          teamMembersList: validMembersList,
+          totalFee,
+          totalAmount: totalFee,
+          venue: selectedOnSiteEvent.venue,
+          timing: selectedOnSiteEvent.timing,
+          game: isOnSiteEsports ? onSiteGame : null,
+          timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+        };
+
+        toast.success(`Registration completed! Ticket #${ticket.ticketCode}`, { id: toastId, duration: 6000 });
+        setOnSiteTicketResult(ticket);
+        fetchRegistrations();
+      } else {
+        toast.error(resData.message || 'Registration failed', { id: toastId });
+      }
+    } catch (err) {
+      console.error('On-site register error:', err);
+      toast.error('Network error during on-site registration', { id: toastId });
+    } finally {
+      setIsRegisteringOnSite(false);
+    }
+  };
+
+  const handleResetOnSiteForm = () => {
+    setOnSiteFields(initialOnSiteFields);
+    setOnSiteErrors({});
+    setOnSiteTicketResult(null);
+    setOnSiteEventId('');
   };
 
   // Helper Analytics Calculations
@@ -977,171 +1133,785 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
             />
           )}
 
-          {/* ==================== 2. REGISTRATION FORM TAB ==================== */}
+          {/* ==================== 2. REGISTRATION FORM TAB (Full Online-Matching On-Site Form) ==================== */}
           {activeTab === 'registration' && (
             <div style={S.viewContainer}>
-              <div style={{ ...S.card, padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-                <h3 style={{ ...S.cardTitle, marginBottom: '0.5rem', fontSize: '1.25rem' }}>
-                  Participant On-Site Desk Registration
-                </h3>
-                <p style={{ color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                  Register participants directly at the reception desk and generate ticket credentials.
-                </p>
-
-                <form onSubmit={handleOnSiteRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  <div style={S.modalInputGroup}>
-                    <label style={S.label}>Select Event *</label>
-                    <select
-                      value={onSiteEventId}
-                      onChange={(e) => setOnSiteEventId(e.target.value)}
-                      style={S.select}
-                      required
-                    >
-                      <option value="">-- Choose Symposium Event --</option>
-                      {eventsList.map((evt) => (
-                        <option key={evt.id} value={evt.id}>
-                          [{evt.category.toUpperCase()}] {evt.name} — {evt.fee || `₹${evt.feePerHead || 50}`}
-                        </option>
-                      ))}
-                    </select>
+              {onSiteTicketResult ? (
+                /* Ticket Success View */
+                <div style={{ ...S.card, padding: '2rem', maxWidth: '720px', margin: '0 auto', textAlign: 'center', border: '1.5px solid #10b981' }}>
+                  <div style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '2px solid #10b981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem auto'
+                  }}>
+                    <FaCheckCircle size={32} style={{ color: '#10b981' }} />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div style={S.modalInputGroup}>
-                      <label style={S.label}>Participant Full Name *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Mohamed Ali"
-                        value={onSiteFullName}
-                        onChange={(e) => setOnSiteFullName(e.target.value)}
-                        style={S.input}
-                        required
-                      />
-                    </div>
-                    <div style={S.modalInputGroup}>
-                      <label style={S.label}>Phone Number (10 digits) *</label>
-                      <input
-                        type="tel"
-                        placeholder="e.g. 9876543210"
-                        value={onSitePhone}
-                        onChange={(e) => setOnSitePhone(e.target.value)}
-                        style={S.input}
-                        required
-                      />
-                    </div>
-                  </div>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '999px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '0.5rem'
+                  }}>
+                    ON-SITE REGISTRATION CONFIRMED & ADMITTED
+                  </span>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div style={S.modalInputGroup}>
-                      <label style={S.label}>Email Address *</label>
-                      <input
-                        type="email"
-                        placeholder="e.g. student@gmail.com"
-                        value={onSiteEmail}
-                        onChange={(e) => setOnSiteEmail(e.target.value)}
-                        style={S.input}
-                        required
-                      />
-                    </div>
-                    <div style={S.modalInputGroup}>
-                      <label style={S.label}>College Name *</label>
-                      <input
-                        type="text"
-                        placeholder="College Name"
-                        value={onSiteCollege}
-                        onChange={(e) => setOnSiteCollege(e.target.value)}
-                        style={S.input}
-                        required
-                      />
-                    </div>
-                  </div>
+                  <h2 style={{ margin: '0.25rem 0 0.5rem 0', fontSize: '1.5rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
+                    {onSiteTicketResult.eventName}
+                  </h2>
+                  <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.88rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                    Official on-site participant pass generated for <strong>{onSiteTicketResult.fullName}</strong>.
+                  </p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div style={S.modalInputGroup}>
-                      <label style={S.label}>Department *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. CSE / IT / ECE"
-                        value={onSiteDept}
-                        onChange={(e) => setOnSiteDept(e.target.value)}
-                        style={S.input}
-                        required
-                      />
-                    </div>
-                    <div style={S.modalInputGroup}>
-                      <label style={S.label}>Year of Study *</label>
-                      <select
-                        value={onSiteYear}
-                        onChange={(e) => setOnSiteYear(e.target.value)}
-                        style={S.select}
-                      >
-                        <option value="1st Year">1st Year</option>
-                        <option value="2nd Year">2nd Year</option>
-                        <option value="3rd Year">3rd Year</option>
-                        <option value="4th Year">4th Year</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Team Event Support */}
-                  {eventsList.find(e => e.id === onSiteEventId)?.isTeam && (
-                    <div style={{ background: isDark ? '#1f2937' : '#f8fafc', padding: '1rem', borderRadius: '10px', display: 'flex', flexDirection: 'column', gap: '0.75rem', border: isDark ? '1px solid #374151' : '1px solid #e2e8f0' }}>
-                      <div style={S.modalInputGroup}>
-                        <label style={S.label}>Team Name</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Cyber Squad"
-                          value={onSiteTeamName}
-                          onChange={(e) => setOnSiteTeamName(e.target.value)}
-                          style={S.input}
-                        />
+                  {/* Ticket Badge Box */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                    background: isDark ? 'rgba(0, 0, 0, 0.4)' : '#f8fafc',
+                    border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '1.25rem 1.5rem',
+                    marginBottom: '1.5rem',
+                    textAlign: 'left'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
+                        OFFICIAL TICKET REFERENCE
                       </div>
-                      <div style={S.modalInputGroup}>
-                        <label style={S.label}>Additional Team Members</label>
-                        {onSiteTeamMembers.map((m, idx) => (
-                          <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                            <input
-                              type="text"
-                              placeholder={`Member #${idx + 2} Full Name`}
-                              value={m}
-                              onChange={(e) => {
-                                const copy = [...onSiteTeamMembers];
-                                copy[idx] = e.target.value;
-                                setOnSiteTeamMembers(copy);
-                              }}
-                              style={S.input}
-                            />
-                            {onSiteTeamMembers.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => setOnSiteTeamMembers(onSiteTeamMembers.filter((_, i) => i !== idx))}
-                                style={S.actionBtnDelete}
-                              >
-                                <FaTrash size={12} />
-                              </button>
-                            )}
-                          </div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#10b981', letterSpacing: '0.5px' }}>
+                        #{onSiteTicketResult.ticketCode}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b', marginTop: '2px' }}>
+                        {onSiteTicketResult.college} • {onSiteTicketResult.department} ({onSiteTicketResult.year})
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(onSiteTicketResult.ticketCode)}`}
+                        alt="Ticket QR Code"
+                        style={{
+                          width: '70px',
+                          height: '70px',
+                          borderRadius: '8px',
+                          background: '#ffffff',
+                          padding: '3px',
+                          border: '1px solid #cbd5e1'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Meta Details Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '0.75rem',
+                    textAlign: 'left',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}` }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>PHONE / WHATSAPP</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: isDark ? '#ffffff' : '#0f172a' }}>{onSiteTicketResult.phone}</div>
+                    </div>
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}` }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>FEE PAID AT DESK</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#10b981' }}>₹{onSiteTicketResult.totalFee} (CASH / UPI)</div>
+                    </div>
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}` }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>PARTICIPANTS</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: isDark ? '#ffffff' : '#0f172a' }}>
+                        {onSiteTicketResult.membersCount} {onSiteTicketResult.membersCount === 1 ? 'Individual' : 'Team Members'}
+                      </div>
+                    </div>
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc', padding: '0.75rem 1rem', borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}` }}>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700' }}>REPORTING VENUE</div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: isDark ? '#ffffff' : '#0f172a' }}>{onSiteTicketResult.venue || 'CSE Dept Labs'}</div>
+                    </div>
+                  </div>
+
+                  {/* Team Members List (if any) */}
+                  {Array.isArray(onSiteTicketResult.teamMembersList) && onSiteTicketResult.teamMembersList.length > 0 && (
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : '#f1f5f9', padding: '1rem', borderRadius: '10px', textAlign: 'left', marginBottom: '1.5rem', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}` }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '800', color: isDark ? '#cbd5e1' : '#334155', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaUsers /> {onSiteTicketResult.teamName ? `Team: ${onSiteTicketResult.teamName}` : 'Registered Team Members'}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ fontSize: '0.78rem', background: '#10b981', color: '#ffffff', padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: '700' }}>
+                          👑 {onSiteTicketResult.leadName || onSiteTicketResult.fullName} (Lead)
+                        </span>
+                        {onSiteTicketResult.teamMembersList.map((m, idx) => (
+                          <span key={idx} style={{ fontSize: '0.78rem', background: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0', color: isDark ? '#ffffff' : '#0f172a', padding: '0.2rem 0.6rem', borderRadius: '6px', fontWeight: '600' }}>
+                            {idx + 2}. {m}
+                          </span>
                         ))}
-                        <button
-                          type="button"
-                          onClick={() => setOnSiteTeamMembers([...onSiteTeamMembers, ''])}
-                          style={{ ...S.filterBtn, alignSelf: 'flex-start', marginTop: '0.2rem' }}
-                        >
-                          <FaPlus size={10} /> Add Member
-                        </button>
                       </div>
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={isRegisteringOnSite}
-                    style={{ ...S.primaryBtn, width: '100%', padding: '0.85rem', fontSize: '1rem', marginTop: '0.5rem' }}
-                  >
-                    {isRegisteringOnSite ? 'Processing...' : 'Complete & Generate Ticket Code'}
-                  </button>
-                </form>
-              </div>
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => handlePrintTicket(onSiteTicketResult)}
+                      style={{
+                        ...S.primaryBtn,
+                        padding: '0.75rem 1.5rem',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <FaPrint /> Print Official Pass
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(onSiteTicketResult.ticketCode);
+                        setCopiedTicket(true);
+                        toast.success('Ticket code copied to clipboard!');
+                        setTimeout(() => setCopiedTicket(false), 2000);
+                      }}
+                      style={{
+                        ...S.filterBtn,
+                        padding: '0.75rem 1.25rem',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      {copiedTicket ? <FaCheck style={{ color: '#10b981' }} /> : <FaCopy />}
+                      <span>{copiedTicket ? 'Copied!' : 'Copy Code'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetOnSiteForm}
+                      style={{
+                        background: '#3b82f6',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.75rem 1.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <FaPlus /> Register Next Participant
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Rich On-Site Form Entry */
+                <div style={{ ...S.card, padding: '2rem', maxWidth: '840px', margin: '0 auto' }}>
+                  <div style={{ borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '800', padding: '0.2rem 0.6rem', borderRadius: '999px', background: 'rgba(57, 255, 136, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                        <FaBolt style={{ marginRight: '4px' }} /> ON-SITE DESK ENTRY
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>• ELOQUENCE 2026</span>
+                    </div>
+                    <h3 style={{ ...S.cardTitle, fontSize: '1.35rem', margin: 0 }}>
+                      Participant On-Site Registration Form
+                    </h3>
+                    <p style={{ color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.85rem', margin: '0.35rem 0 0 0' }}>
+                      Register students visiting the spot registration counter. Complete participant profile and issue verified entry passes in real-time.
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleOnSiteRegisterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    
+                    {/* ── STEP 1: EVENT SELECTION ── */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <label style={{ ...S.label, margin: 0, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <FaLayerGroup style={{ color: '#3b82f6' }} /> 1. Select Symposium Event *
+                        </label>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          {['all', 'technical', 'non-technical'].map((cat) => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={() => setOnSiteCategoryFilter(cat)}
+                              style={{
+                                padding: '0.2rem 0.55rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                textTransform: 'capitalize',
+                                cursor: 'pointer',
+                                border: 'none',
+                                background: onSiteCategoryFilter === cat ? '#2563eb' : (isDark ? '#1f2937' : '#f1f5f9'),
+                                color: onSiteCategoryFilter === cat ? '#ffffff' : (isDark ? '#cbd5e1' : '#475569')
+                              }}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <select
+                        value={onSiteEventId}
+                        onChange={(e) => setOnSiteEventId(e.target.value)}
+                        style={{
+                          ...S.select,
+                          fontSize: '0.95rem',
+                          padding: '0.8rem 1rem',
+                          border: onSiteErrors.eventId ? '1.5px solid #ef4444' : S.select.border
+                        }}
+                        required
+                      >
+                        <option value="">-- Choose Symposium Event --</option>
+                        {eventsList
+                          .filter(evt => onSiteCategoryFilter === 'all' || evt.category === onSiteCategoryFilter)
+                          .map((evt) => (
+                            <option key={evt.id} value={evt.id}>
+                              [{evt.category.toUpperCase()}] {evt.name} — {evt.fee || `₹${evt.feePerHead || 50}`} ({evt.isTeam ? `Team: ${evt.teamSize || '2-4'}` : 'Solo'})
+                            </option>
+                          ))}
+                      </select>
+                      {onSiteErrors.eventId && <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '4px' }}>{onSiteErrors.eventId}</div>}
+
+                      {/* Selected Event Details Banner */}
+                      {selectedOnSiteEvent && (
+                        <div style={{
+                          marginTop: '0.85rem',
+                          padding: '1rem 1.25rem',
+                          borderRadius: '10px',
+                          background: isDark ? 'rgba(37, 99, 235, 0.08)' : '#eff6ff',
+                          border: isDark ? '1px solid rgba(37, 99, 235, 0.25)' : '1px solid #bfdbfe',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.5rem'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: '800', fontSize: '1rem', color: isDark ? '#ffffff' : '#1e3a8a' }}>
+                                {selectedOnSiteEvent.name}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', fontWeight: '800', padding: '0.2rem 0.5rem', borderRadius: '6px', background: selectedOnSiteEvent.category === 'technical' ? '#2563eb' : '#ec4899', color: '#ffffff' }}>
+                                {selectedOnSiteEvent.category.toUpperCase()}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#059669', background: '#ecfdf5', padding: '0.25rem 0.65rem', borderRadius: '6px', border: '1px solid #a7f3d0' }}>
+                              {selectedOnSiteEvent.fee}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.78rem', color: isDark ? '#cbd5e1' : '#475569' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <FaMapMarkerAlt style={{ color: '#10b981' }} /> {selectedOnSiteEvent.venue || 'CSE Dept Labs'}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <FaClock style={{ color: '#f59e0b' }} /> {selectedOnSiteEvent.timing || '10:00 AM – 1:00 PM'}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <FaUsers style={{ color: '#6366f1' }} /> {selectedOnSiteEvent.isTeam ? `Team Event (${selectedOnSiteEvent.teamSize || '2-4 members'})` : 'Solo / Individual'}
+                            </span>
+                          </div>
+
+                          {/* Esports Game Selector */}
+                          {isOnSiteEsports && (
+                            <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0' }}>
+                              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: isDark ? '#93c5fd' : '#1d4ed8', display: 'block', marginBottom: '0.35rem' }}>
+                                <FaGamepad style={{ marginRight: '4px' }} /> CHOOSE ESPORTS GAME *
+                              </label>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                {['FREE FIRE', 'BGMI'].map((gameOption) => (
+                                  <button
+                                    key={gameOption}
+                                    type="button"
+                                    onClick={() => setOnSiteGame(gameOption)}
+                                    style={{
+                                      flex: 1,
+                                      padding: '0.55rem',
+                                      borderRadius: '8px',
+                                      fontSize: '0.82rem',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      border: onSiteGame === gameOption ? '2px solid #3b82f6' : `1px solid ${isDark ? '#374151' : '#cbd5e1'}`,
+                                      background: onSiteGame === gameOption ? (isDark ? '#1e3a8a' : '#dbeafe') : (isDark ? '#111827' : '#ffffff'),
+                                      color: onSiteGame === gameOption ? (isDark ? '#ffffff' : '#1e40af') : (isDark ? '#9ca3af' : '#475569')
+                                    }}
+                                  >
+                                    {gameOption === 'FREE FIRE' ? '🔥 FREE FIRE' : '🎯 BGMI'}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── STEP 2: LEAD PARTICIPANT DETAILS ── */}
+                    <div style={{ background: isDark ? 'rgba(255, 255, 255, 0.02)' : '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaUser style={{ color: '#10b981' }} /> 2. {selectedOnSiteEvent?.isTeam ? 'Team Leader / Lead Participant Details' : 'Participant Details'}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                        {/* Full Name */}
+                        <div>
+                          <label style={S.label}>Full Name *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Mohamed Ali"
+                            value={onSiteFields.fullName}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, fullName: e.target.value })}
+                            style={{
+                              ...S.input,
+                              border: onSiteErrors.fullName ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.fullName && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.fullName}</div>}
+                        </div>
+
+                        {/* Phone Number */}
+                        <div>
+                          <label style={S.label}>Mobile Phone (10 digits) *</label>
+                          <input
+                            type="tel"
+                            placeholder="e.g. 9876543210"
+                            maxLength={10}
+                            value={onSiteFields.phone}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              setOnSiteFields({
+                                ...onSiteFields,
+                                phone: val,
+                                ...(onSiteFields.sameAsPhone ? { whatsapp: val } : {})
+                              });
+                            }}
+                            style={{
+                              ...S.input,
+                              border: onSiteErrors.phone ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.phone && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.phone}</div>}
+                        </div>
+
+                        {/* WhatsApp Number with toggle */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                            <label style={{ ...S.label, margin: 0 }}>WhatsApp Number *</label>
+                            <label style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <input
+                                type="checkbox"
+                                checked={onSiteFields.sameAsPhone}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setOnSiteFields({
+                                    ...onSiteFields,
+                                    sameAsPhone: checked,
+                                    whatsapp: checked ? onSiteFields.phone : ''
+                                  });
+                                }}
+                              />
+                              Same as Phone
+                            </label>
+                          </div>
+                          <input
+                            type="tel"
+                            placeholder="WhatsApp Number"
+                            maxLength={10}
+                            disabled={onSiteFields.sameAsPhone}
+                            value={onSiteFields.sameAsPhone ? onSiteFields.phone : onSiteFields.whatsapp}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, whatsapp: e.target.value.replace(/\D/g, '') })}
+                            style={{
+                              ...S.input,
+                              opacity: onSiteFields.sameAsPhone ? 0.75 : 1,
+                              border: onSiteErrors.whatsapp ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.whatsapp && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.whatsapp}</div>}
+                        </div>
+
+                        {/* Email Address */}
+                        <div>
+                          <label style={S.label}>Email Address *</label>
+                          <input
+                            type="email"
+                            placeholder="student@example.com"
+                            value={onSiteFields.email}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, email: e.target.value })}
+                            style={{
+                              ...S.input,
+                              border: onSiteErrors.email ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.email && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.email}</div>}
+                        </div>
+
+                        {/* College Name with CAHCET Quick Chip */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                            <label style={{ ...S.label, margin: 0 }}>College Name *</label>
+                            <button
+                              type="button"
+                              onClick={() => setOnSiteFields({ ...onSiteFields, college: 'C. Abdul Hakeem College of Engineering & Technology' })}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#2563eb',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                padding: 0
+                              }}
+                            >
+                              + Set CAHCET
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="College Name"
+                            value={onSiteFields.college}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, college: e.target.value })}
+                            style={{
+                              ...S.input,
+                              border: onSiteErrors.college ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.college && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.college}</div>}
+                        </div>
+
+                        {/* Department */}
+                        <div>
+                          <label style={S.label}>Department *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. CSE / IT / ECE / MECH"
+                            value={onSiteFields.department}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, department: e.target.value })}
+                            style={{
+                              ...S.input,
+                              border: onSiteErrors.department ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.department && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.department}</div>}
+                        </div>
+
+                        {/* Year of Study */}
+                        <div>
+                          <label style={S.label}>Year of Study *</label>
+                          <select
+                            value={onSiteFields.year}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, year: e.target.value })}
+                            style={S.select}
+                            required
+                          >
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── STEP 3: TEAM MEMBERS (FOR TEAM EVENTS) ── */}
+                    {selectedOnSiteEvent?.isTeam && (
+                      <div style={{ background: isDark ? 'rgba(255, 255, 255, 0.02)' : '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <FaUsers style={{ color: '#6366f1' }} /> 3. Team Information & Additional Members
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '2px' }}>
+                              Event requirement: {selectedOnSiteEvent.teamSize || `${selectedOnSiteEvent.minMembers || 2} to ${selectedOnSiteEvent.maxMembers || 4} members`}
+                            </div>
+                          </div>
+
+                          <span style={{ fontSize: '0.75rem', fontWeight: '800', background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1', padding: '0.25rem 0.65rem', borderRadius: '6px' }}>
+                            {onSiteTotalMemberCount} Member(s) Total
+                          </span>
+                        </div>
+
+                        {/* Team Name Input */}
+                        <div style={{ marginBottom: '1.25rem' }}>
+                          <label style={S.label}>Official Team Name *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Pixel Pioneers / Cyber Hawks"
+                            value={onSiteFields.teamName}
+                            onChange={(e) => setOnSiteFields({ ...onSiteFields, teamName: e.target.value })}
+                            style={{
+                              ...S.input,
+                              border: onSiteErrors.teamName ? '1.5px solid #ef4444' : S.input.border
+                            }}
+                            required
+                          />
+                          {onSiteErrors.teamName && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '3px' }}>{onSiteErrors.teamName}</div>}
+                        </div>
+
+                        {/* Member Cards */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          {(onSiteFields.teamMembers || []).map((member, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '1rem',
+                                borderRadius: '10px',
+                                background: isDark ? '#111827' : '#ffffff',
+                                border: isDark ? '1px solid #374151' : '1px solid #e2e8f0',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.75rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: '800', color: isDark ? '#93c5fd' : '#1d4ed8' }}>
+                                  👤 Team Member #{idx + 2}
+                                </span>
+
+                                {(onSiteFields.teamMembers.length > ((Number(selectedOnSiteEvent.minMembers) || 2) - 1)) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const filtered = onSiteFields.teamMembers.filter((_, i) => i !== idx);
+                                      setOnSiteFields({ ...onSiteFields, teamMembers: filtered });
+                                    }}
+                                    style={{
+                                      background: isDark ? 'rgba(239, 68, 68, 0.12)' : '#fee2e2',
+                                      color: '#ef4444',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      padding: '0.2rem 0.5rem',
+                                      fontSize: '0.72rem',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '4px'
+                                    }}
+                                  >
+                                    <FaTrash size={10} /> Remove
+                                  </button>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                <div>
+                                  <label style={{ ...S.label, fontSize: '0.72rem' }}>Member #{idx + 2} Full Name *</label>
+                                  <input
+                                    type="text"
+                                    placeholder="Full Name"
+                                    value={member.fullName}
+                                    onChange={(e) => {
+                                      const copy = [...onSiteFields.teamMembers];
+                                      copy[idx] = { ...copy[idx], fullName: e.target.value };
+                                      setOnSiteFields({ ...onSiteFields, teamMembers: copy });
+                                    }}
+                                    style={S.input}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label style={{ ...S.label, fontSize: '0.72rem' }}>Phone Number (Optional)</label>
+                                  <input
+                                    type="tel"
+                                    placeholder="Mobile Number"
+                                    maxLength={10}
+                                    value={member.phone || ''}
+                                    onChange={(e) => {
+                                      const copy = [...onSiteFields.teamMembers];
+                                      copy[idx] = { ...copy[idx], phone: e.target.value.replace(/\D/g, '') };
+                                      setOnSiteFields({ ...onSiteFields, teamMembers: copy });
+                                    }}
+                                    style={S.input}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label style={{ ...S.label, fontSize: '0.72rem' }}>Email Address (Optional)</label>
+                                  <input
+                                    type="email"
+                                    placeholder="Email"
+                                    value={member.email || ''}
+                                    onChange={(e) => {
+                                      const copy = [...onSiteFields.teamMembers];
+                                      copy[idx] = { ...copy[idx], email: e.target.value };
+                                      setOnSiteFields({ ...onSiteFields, teamMembers: copy });
+                                    }}
+                                    style={S.input}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label style={{ ...S.label, fontSize: '0.72rem' }}>Department & Year</label>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <input
+                                      type="text"
+                                      placeholder="Dept"
+                                      value={member.department || 'CSE'}
+                                      onChange={(e) => {
+                                        const copy = [...onSiteFields.teamMembers];
+                                        copy[idx] = { ...copy[idx], department: e.target.value };
+                                        setOnSiteFields({ ...onSiteFields, teamMembers: copy });
+                                      }}
+                                      style={{ ...S.input, flex: 1 }}
+                                    />
+                                    <select
+                                      value={member.year || '3rd Year'}
+                                      onChange={(e) => {
+                                        const copy = [...onSiteFields.teamMembers];
+                                        copy[idx] = { ...copy[idx], year: e.target.value };
+                                        setOnSiteFields({ ...onSiteFields, teamMembers: copy });
+                                      }}
+                                      style={{ ...S.select, flex: 1 }}
+                                    >
+                                      <option value="1st Year">1st Yr</option>
+                                      <option value="2nd Year">2nd Yr</option>
+                                      <option value="3rd Year">3rd Yr</option>
+                                      <option value="4th Year">4th Yr</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {onSiteErrors.teamMembers && (
+                            <div style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '600' }}>
+                              {onSiteErrors.teamMembers}
+                            </div>
+                          )}
+
+                          {/* Add Member Button */}
+                          {(onSiteFields.teamMembers || []).length < ((Number(selectedOnSiteEvent.maxMembers) || 4) - 1) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOnSiteFields({
+                                  ...onSiteFields,
+                                  teamMembers: [...(onSiteFields.teamMembers || []), createEmptyTeamMember(onSiteFields.college)]
+                                });
+                              }}
+                              style={{
+                                alignSelf: 'flex-start',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                background: isDark ? 'rgba(99, 102, 241, 0.15)' : '#eef2ff',
+                                color: '#6366f1',
+                                border: '1px dashed #6366f1',
+                                borderRadius: '8px',
+                                padding: '0.5rem 1rem',
+                                fontSize: '0.82rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                marginTop: '0.25rem'
+                              }}
+                            >
+                              <FaPlus size={10} /> Add Another Team Member (Up to {selectedOnSiteEvent.maxMembers || 4})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── STEP 4: REAL-TIME FEE & PAYMENT SUMMARY ── */}
+                    {selectedOnSiteEvent && (
+                      <div style={{
+                        padding: '1.25rem 1.5rem',
+                        borderRadius: '12px',
+                        background: isDark ? '#064e3b' : '#ecfdf5',
+                        border: '1px solid #10b981',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1rem'
+                      }}>
+                        <div>
+                          <div style={{ fontSize: '0.72rem', fontWeight: '800', color: isDark ? '#6ee7b7' : '#047857', textTransform: 'uppercase' }}>
+                            <FaMoneyBillWave style={{ marginRight: '4px' }} /> ON-SITE FEE CALCULATION
+                          </div>
+                          <div style={{ fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#065f46', marginTop: '2px' }}>
+                            {selectedOnSiteEvent.name} • {selectedOnSiteEvent.feeType === 'per_squad' || selectedOnSiteEvent.feeType === 'fixed' ? 'Fixed Squad Fee' : `₹${selectedOnSiteEvent.feePerHead || 50} × ${onSiteTotalMemberCount} member(s)`}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', fontWeight: '700', color: isDark ? '#34d399' : '#059669', marginTop: '2px' }}>
+                            Payment Mode: CASH / DESK SPOT UPI (PAID)
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: '0.75rem', color: isDark ? '#a7f3d0' : '#047857', fontWeight: '700', display: 'block' }}>TOTAL AMOUNT</span>
+                          <span style={{ fontSize: '1.75rem', fontWeight: '900', color: isDark ? '#ffffff' : '#064e3b' }}>
+                            ₹{calculateOnSiteFee()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submit & Reset Buttons */}
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                      <button
+                        type="submit"
+                        disabled={isRegisteringOnSite}
+                        style={{
+                          ...S.primaryBtn,
+                          flex: 1,
+                          padding: '0.95rem',
+                          fontSize: '1rem',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <FaBolt /> {isRegisteringOnSite ? 'Generating Ticket Pass...' : 'Complete On-Site Registration & Issue Pass'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleResetOnSiteForm}
+                        style={{
+                          ...S.filterBtn,
+                          padding: '0.95rem 1.25rem',
+                          fontSize: '0.95rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <FaUndo /> Reset
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           )}
 

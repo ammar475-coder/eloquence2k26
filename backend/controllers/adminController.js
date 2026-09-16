@@ -269,6 +269,10 @@ const getEventsData = () => {
 const saveEventsData = (events) => {
   try {
     fs.writeFileSync(eventsFilePath, JSON.stringify(events, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateEventsCache) apiCtrl.invalidateEventsCache();
+    } catch (_) {}
   } catch (err) {
     console.error('Error writing events.json:', err);
   }
@@ -286,6 +290,10 @@ const getSponsorsData = () => {
 const saveSponsorsData = (sponsors) => {
   try {
     fs.writeFileSync(sponsorsFilePath, JSON.stringify(sponsors, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateSponsorsCache) apiCtrl.invalidateSponsorsCache();
+    } catch (_) {}
     return true;
   } catch (err) {
     console.error('Error writing sponsors.json:', err);
@@ -305,6 +313,10 @@ const getCoordinatorsData = () => {
 const saveCoordinatorsData = (coordinators) => {
   try {
     fs.writeFileSync(coordinatorsFilePath, JSON.stringify(coordinators, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateCoordinatorsCache) apiCtrl.invalidateCoordinatorsCache();
+    } catch (_) {}
     return true;
   } catch (err) {
     console.error('Error writing coordinators.json:', err);
@@ -324,6 +336,10 @@ const getHomepageCoordinatorsData = () => {
 const saveHomepageCoordinatorsData = (teams) => {
   try {
     fs.writeFileSync(homepageCoordinatorsFilePath, JSON.stringify(teams, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateHomepageTeamsCache) apiCtrl.invalidateHomepageTeamsCache();
+    } catch (_) {}
     if (fs.existsSync(frontendStudentCoordinatorsFilePath)) {
       try {
         const activeTeamsForFrontend = teams

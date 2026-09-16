@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { getCachedEvents, fetchEventsData } from '../services/api.js';
 import EventCard from './EventCard.jsx';
 

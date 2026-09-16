@@ -43,28 +43,23 @@ function AnimatedNumber({ value, prefix = '', suffix = '', padDigits = 2, durati
 }
 
 export default function EventsPage({ onNavigate }) {
-  const initialCache = getCachedEvents();
-  const [eventsList, setEventsList] = useState(() => initialCache || []);
-  const [loading, setLoading] = useState(() => !initialCache || initialCache.length === 0);
+  const [eventsList, setEventsList] = useState(() => getCachedEvents() || []);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const canvasRef = useRef(null);
 
-  // Fetch live event data from backend API
+  // Fetch live event updates from backend API in background
   useEffect(() => {
     let isMounted = true;
     fetchEventsData()
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setEventsList(data);
-          setLoading(false);
         }
       })
       .catch((err) => {
         console.warn('EventsPage live fetch error:', err);
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
       });
     return () => {
       isMounted = false;

@@ -240,6 +240,67 @@ const dbToEvent = (e) => ({
   updatedAt: e.updated_at || e.updatedAt
 });
 
+// ── Ultra-Fast Server In-Memory Cache with Background Sync ────────────────
+let inMemoryEvents = null;
+let lastEventsSyncTime = 0;
+let inMemorySponsors = null;
+let lastSponsorsSyncTime = 0;
+let inMemoryCoordinators = null;
+let lastCoordinatorsSyncTime = 0;
+let inMemoryHomepageTeams = null;
+let lastHomepageTeamsSyncTime = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+
+function initServerMemoryCache() {
+  try {
+    const eventsFile = path.join(DATA_DIR, 'events.json');
+    if (fs.existsSync(eventsFile)) {
+      const parsed = JSON.parse(fs.readFileSync(eventsFile, 'utf-8') || '[]');
+      if (Array.isArray(parsed) && parsed.length > 0) inMemoryEvents = parsed;
+    }
+  } catch (_) {}
+
+  try {
+    const sponsors = readSponsors();
+    const active = sponsors.filter(s => s.isActive !== false);
+    active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+    if (active.length > 0) inMemorySponsors = active;
+  } catch (_) {}
+
+  try {
+    const coords = readCoordinators();
+    const active = coords.filter(c => c.isActive !== false);
+    active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+    if (active.length > 0) inMemoryCoordinators = active;
+  } catch (_) {}
+
+  try {
+    const hp = readHomepageCoordinators();
+    const active = hp.filter(t => t.isActive !== false);
+    active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+    if (active.length > 0) inMemoryHomepageTeams = active;
+  } catch (_) {}
+}
+
+initServerMemoryCache();
+
+exports.invalidateEventsCache = () => {
+  inMemoryEvents = null;
+  lastEventsSyncTime = 0;
+};
+exports.invalidateSponsorsCache = () => {
+  inMemorySponsors = null;
+  lastSponsorsSyncTime = 0;
+};
+exports.invalidateCoordinatorsCache = () => {
+  inMemoryCoordinators = null;
+  lastCoordinatorsSyncTime = 0;
+};
+exports.invalidateHomepageTeamsCache = () => {
+  inMemoryHomepageTeams = null;
+  lastHomepageTeamsSyncTime = 0;
+};
+
 exports.getStatus = (req, res) => {
   res.json({
     success: true,
@@ -563,7 +624,7 @@ exports.registerEvent = async (req, res) => {
     });
   }
 
-  const { currentEvent, fields, totalFee } = req.body;
+  const { currentEvent, fields, totalFee, paymentMethod = 'ON_SITE_DESK', paymentStatus = 'paid', game } = req.body;
   
   if (!currentEvent || !fields) {
     return res.status(400).json({ success: false, message: 'Missing required data' });
@@ -592,6 +653,13 @@ exports.registerEvent = async (req, res) => {
     const validTeamMembers = (fields.teamMembers || [])
       .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
 
+    const paymentMeta = {
+      venue: currentEvent.venue || 'CSE Department Labs',
+      payment_method: paymentMethod || 'ON_SITE_DESK',
+      game: game || null
+    };
+    const venueSnapshotStr = JSON.stringify(paymentMeta);
+
     // 1. Insert into registrations table
     const { data: regData, error: regError } = await supabase
       .from('registrations')
@@ -607,7 +675,10 @@ exports.registerEvent = async (req, res) => {
         year: fields.year,
         members_count: 1 + validTeamMembers.length,
         total_fee: totalFee,
-        payment_status: 'pending'
+        payment_status: paymentStatus,
+        registration_status: 'active',
+        venue_snapshot: venueSnapshotStr,
+        timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM'
       }])
       .select('id');
 
@@ -700,30 +771,63 @@ exports.getHealth = (req, res) => {
 };
 
 exports.getPublicEvents = async (req, res) => {
-  let localEvents = [];
-  try {
-    const eventsFile = path.join(DATA_DIR, 'events.json');
-    if (fs.existsSync(eventsFile)) {
-      localEvents = JSON.parse(fs.readFileSync(eventsFile, 'utf-8'));
-    }
-  } catch (e) {}
+  const now = Date.now();
 
+  // If in-memory cache is available and fresh, serve instantly (< 1ms)
+  if (inMemoryEvents && inMemoryEvents.length > 0 && (now - lastEventsSyncTime < CACHE_TTL_MS)) {
+    return res.json({ success: true, data: inMemoryEvents });
+  }
+
+  // Load from local file if memory cache is not yet set
+  let localEvents = inMemoryEvents || [];
+  if (localEvents.length === 0) {
+    try {
+      const eventsFile = path.join(DATA_DIR, 'events.json');
+      if (fs.existsSync(eventsFile)) {
+        localEvents = JSON.parse(fs.readFileSync(eventsFile, 'utf-8') || '[]');
+      }
+    } catch (e) {}
+  }
+
+  // If we have cached/local data, return immediately and sync in background
+  if (localEvents.length > 0) {
+    inMemoryEvents = localEvents;
+    res.json({ success: true, data: localEvents });
+
+    // Background sync with Supabase
+    (async () => {
+      try {
+        const { data: dbEvents, error } = await supabase.from('events').select('*').order('id', { ascending: true });
+        if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
+          const merged = dbEvents.map(dbToEvent).map(e => {
+            const local = localEvents.find(l => l.id === e.id);
+            return {
+              ...e,
+              venueImage: e.venueImage || (local ? (local.venueImage || local.venue_image) : '') || ''
+            };
+          });
+          inMemoryEvents = merged;
+          lastEventsSyncTime = Date.now();
+        }
+      } catch (err) {}
+    })();
+    return;
+  }
+
+  // Cold start fallback
   try {
     const { data: dbEvents, error } = await supabase.from('events').select('*').order('id', { ascending: true });
     if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
-      const merged = dbEvents.map(dbToEvent).map(e => {
-        const local = localEvents.find(l => l.id === e.id);
-        return {
-          ...e,
-          venueImage: e.venueImage || (local ? (local.venueImage || local.venue_image) : '') || ''
-        };
-      });
+      const merged = dbEvents.map(dbToEvent);
+      inMemoryEvents = merged;
+      lastEventsSyncTime = Date.now();
       return res.json({ success: true, data: merged });
     }
   } catch (e) {
     console.warn('Supabase getPublicEvents fallback:', e.message);
   }
 
+  inMemoryEvents = localEvents;
   res.json({ success: true, data: localEvents });
 };
 
@@ -931,35 +1035,68 @@ exports.getRegistrationById = async (req, res) => {
 
 // ==================== PUBLIC SPONSOR ENDPOINTS ====================
 exports.getActiveSponsors = async (req, res) => {
-  try {
-    // Try Supabase first
-    try {
-      const { data: dbSponsors, error } = await supabase
-        .from('sponsors')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+  const now = Date.now();
+  if (inMemorySponsors && inMemorySponsors.length > 0 && (now - lastSponsorsSyncTime < CACHE_TTL_MS)) {
+    return res.json({ success: true, count: inMemorySponsors.length, data: inMemorySponsors });
+  }
 
-      if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
-        const active = dbSponsors.map(dbToSponsor);
-        return res.json({ success: true, count: active.length, data: active });
-      }
-    } catch (e) {
-      console.warn('Supabase getActiveSponsors fallback:', e.message);
-    }
-
+  const localSponsors = inMemorySponsors || (() => {
     const sponsors = readSponsors();
     const active = sponsors.filter(s => s.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    res.json({ success: true, count: active.length, data: active });
-  } catch (err) {
-    console.error('Error fetching active sponsors:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch sponsors' });
+    return active;
+  })();
+
+  if (localSponsors.length > 0) {
+    inMemorySponsors = localSponsors;
+    res.json({ success: true, count: localSponsors.length, data: localSponsors });
+
+    // Background sync
+    (async () => {
+      try {
+        const { data: dbSponsors, error } = await supabase
+          .from('sponsors')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
+          inMemorySponsors = dbSponsors.map(dbToSponsor);
+          lastSponsorsSyncTime = Date.now();
+        }
+      } catch (_) {}
+    })();
+    return;
   }
+
+  try {
+    const { data: dbSponsors, error } = await supabase
+      .from('sponsors')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
+      const active = dbSponsors.map(dbToSponsor);
+      inMemorySponsors = active;
+      lastSponsorsSyncTime = Date.now();
+      return res.json({ success: true, count: active.length, data: active });
+    }
+  } catch (e) {
+    console.warn('Supabase getActiveSponsors fallback:', e.message);
+  }
+
+  inMemorySponsors = localSponsors;
+  res.json({ success: true, count: localSponsors.length, data: localSponsors });
 };
 
 exports.getPublicSponsorById = async (req, res) => {
   try {
+    if (inMemorySponsors && inMemorySponsors.length > 0) {
+      const found = inMemorySponsors.find(s => s.id === req.params.id);
+      if (found) return res.json({ success: true, data: found });
+    }
+
     try {
       const { data: dbSponsor, error } = await supabase
         .from('sponsors')
@@ -988,30 +1125,59 @@ exports.getPublicSponsorById = async (req, res) => {
 
 // ==================== PUBLIC COORDINATOR ENDPOINTS ====================
 exports.getActiveCoordinators = async (req, res) => {
-  try {
-    try {
-      const { data: dbCoords, error } = await supabase
-        .from('coordinators')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+  const now = Date.now();
+  if (inMemoryCoordinators && inMemoryCoordinators.length > 0 && (now - lastCoordinatorsSyncTime < CACHE_TTL_MS)) {
+    return res.json({ success: true, count: inMemoryCoordinators.length, data: inMemoryCoordinators });
+  }
 
-      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-        const active = dbCoords.map(dbToCoordinator);
-        return res.json({ success: true, count: active.length, data: active });
-      }
-    } catch (e) {
-      console.warn('Supabase getActiveCoordinators fallback:', e.message);
-    }
-
+  const localCoords = inMemoryCoordinators || (() => {
     const coordinators = readCoordinators();
     const active = coordinators.filter(c => c.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    res.json({ success: true, count: active.length, data: active });
-  } catch (err) {
-    console.error('Error fetching coordinators:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch coordinators' });
+    return active;
+  })();
+
+  if (localCoords.length > 0) {
+    inMemoryCoordinators = localCoords;
+    res.json({ success: true, count: localCoords.length, data: localCoords });
+
+    // Background sync
+    (async () => {
+      try {
+        const { data: dbCoords, error } = await supabase
+          .from('coordinators')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+          inMemoryCoordinators = dbCoords.map(dbToCoordinator);
+          lastCoordinatorsSyncTime = Date.now();
+        }
+      } catch (_) {}
+    })();
+    return;
   }
+
+  try {
+    const { data: dbCoords, error } = await supabase
+      .from('coordinators')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+      const active = dbCoords.map(dbToCoordinator);
+      inMemoryCoordinators = active;
+      lastCoordinatorsSyncTime = Date.now();
+      return res.json({ success: true, count: active.length, data: active });
+    }
+  } catch (e) {
+    console.warn('Supabase getActiveCoordinators fallback:', e.message);
+  }
+
+  inMemoryCoordinators = localCoords;
+  res.json({ success: true, count: localCoords.length, data: localCoords });
 };
 
 exports.getCoordinatorsByEvent = async (req, res) => {
@@ -1022,39 +1188,16 @@ exports.getCoordinatorsByEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    try {
-      const { data: dbCoords, error } = await supabase
-        .from('coordinators')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+    const allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
+      ? inMemoryCoordinators
+      : (() => {
+          const coords = readCoordinators();
+          const active = coords.filter(c => c.isActive !== false);
+          active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+          return active;
+        })();
 
-      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-        let matching = dbCoords
-          .map(dbToCoordinator)
-          .filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase()));
-
-        if (role) {
-          const rLower = role.toLowerCase().trim();
-          matching = matching.filter(c => {
-            const cRole = String(c.role || '').toLowerCase();
-            return cRole.includes(rLower);
-          });
-        }
-
-        return res.json({
-          success: true,
-          eventId,
-          count: matching.length,
-          data: matching
-        });
-      }
-    } catch (e) {
-      console.warn('Supabase getCoordinatorsByEvent fallback:', e.message);
-    }
-
-    const coordinators = readCoordinators();
-    let matching = coordinators.filter(c => 
+    let matching = allCoords.filter(c => 
       c.isActive !== false && 
       Array.isArray(c.assignedEvents) && 
       c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase())
@@ -1085,54 +1228,7 @@ exports.getCoordinatorsByEvent = async (req, res) => {
 // ==================== PUBLIC STUDENT COORDINATORS (LEADERSHIP) ====================
 exports.getStudentCoordinators = async (req, res) => {
   try {
-    const { data: dbCoords, error } = await supabase
-      .from('coordinators')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-
-    if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-      const webTeamCoords = dbCoords.filter(c => 
-        (Array.isArray(c.assigned_events) && c.assigned_events.includes('web-team')) ||
-        (c.role && c.role.toLowerCase().includes('website'))
-      );
-      const mainTeamCoords = dbCoords.filter(c => 
-        (Array.isArray(c.assigned_events) && c.assigned_events.includes('main-coordinators')) ||
-        (c.role && c.role.toLowerCase().includes('main coordinator'))
-      );
-
-      const result = [
-        {
-          id: 'web-team',
-          role: 'WEBSITE DEVELOPMENT TEAM',
-          tag: 'WEB & TECH CREW',
-          iconName: 'Code',
-          tier: 'cyan',
-          desc: 'Architecting the official Eloquence 2026 digital platform, registration engine, and interactive cyber experience.',
-          names: webTeamCoords.length > 0 ? webTeamCoords.map(c => c.name) : [
-            "SYED MUSTHAFA S", "MOHAMMED AYAZ A", "SHAWOOR SAQIB SK", "FAAZIL AMMAR", "SHAHID AHAMED VS", "MOHAMMED SAAD V"
-          ]
-        },
-        {
-          id: 'main-coordinators',
-          role: 'MAIN COORDINATOR TEAM',
-          tag: 'STUDENT LEADERSHIP',
-          iconName: 'Users',
-          tier: 'emerald',
-          desc: 'Leading symposium logistics, operations, participant management, and orchestrating Eloquence 2026.',
-          names: mainTeamCoords.length > 0 ? mainTeamCoords.map(c => c.name) : [
-            "SAMNESH S", "HARISH KUMAR RG", "SHARMILA Y", "MADHUMITHA R"
-          ]
-        }
-      ];
-      return res.json({ success: true, data: result });
-    }
-  } catch (e) {
-    console.warn('Supabase getStudentCoordinators fallback:', e.message);
-  }
-
-  // Fallback to static data
-  try {
+    // Check fallback file or default
     const fallbackPath = path.join(DATA_DIR, 'studentCoordinators.json');
     if (fs.existsSync(fallbackPath)) {
       const raw = fs.readFileSync(fallbackPath, 'utf-8');
@@ -1145,30 +1241,59 @@ exports.getStudentCoordinators = async (req, res) => {
 
 // ==================== PUBLIC HOMEPAGE STUDENT COORDINATORS ====================
 exports.getPublicHomepageCoordinators = async (req, res) => {
-  try {
-    try {
-      const { data: dbTeams, error } = await supabase
-        .from('homepage_coordinators')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+  const now = Date.now();
+  if (inMemoryHomepageTeams && inMemoryHomepageTeams.length > 0 && (now - lastHomepageTeamsSyncTime < CACHE_TTL_MS)) {
+    return res.json({ success: true, count: inMemoryHomepageTeams.length, data: inMemoryHomepageTeams });
+  }
 
-      if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
-        const active = dbTeams.map(dbToHomepageTeam);
-        return res.json({ success: true, count: active.length, data: active });
-      }
-    } catch (e) {
-      console.warn('Supabase getPublicHomepageCoordinators fallback:', e.message);
-    }
-
+  const localTeams = inMemoryHomepageTeams || (() => {
     const teams = readHomepageCoordinators();
     const active = teams.filter(t => t.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    res.json({ success: true, count: active.length, data: active });
-  } catch (err) {
-    console.error('Error fetching homepage coordinator teams:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch homepage coordinator teams' });
+    return active;
+  })();
+
+  if (localTeams.length > 0) {
+    inMemoryHomepageTeams = localTeams;
+    res.json({ success: true, count: localTeams.length, data: localTeams });
+
+    // Background sync
+    (async () => {
+      try {
+        const { data: dbTeams, error } = await supabase
+          .from('homepage_coordinators')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
+          inMemoryHomepageTeams = dbTeams.map(dbToHomepageTeam);
+          lastHomepageTeamsSyncTime = Date.now();
+        }
+      } catch (_) {}
+    })();
+    return;
   }
+
+  try {
+    const { data: dbTeams, error } = await supabase
+      .from('homepage_coordinators')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
+      const active = dbTeams.map(dbToHomepageTeam);
+      inMemoryHomepageTeams = active;
+      lastHomepageTeamsSyncTime = Date.now();
+      return res.json({ success: true, count: active.length, data: active });
+    }
+  } catch (e) {
+    console.warn('Supabase getPublicHomepageCoordinators fallback:', e.message);
+  }
+
+  inMemoryHomepageTeams = localTeams;
+  res.json({ success: true, count: localTeams.length, data: localTeams });
 };
 
 // ── Participant List Dispatch (Supabase Live) ──────────────────────────────────────────────────

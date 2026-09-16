@@ -86,9 +86,21 @@ export async function submitRegistration(payload) {
   }
 }
 
+import defaultEvents from '../data/events.js';
+import defaultSponsorsObj from '../data/sponsors.js';
+
+const flatDefaultSponsors = Array.isArray(defaultSponsorsObj)
+  ? defaultSponsorsObj
+  : [
+      ...(defaultSponsorsObj?.elite || []),
+      ...(defaultSponsorsObj?.premium || []),
+      ...(defaultSponsorsObj?.standard || []),
+    ];
+
 // ==================== PUBLIC SPONSOR & COORDINATOR APIS ====================
 
-let inMemorySponsorsCache = null;
+let inMemorySponsorsCache = flatDefaultSponsors;
+let pendingSponsorsPromise = null;
 
 export function groupSponsorsByTier(list) {
   if (!Array.isArray(list)) return { elite: [], premium: [], standard: [] };
@@ -111,24 +123,25 @@ export function groupSponsorsByTier(list) {
 }
 
 export function getCachedSponsors() {
-  if (inMemorySponsorsCache && Array.isArray(inMemorySponsorsCache)) {
+  if (inMemorySponsorsCache && Array.isArray(inMemorySponsorsCache) && inMemorySponsorsCache.length > 0) {
     return inMemorySponsorsCache;
   }
   try {
     const raw = sessionStorage.getItem('eloquence_db_sponsors');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         inMemorySponsorsCache = parsed;
         return parsed;
       }
     }
   } catch (_) {}
-  return null;
+  inMemorySponsorsCache = flatDefaultSponsors;
+  return flatDefaultSponsors;
 }
 
 export function setCachedSponsors(sponsorsList) {
-  if (Array.isArray(sponsorsList)) {
+  if (Array.isArray(sponsorsList) && sponsorsList.length > 0) {
     inMemorySponsorsCache = sponsorsList;
     try {
       sessionStorage.setItem('eloquence_db_sponsors', JSON.stringify(sponsorsList));
@@ -137,18 +150,26 @@ export function setCachedSponsors(sponsorsList) {
 }
 
 export async function fetchSponsorsData() {
-  try {
-    const res = await fetch(getApiUrl('/api/sponsors'));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const result = await res.json();
-    if (result.success && Array.isArray(result.data)) {
-      setCachedSponsors(result.data);
-      return result.data;
+  if (pendingSponsorsPromise) return pendingSponsorsPromise;
+
+  pendingSponsorsPromise = (async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/sponsors'));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        setCachedSponsors(result.data);
+        return result.data;
+      }
+    } catch (err) {
+      console.warn('Error fetching sponsors from DB:', err);
+    } finally {
+      pendingSponsorsPromise = null;
     }
-  } catch (err) {
-    console.warn('Error fetching sponsors from DB:', err);
-  }
-  return getCachedSponsors() || [];
+    return getCachedSponsors();
+  })();
+
+  return pendingSponsorsPromise;
 }
 
 export async function fetchActiveSponsors() {
@@ -392,7 +413,8 @@ export async function updateRegistrationStatus(token, payload) {
 }
 
 // ==================== EVENTS CACHING & FETCHING ====================
-let inMemoryEventsCache = null;
+let inMemoryEventsCache = defaultEvents;
+let pendingEventsPromise = null;
 
 export function getCachedEvents() {
   if (inMemoryEventsCache && Array.isArray(inMemoryEventsCache) && inMemoryEventsCache.length > 0) {
@@ -408,7 +430,8 @@ export function getCachedEvents() {
       }
     }
   } catch (_) {}
-  return null;
+  inMemoryEventsCache = defaultEvents;
+  return defaultEvents;
 }
 
 export function setCachedEvents(events) {
@@ -421,24 +444,32 @@ export function setCachedEvents(events) {
 }
 
 export async function fetchEventsData() {
-  try {
-    const res = await fetch(getApiUrl('/api/events'));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const result = await res.json();
-    if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-      const sorted = [...result.data].sort((a, b) => {
-        if (a.category !== b.category) {
-          return a.category === 'technical' ? -1 : 1;
-        }
-        return (a.id || '').localeCompare(b.id || '', undefined, { numeric: true });
-      });
-      setCachedEvents(sorted);
-      return sorted;
+  if (pendingEventsPromise) return pendingEventsPromise;
+
+  pendingEventsPromise = (async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/events'));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+        const sorted = [...result.data].sort((a, b) => {
+          if (a.category !== b.category) {
+            return a.category === 'technical' ? -1 : 1;
+          }
+          return (a.id || '').localeCompare(b.id || '', undefined, { numeric: true });
+        });
+        setCachedEvents(sorted);
+        return sorted;
+      }
+    } catch (err) {
+      console.warn('Error fetching events from DB:', err);
+    } finally {
+      pendingEventsPromise = null;
     }
-  } catch (err) {
-    console.warn('Error fetching events from DB:', err);
-  }
-  return getCachedEvents() || [];
+    return getCachedEvents();
+  })();
+
+  return pendingEventsPromise;
 }
 
 export async function fetchEventWinners(eventId = null) {

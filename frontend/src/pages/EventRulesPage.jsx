@@ -31,11 +31,8 @@ import { getEventSticker } from '../data/eventStickers.js';
 import VenueImageModal from '../components/VenueImageModal.jsx';
 
 export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
-  const initialCache = getCachedEvents();
-  const initialFound = initialCache ? initialCache.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()) : null;
-
-  const [eventsList, setEventsList] = useState(() => initialCache || []);
-  const [loading, setLoading] = useState(() => !initialFound);
+  const [eventsList, setEventsList] = useState(() => getCachedEvents() || []);
+  const [loading, setLoading] = useState(false);
   const [liveCoordinators, setLiveCoordinators] = useState([]);
   const [isRegClosed, setIsRegClosed] = useState(false);
   const [showVenueModal, setShowVenueModal] = useState(false);
@@ -109,14 +106,10 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setEventsList(data);
-          setLoading(false);
         }
       })
       .catch((err) => {
         console.warn('EventRulesPage fetch error:', err);
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
       });
     return () => { isMounted = false; };
   }, [eventId]);
