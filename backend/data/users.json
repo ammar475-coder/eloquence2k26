@@ -64,5 +64,11 @@
     "username": "shahid_cert",
     "password": "admin",
     "role": "certification team"
+  },
+  {
+    "id": 1789486239500,
+    "username": "Musthafa",
+    "password": "Proadmin",
+    "role": "superadmin"
   }
 ]

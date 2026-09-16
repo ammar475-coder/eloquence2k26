@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { FaArrowRight, FaCamera } from 'react-icons/fa';
+import { FaArrowRight } from 'react-icons/fa';
 import { getEventBanner } from '../data/eventImages.js';
 import { getEventSticker } from '../data/eventStickers.js';
-import VenueImageModal from '../components/VenueImageModal.jsx';
 
 function getEventIllustration(event) {
   const bannerSrc = getEventBanner(event);
@@ -63,8 +61,6 @@ function getEventIcon(id) {
 }
 
 export default function EventCard({ event, onRegister, onViewRules }) {
-  const [showVenueModal, setShowVenueModal] = useState(false);
-
   const handleRegister = (e) => {
     if (e) e.stopPropagation();
     if (onRegister) {
@@ -117,54 +113,7 @@ export default function EventCard({ event, onRegister, onViewRules }) {
           )}
         </div>
 
-        <div className="event-card-meta-list">
-          <div className="meta-line" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
-              <span className="meta-key">Venue:</span>
-              <span className="meta-val" style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                {event.venue || 'CSE Department Labs'}
-              </span>
-            </div>
-            <button
-              type="button"
-              className="event-card-venue-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowVenueModal(true);
-              }}
-              title={`View Venue Photo for ${event.name}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '0.68rem',
-                fontWeight: '700',
-                padding: '0.2rem 0.55rem',
-                borderRadius: '6px',
-                background: (event.venueImage || event.venue_image) ? 'rgba(57, 255, 136, 0.14)' : 'rgba(255, 255, 255, 0.07)',
-                color: (event.venueImage || event.venue_image) ? '#39FF88' : '#94a3b8',
-                border: (event.venueImage || event.venue_image) ? '1px solid rgba(57, 255, 136, 0.35)' : '1px solid rgba(255, 255, 255, 0.12)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
-                marginLeft: '0.5rem'
-              }}
-            >
-              <FaCamera size={10} />
-              <span>{(event.venueImage || event.venue_image) ? 'Photo' : 'Venue'}</span>
-            </button>
-          </div>
-          <div className="meta-line">
-            <span className="meta-key">Time:</span>
-            <span className="meta-val">{event.timing || '10:00 AM – 1:00 PM'}</span>
-          </div>
-          <div className="meta-line meta-fee-row">
-            <span className="meta-key">Fee:</span>
-            <span className="meta-val fee-val-highlight">{event.fee}</span>
-          </div>
-        </div>
-
-        {/* Single Primary Register Action Button (leads to rules & registration page) */}
+        {/* Primary Register Action Button */}
         <div className="event-card-buttons-row">
           <button
             type="button"
@@ -175,13 +124,6 @@ export default function EventCard({ event, onRegister, onViewRules }) {
           </button>
         </div>
       </div>
-
-      {/* Venue Photo Modal */}
-      <VenueImageModal
-        isOpen={showVenueModal}
-        onClose={() => setShowVenueModal(false)}
-        event={event}
-      />
     </div>
   );
 }

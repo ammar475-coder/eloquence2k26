@@ -7,26 +7,62 @@ import ScrollableMarquee from '../components/ScrollableMarquee.jsx';
 function SponsorCard({ sponsor, tier }) {
   const [flipped, setFlipped] = useState(false);
   const cardRef = useRef(null);
+  const touchStartPos = useRef({ x: 0, y: 0 });
+  const lastTouchTime = useRef(0);
 
   // Auto flip back to front when user clicks anywhere outside this card
   useEffect(() => {
     if (!flipped) return;
 
-    const handlePointerDownOutside = (e) => {
+    const handleClickOutside = (e) => {
       if (cardRef.current && !cardRef.current.contains(e.target)) {
         setFlipped(false);
       }
     };
 
-    document.addEventListener('pointerdown', handlePointerDownOutside);
+    const timer = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('touchend', handleClickOutside);
+    }, 100);
+
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDownOutside);
+      clearTimeout(timer);
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchend', handleClickOutside);
     };
   }, [flipped]);
 
+  const handleTouchStart = (e) => {
+    if (e.touches && e.touches.length === 1) {
+      touchStartPos.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!e.changedTouches || e.changedTouches.length !== 1) return;
+    const dx = Math.abs(e.changedTouches[0].clientX - touchStartPos.current.x);
+    const dy = Math.abs(e.changedTouches[0].clientY - touchStartPos.current.y);
+
+    // If moved less than 12px, this is a clean tap
+    if (dx < 12 && dy < 12) {
+      if (e.target.closest('a') || e.target.closest('button.sponsor-action-pill-btn')) {
+        return;
+      }
+      lastTouchTime.current = Date.now();
+      setFlipped((f) => !f);
+    }
+  };
+
   const handleCardClick = (e) => {
+    // If touched recently (within 500ms), ignore synthesized click to prevent double-toggling
+    if (Date.now() - lastTouchTime.current < 500) {
+      return;
+    }
     // If the click is inside an interactive action button, don't toggle flip
-    if (e.target.closest('a') || e.target.closest('button')) {
+    if (e.target.closest('a') || e.target.closest('button.sponsor-action-pill-btn')) {
       return;
     }
     setFlipped((f) => !f);
@@ -67,6 +103,8 @@ function SponsorCard({ sponsor, tier }) {
       ref={cardRef}
       className={`sponsor-card sponsor-card-${tier} ${flipped ? 'card-is-flipped' : ''}`}
       onClick={handleCardClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       role="button"
       tabIndex={0}
       aria-label={`${sponsor.name} — click or tap to view contact details`}
@@ -78,7 +116,7 @@ function SponsorCard({ sponsor, tier }) {
       }}
     >
       <div className={`sponsor-card-inner ${flipped ? 'sponsor-flipped' : ''}`}>
-        {/* Front Face: Premium Photo + Identity + Direct Quick Actions */}
+        {/* Front Face: Premium Photo + Identity */}
         <div className={`sponsor-face sponsor-front ${hasLogo ? 'has-sponsor-photo' : 'no-sponsor-photo'}`}>
           <span className="sponsor-tag">{tag}</span>
           <div className="sponsor-mark">
@@ -113,37 +151,9 @@ function SponsorCard({ sponsor, tier }) {
                 {sponsor.description || sponsor.companyName}
               </p>
             )}
-            <div className="sponsor-front-actions">
-              {cleanPhone && (
-                <a
-                  href={`tel:${cleanPhone}`}
-                  className="sponsor-front-btn sponsor-front-call"
-                  onClick={(e) => e.stopPropagation()}
-                  title={`Call ${sponsor.name} (${sponsor.contactPhone})`}
-                  aria-label={`Call ${sponsor.name}`}
-                >
-                  <FaPhoneAlt size={10} />
-                  <span>Call</span>
-                </a>
-              )}
-              {websiteLink && (
-                <a
-                  href={websiteLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sponsor-front-btn sponsor-front-web"
-                  onClick={(e) => e.stopPropagation()}
-                  title={`Visit ${sponsor.name} official website (${websiteLink})`}
-                  aria-label={`Website of ${sponsor.name}`}
-                >
-                  <FaGlobe size={10} />
-                  <span>Website <FaExternalLinkAlt size={8} style={{ marginLeft: '0.2rem' }} /></span>
-                </a>
-              )}
-              <span className="sponsor-flip-hint">
-                DETAILS <FaRedoAlt size={9} style={{ marginLeft: '0.25rem' }} />
-              </span>
-            </div>
+            <span className="sponsor-flip-hint">
+              CLICK / TAP FOR DETAILS <FaRedoAlt size={9} style={{ marginLeft: '0.25rem' }} />
+            </span>
           </div>
         </div>
 
@@ -298,7 +308,7 @@ function SponsorRow({ tier, label, items, direction }) {
       <div className="sponsor-marquee">
         <div className="sponsor-marquee-fade sponsor-marquee-fade-left" />
         <div className="sponsor-marquee-fade sponsor-marquee-fade-right" />
-        <ScrollableMarquee speed={34} direction={direction} baseCount={baseItems.length}>
+        <ScrollableMarquee speed={46} direction={direction} baseCount={baseItems.length}>
           <div
             className={`sponsor-track ${direction === 'right' ? 'sponsor-track-reverse' : ''}`}
           >
