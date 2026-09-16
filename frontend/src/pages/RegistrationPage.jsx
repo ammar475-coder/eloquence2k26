@@ -40,6 +40,7 @@ import {
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import paymentQrImg from '../assets/payment_upi_qr.jpg';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Helper to dynamically load official Razorpay Checkout SDK
 const loadRazorpayScript = () => {
@@ -280,6 +281,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [copied, setCopied] = useState(false);
   const [upiUtr, setUpiUtr] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [qrViewMode, setQrViewMode] = useState('dynamic'); // 'dynamic' | 'original'
   const [showEventModal, setShowEventModal] = useState(false);
   const [modalCategory, setModalCategory] = useState('all');
 
@@ -2091,17 +2093,72 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                         </div>
                       </div>
 
+                      {/* Mode Switcher */}
+                      <div className="upi-mode-switch-wrap">
+                        <button
+                          type="button"
+                          className={`upi-mode-btn ${qrViewMode === 'dynamic' ? 'active' : ''}`}
+                          onClick={() => setQrViewMode('dynamic')}
+                        >
+                          <FaBolt style={{ marginRight: '5px' }} />
+                          Auto-Fill Amount QR (₹{feeInfo.total})
+                        </button>
+                        <button
+                          type="button"
+                          className={`upi-mode-btn ${qrViewMode === 'original' ? 'active' : ''}`}
+                          onClick={() => setQrViewMode('original')}
+                        >
+                          <FaQrcode style={{ marginRight: '5px' }} />
+                          FamPay Card Photo
+                        </button>
+                      </div>
+
                       <div className="upi-qr-body">
                         {/* The QR Image */}
                         <div className="upi-qr-img-wrap">
-                          <img
-                            src={paymentQrImg}
-                            alt="Samnesh S - 6374229503@yesfam UPI QR Code"
-                            className="upi-qr-image"
-                          />
-                          <div className="upi-qr-amount-pill">
-                            AMOUNT TO PAY: <strong>₹{feeInfo.total}</strong>
-                          </div>
+                          {qrViewMode === 'dynamic' ? (
+                            <div className="fampay-card-mockup">
+                              <div className="fampay-card-header">
+                                <span className="fampay-card-name">Samnesh S</span>
+                                <div className="fampay-card-vpa-pill">6374229503@yesfam</div>
+                              </div>
+                              <div className="fampay-qr-frame">
+                                <QRCodeSVG
+                                  value={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${Number(feeInfo.total) || 0}&cu=INR&tn=Eloquence26`}
+                                  size={215}
+                                  bgColor="#ffffff"
+                                  fgColor="#000000"
+                                  level="H"
+                                  marginSize={2}
+                                  imageSettings={{
+                                    src: '/fampay_center.png',
+                                    height: 38,
+                                    width: 38,
+                                    excavate: true
+                                  }}
+                                />
+                              </div>
+                              <div className="fampay-card-footer">
+                                <div className="fampay-amount-pill">
+                                  AMOUNT: <strong>₹{feeInfo.total}</strong>
+                                </div>
+                                <div className="fampay-hint-text">
+                                  ⚡ Scan with GPay / PhonePe / Paytm to auto-fill ₹{feeInfo.total}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="upi-original-card-wrap">
+                              <img
+                                src={paymentQrImg}
+                                alt="Samnesh S - 6374229503@yesfam UPI QR Code"
+                                className="upi-qr-image"
+                              />
+                              <div className="upi-qr-amount-pill">
+                                AMOUNT TO PAY: <strong>₹{feeInfo.total}</strong>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Payment Info & UTR Entry */}
@@ -2132,7 +2189,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
                           {/* Mobile Quick Link to open in GPay / PhonePe / Paytm */}
                           <a
-                            href={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${feeInfo.total}&cu=INR&tn=ELOQUENCE26`}
+                            href={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${Number(feeInfo.total) || 0}&cu=INR&tn=Eloquence26`}
                             className="btn-mobile-upi-pay"
                           >
                             <FaBolt style={{ marginRight: '6px' }} />
@@ -2154,7 +2211,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                               onChange={(e) => setUpiUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
                             />
                             <p className="upi-utr-help">
-                              Scan QR above with any UPI app (Google Pay, PhonePe, Paytm, BHIM), pay <strong>₹{feeInfo.total}</strong>, and enter your 12-digit UTR/Ref number to complete registration.
+                              Scan QR above with any UPI app (Google Pay, PhonePe, Paytm, BHIM) — the <strong>₹{feeInfo.total}</strong> amount will appear automatically. Complete payment and enter your 12-digit UTR/Ref number to complete registration.
                             </p>
                           </div>
                         </div>

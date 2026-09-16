@@ -12320,3 +12320,148 @@ img {
   line-height: 1.45;
   margin: 0.2rem 0 0 0;
 }
+
+/* ── UPI View Mode Switcher ── */
+.upi-mode-switch-wrap {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.upi-mode-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.72);
+  padding: 0.4rem 0.95rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.25s ease;
+  letter-spacing: 0.02em;
+}
+
+.upi-mode-btn:hover {
+  background: rgba(0, 245, 255, 0.12);
+  color: #fff;
+  border-color: rgba(0, 245, 255, 0.4);
+}
+
+.upi-mode-btn.active {
+  background: linear-gradient(135deg, #00f5ff 0%, #0284c7 100%);
+  color: #040c12;
+  border-color: #00f5ff;
+  box-shadow: 0 0 16px rgba(0, 245, 255, 0.45);
+}
+
+/* ── FamPay Card Mockup for Dynamic Pre-filled QR ── */
+.fampay-card-mockup {
+  background: linear-gradient(180deg, #111417 0%, #06080a 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 22px;
+  padding: 1.35rem 1.2rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: clamp(245px, 32vw, 280px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 245, 255, 0.12);
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.fampay-card-mockup:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 245, 255, 0.4);
+}
+
+.fampay-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1.1rem;
+  width: 100%;
+}
+
+.fampay-card-name {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  font-family: var(--font-display, sans-serif);
+}
+
+.fampay-card-vpa-pill {
+  padding: 0.3rem 1.1rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.88rem;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.fampay-qr-frame {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  width: 100%;
+  max-width: 240px;
+}
+
+.fampay-qr-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 215px;
+}
+
+.fampay-card-footer {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.fampay-amount-pill {
+  background: linear-gradient(135deg, rgba(0, 245, 255, 0.18) 0%, rgba(2, 132, 199, 0.28) 100%);
+  border: 1px solid rgba(0, 245, 255, 0.5);
+  border-radius: 20px;
+  padding: 0.35rem 0.95rem;
+  font-size: 0.85rem;
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+
+.fampay-amount-pill strong {
+  color: #00f5ff;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.fampay-hint-text {
+  font-size: 0.72rem;
+  color: #39ff88;
+  font-weight: 600;
+  text-align: center;
+}
+
+.upi-original-card-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
