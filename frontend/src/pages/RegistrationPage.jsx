@@ -37,7 +37,7 @@ import {
   FaInfoCircle,
   FaCopy
 } from 'react-icons/fa';
-import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData } from '../services/api.js';
+import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import paymentQrImg from '../assets/payment_upi_qr.jpg';
 import { QRCodeSVG } from 'qrcode.react';
@@ -97,37 +97,20 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     let reconnectTimer = null;
     let isExplicitlyClosed = false;
 
-    const checkStatus = () => {
-      fetch(getApiUrl('/api/registration-status'))
-        .then((res) => res.json())
-        .then((data) => {
-          if (!isMounted) return;
-          if (data.success) {
-            const nextClosed = Boolean(data.isRegistrationClosed);
-            setIsRegClosed((prev) => {
-              if (!prev && nextClosed) {
-                toast.error('Registrations have been closed by symposium administrators.', { id: 'reg-status-toast' });
-              } else if (prev && !nextClosed) {
-                toast.success('Registrations have been re-opened!', { id: 'reg-status-toast' });
-              }
-              return nextClosed;
-            });
-            if (data.closedReason) setClosedNotice(data.closedReason);
-            if (data.closedAt) setRegClosedAt(data.closedAt);
-          }
-        })
-        .catch((err) => console.warn('Failed to load registration status:', err))
-        .finally(() => {
-          if (isMounted) setLoadingRegStatus(false);
-        });
-    };
-
-    // Initial fetch
-    checkStatus();
-
-    // Re-check on tab focus / visibility change
-    window.addEventListener('focus', checkStatus);
-    document.addEventListener('visibilitychange', checkStatus);
+    fetchRegistrationStatus()
+      .then((data) => {
+        if (!isMounted || !data) return;
+        if (data.success) {
+          const nextClosed = Boolean(data.isRegistrationClosed);
+          setIsRegClosed(nextClosed);
+          if (data.closedReason) setClosedNotice(data.closedReason);
+          if (data.closedAt) setRegClosedAt(data.closedAt);
+        }
+      })
+      .catch((err) => console.warn('Failed to load registration status:', err))
+      .finally(() => {
+        if (isMounted) setLoadingRegStatus(false);
+      });
 
     // Auto-reconnecting real-time WebSocket connection
     const connectWebSocket = () => {
@@ -139,6 +122,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           try {
             const msg = JSON.parse(evt.data);
             if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
+              setCachedRegistrationStatus(msg.data);
               const nextClosed = Boolean(msg.data?.isRegistrationClosed);
               setIsRegClosed((prev) => {
                 if (!prev && nextClosed) {
@@ -156,7 +140,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
         ws.onclose = () => {
           if (!isExplicitlyClosed && isMounted) {
-            reconnectTimer = setTimeout(connectWebSocket, 2000);
+            reconnectTimer = setTimeout(connectWebSocket, 3000);
           }
         };
 
@@ -165,7 +149,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         };
       } catch (e) {
         if (!isExplicitlyClosed && isMounted) {
-          reconnectTimer = setTimeout(connectWebSocket, 2000);
+          reconnectTimer = setTimeout(connectWebSocket, 3000);
         }
       }
     };
@@ -175,11 +159,15 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     return () => {
       isMounted = false;
       isExplicitlyClosed = true;
-      window.removeEventListener('focus', checkStatus);
-      document.removeEventListener('visibilitychange', checkStatus);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) {
-        try { ws.close(); } catch (e) {}
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.close(); } catch (e) {}
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => {
+            try { ws.close(); } catch (e) {}
+          };
+        }
       }
     };
   }, []);

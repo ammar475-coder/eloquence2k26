@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
 import cahcetLogo from '../assets/cahcet.png';
-import { getApiUrl, getWsUrl } from '../config/api';
+import { getWsUrl } from '../config/api';
+import { fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api';
 import { FaCalendarAlt } from 'react-icons/fa';
 
 const EVENT_START = new Date('2026-09-26T00:00:00+05:30').getTime();
@@ -29,34 +30,28 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
   const [closedReason, setClosedReason] = useState('ONLINE REGISTRATIONS ARE CLOSED');
   const [onSpotNotice, setOnSpotNotice] = useState('ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM');
 
-  // Countdown timer interval
   useEffect(() => {
-    const timer = window.setInterval(() => setTimeRemaining(getTimeRemaining()), 1000);
+    const timer = window.setInterval(() => {
+      setTimeRemaining(getTimeRemaining());
+    }, 1000);
     return () => window.clearInterval(timer);
   }, []);
 
-  // Fetch real-time registration status & WebSocket listener
+  // Fetch real-time registration status once & WebSocket listener
   useEffect(() => {
     let isMounted = true;
     let ws = null;
 
-    const checkStatus = () => {
-      fetch(getApiUrl('/api/registration-status'))
-        .then((res) => res.json())
-        .then((data) => {
-          if (!isMounted) return;
-          if (data.success) {
-            setIsRegClosed(Boolean(data.isRegistrationClosed));
-            if (data.closedReason) setClosedReason(data.closedReason);
-            if (data.onSpotNotice) setOnSpotNotice(data.onSpotNotice);
-          }
-        })
-        .catch(() => {});
-    };
-
-    checkStatus();
-    window.addEventListener('focus', checkStatus);
-    document.addEventListener('visibilitychange', checkStatus);
+    fetchRegistrationStatus()
+      .then((data) => {
+        if (!isMounted || !data) return;
+        if (data.success) {
+          setIsRegClosed(Boolean(data.isRegistrationClosed));
+          if (data.closedReason) setClosedReason(data.closedReason);
+          if (data.onSpotNotice) setOnSpotNotice(data.onSpotNotice);
+        }
+      })
+      .catch(() => {});
 
     try {
       ws = new WebSocket(getWsUrl('/ws/registrations'));
@@ -65,6 +60,7 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
           const msg = JSON.parse(evt.data);
           if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
             if (isMounted) {
+              setCachedRegistrationStatus(msg.data);
               setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
               if (msg.data?.closedReason) setClosedReason(msg.data.closedReason);
               if (msg.data?.onSpotNotice) setOnSpotNotice(msg.data.onSpotNotice);
@@ -76,10 +72,14 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
 
     return () => {
       isMounted = false;
-      window.removeEventListener('focus', checkStatus);
-      document.removeEventListener('visibilitychange', checkStatus);
       if (ws) {
-        try { ws.close(); } catch (e) {}
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.close(); } catch (e) {}
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => {
+            try { ws.close(); } catch (e) {}
+          };
+        }
       }
     };
   }, []);

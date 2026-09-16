@@ -371,26 +371,56 @@ export async function deleteHomepageCoordinatorTeam(id, token) {
 
 // ==================== REGISTRATION STATUS (CLOSE RG) APIS ====================
 
-export async function fetchRegistrationStatus() {
-  try {
-    const res = await fetch(getApiUrl('/api/registration-status'));
-    const data = await res.json();
-    if (data.success) {
-      return data;
-    }
-    return {
-      success: true,
-      isRegistrationClosed: false,
-      closedReason: ''
-    };
-  } catch (err) {
-    console.warn('Failed to fetch registration status from server:', err);
-    return {
-      success: true,
-      isRegistrationClosed: false,
-      closedReason: ''
-    };
+let cachedRegistrationStatus = null;
+let registrationStatusPromise = null;
+let lastStatusFetchTime = 0;
+const STATUS_CACHE_TTL = 30000; // 30 seconds
+
+export function setCachedRegistrationStatus(data) {
+  if (data) {
+    cachedRegistrationStatus = { success: true, ...data };
+    lastStatusFetchTime = Date.now();
   }
+}
+
+export async function fetchRegistrationStatus(force = false) {
+  const now = Date.now();
+  if (!force && cachedRegistrationStatus && (now - lastStatusFetchTime < STATUS_CACHE_TTL)) {
+    return cachedRegistrationStatus;
+  }
+
+  if (registrationStatusPromise) {
+    return registrationStatusPromise;
+  }
+
+  registrationStatusPromise = (async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/registration-status'));
+      const data = await res.json();
+      if (data && data.success) {
+        cachedRegistrationStatus = data;
+        lastStatusFetchTime = Date.now();
+        return data;
+      }
+      return cachedRegistrationStatus || {
+        success: true,
+        isRegistrationClosed: false,
+        closedReason: '',
+        onSpotNotice: ''
+      };
+    } catch (err) {
+      return cachedRegistrationStatus || {
+        success: true,
+        isRegistrationClosed: false,
+        closedReason: '',
+        onSpotNotice: ''
+      };
+    } finally {
+      registrationStatusPromise = null;
+    }
+  })();
+
+  return registrationStatusPromise;
 }
 
 export async function fetchAdminRegistrationStatus(token) {
