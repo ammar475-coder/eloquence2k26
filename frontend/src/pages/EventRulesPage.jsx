@@ -27,7 +27,7 @@ import {
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
-import { getCachedEvents, fetchEventsData } from '../services/api.js';
+import { getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import VenueImageModal from '../components/VenueImageModal.jsx';
 
@@ -153,21 +153,13 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
     let reconnectTimer = null;
     let isExplicitlyClosed = false;
 
-    const checkStatus = () => {
-      fetch(getApiUrl('/api/registration-status'))
-        .then((res) => res.json())
-        .then((data) => {
-          if (isMounted && data.success) {
-            setIsRegClosed(Boolean(data.isRegistrationClosed));
-          }
-        })
-        .catch(() => {});
-    };
-
-    checkStatus();
-
-    window.addEventListener('focus', checkStatus);
-    document.addEventListener('visibilitychange', checkStatus);
+    fetchRegistrationStatus()
+      .then((data) => {
+        if (isMounted && data?.success) {
+          setIsRegClosed(Boolean(data.isRegistrationClosed));
+        }
+      })
+      .catch(() => {});
 
     const connectWs = () => {
       if (isExplicitlyClosed || !isMounted) return;
@@ -177,21 +169,26 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
           try {
             const msg = JSON.parse(evt.data);
             if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
-              if (isMounted) setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+              if (isMounted) {
+                setCachedRegistrationStatus(msg.data);
+                setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+              }
             }
           } catch (_) {}
         };
         ws.onclose = () => {
           if (!isExplicitlyClosed && isMounted) {
-            reconnectTimer = setTimeout(connectWs, 2000);
+            reconnectTimer = setTimeout(connectWs, 3000);
           }
         };
         ws.onerror = () => {
-          try { ws.close(); } catch (_) {}
+          try {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+          } catch (_) {}
         };
       } catch (_) {
         if (!isExplicitlyClosed && isMounted) {
-          reconnectTimer = setTimeout(connectWs, 2000);
+          reconnectTimer = setTimeout(connectWs, 3000);
         }
       }
     };
@@ -201,11 +198,15 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
     return () => {
       isMounted = false;
       isExplicitlyClosed = true;
-      window.removeEventListener('focus', checkStatus);
-      document.removeEventListener('visibilitychange', checkStatus);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) {
-        try { ws.close(); } catch (_) {}
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.close(); } catch (_) {}
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => {
+            try { ws.close(); } catch (_) {}
+          };
+        }
       }
     };
   }, []);

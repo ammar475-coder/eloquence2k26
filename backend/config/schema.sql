@@ -94,6 +94,12 @@ ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DE
 ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS attendance_status TEXT DEFAULT 'pending';
 ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
 ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS verified_by TEXT;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS upi_utr TEXT;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS verification_status TEXT DEFAULT 'pending';
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS is_flagged BOOLEAN DEFAULT false;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS flag_reason TEXT;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS flagged_at TIMESTAMPTZ;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS flagged_by TEXT;
 
 -- ------------------------------------------------------------------------------
 -- 3. REGISTRATION MEMBERS TABLE
@@ -228,10 +234,13 @@ CREATE TABLE IF NOT EXISTS public.settings (
     id TEXT PRIMARY KEY DEFAULT 'general',
     is_registration_closed BOOLEAN DEFAULT false,
     closed_reason TEXT,
+    on_spot_notice TEXT,
     closed_at TIMESTAMPTZ,
     closed_by TEXT,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS on_spot_notice TEXT;
 
 -- ------------------------------------------------------------------------------
 -- 11. WINNERS & SCORES TABLES

@@ -308,9 +308,31 @@ exports.getStatus = (req, res) => {
   });
 };
 
-exports.getRegistrationStatus = (req, res) => {
+exports.getRegistrationStatus = async (req, res) => {
   try {
-    const settings = readSettings();
+    let settings = readSettings();
+    try {
+      const { data: dbSettings, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'general')
+        .maybeSingle();
+
+      if (dbSettings && !error) {
+        settings = {
+          isRegistrationClosed: Boolean(dbSettings.is_registration_closed),
+          closedReason: dbSettings.closed_reason || settings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+          closedAt: dbSettings.closed_at || settings.closedAt || null,
+          closedBy: dbSettings.closed_by || settings.closedBy || null,
+          onSpotNotice: dbSettings.on_spot_notice || settings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
+          updatedAt: dbSettings.updated_at || new Date().toISOString()
+        };
+        writeSettings(settings);
+      }
+    } catch (dbErr) {
+      // Non-blocking fallback to local settings
+    }
+
     res.json({
       success: true,
       data: settings,
@@ -459,6 +481,7 @@ exports.verifyPaymentAndRegister = async (req, res) => {
   // 2. Generate unique Ticket Code
   const eventCat = currentEvent.category === 'technical' ? 'TCH' : 'NT';
   const ticketCode = `ELQ26-${eventCat}-${Math.floor(10000 + Math.random() * 90000)}`;
+  let registrationId = crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}`;
 
   try {
     // Ensure event exists in Supabase events table
@@ -526,8 +549,8 @@ exports.verifyPaymentAndRegister = async (req, res) => {
 
       if (regError) {
         console.warn('Supabase registration insert warning:', regError.message);
-      } else {
-        registrationId = regData && regData[0] ? regData[0].id : null;
+      } else if (regData && regData[0]) {
+        registrationId = regData[0].id;
       }
     } catch (dbErr) {
       console.error('Supabase registration insert exception:', dbErr.message);
@@ -568,7 +591,7 @@ exports.verifyPaymentAndRegister = async (req, res) => {
       isTeam: Boolean(currentEvent.isTeam),
       membersCount: 1 + validTeamMembers.length,
       participantCount: 1 + validTeamMembers.length,
-      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : m.name),
+      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : (m?.name || '')),
       totalFee,
       totalAmount: totalFee,
       paymentStatus: 'PAID',
@@ -600,16 +623,24 @@ exports.verifyPaymentAndRegister = async (req, res) => {
       console.warn('Local backup registration write error:', localErr);
     }
 
+    // Broadcast real-time event via WebSocket
+    try {
+      const { broadcastRegistrationUpdate } = require('../config/websocket');
+      broadcastRegistrationUpdate('CREATE', ticketData);
+    } catch (wsErr) {
+      console.warn('[WebSocket Broadcast]:', wsErr.message);
+    }
+
     return res.json({
       success: true,
-      message: 'Payment verified and registration successfully confirmed',
+      message: 'Payment verified and registration confirmed successfully',
       ticketData
     });
   } catch (err) {
-    console.error('Registration processing error:', err);
+    console.error('Payment verification registration error:', err);
     return res.status(500).json({
       success: false,
-      message: 'Server error processing registration after payment',
+      message: 'Failed to complete registration after payment verification',
       errorDetails: err.message || err.toString()
     });
   }
@@ -630,11 +661,152 @@ exports.registerEvent = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Missing required data' });
   }
 
-  // Generate a mock ticket code
-  const ticketCode = `ELQ26-${currentEvent.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(10000 + Math.random() * 90000)}`;
+  // Extract and normalize UPI UTR / Transaction Reference
+  const rawUtr = (fields && (fields.upiUtr || fields.transactionId || fields.utr)) || req.body.upiUtr || req.body.transactionId || '';
+  const cleanUtr = typeof rawUtr === 'string' ? rawUtr.trim() : '';
 
+  // Enforce single-use UTR constraint: Each UTR number can only be used once
+  if (cleanUtr) {
+    const cleanUtrNorm = cleanUtr.toUpperCase();
+    const localRegs = readRegistrations();
+    const isDuplicateLocal = localRegs.some(r => {
+      const rUtr = (r.upiUtr || r.upi_utr || r.transactionId || r.transaction_id || '').toString().trim().toUpperCase();
+      let snapUtr = '';
+      if (r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(r.venue_snapshot);
+          snapUtr = (parsed.upi_utr || parsed.upiUtr || parsed.transaction_id || parsed.transactionId || '').toString().trim().toUpperCase();
+        } catch (e) {}
+      }
+      return (rUtr && rUtr === cleanUtrNorm) || (snapUtr && snapUtr === cleanUtrNorm);
+    });
+
+    if (isDuplicateLocal) {
+      return res.status(400).json({
+        success: false,
+        message: `This UPI UTR / Transaction Reference number "${cleanUtr}" has already been used for another registration. Each UTR number can only be used once.`
+      });
+    }
+
+    // Also check Supabase for duplicate UTR
+    try {
+      const { data: supaMatches } = await supabase
+        .from('registrations')
+        .select('id, ticket_code, razorpay_payment_id')
+        .ilike('razorpay_payment_id', cleanUtr)
+        .limit(1);
+
+      if (Array.isArray(supaMatches) && supaMatches.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `This UPI UTR / Transaction Reference number "${cleanUtr}" has already been registered. Each UTR number can only be used once.`
+        });
+      }
+    } catch (supaErr) {
+      console.warn('[UTR Duplicate Check] Supabase check note:', supaErr.message);
+    }
+  }
+
+  // Generate unique ticket code & UUID
+  const catPrefix = (currentEvent.category || '').toLowerCase() === 'technical' ? 'TCH' : 'NT';
+  const ticketCode = `ELQ26-${catPrefix}-${Math.floor(10000 + Math.random() * 90000)}`;
+  const registrationId = crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}`;
+
+  const rawTeamMembers = fields.teamMembers || req.body.teamMembers || [];
+  const validTeamMembers = (Array.isArray(rawTeamMembers) ? rawTeamMembers : [])
+    .filter(m => {
+      if (!m) return false;
+      if (typeof m === 'string') return m.trim().length > 0;
+      const n = m.fullName || m.name || '';
+      return typeof n === 'string' && n.trim().length > 0;
+    })
+    .map(m => {
+      if (typeof m === 'string') {
+        return {
+          fullName: m.trim(),
+          name: m.trim(),
+          phone: '',
+          email: '',
+          college: fields.college || '',
+          department: fields.department || '',
+          year: fields.year || ''
+        };
+      }
+      const memberName = (m.fullName || m.name || '').trim();
+      return {
+        fullName: memberName,
+        name: memberName,
+        email: m.email || '',
+        phone: m.phone || '',
+        whatsapp: m.whatsapp || m.phone || '',
+        college: m.college || fields.college || '',
+        department: m.department || fields.department || '',
+        year: m.year || fields.year || ''
+      };
+    });
+
+  const isPaid = Number(totalFee) > 0;
+  const initialVerificationStatus = isPaid ? 'pending' : 'verified';
+
+  const paymentMeta = {
+    venue: currentEvent.venue || 'CSE Department Labs',
+    payment_method: paymentMethod || 'ON_SITE_DESK',
+    game: game || null,
+    upi_utr: cleanUtr || null,
+    transaction_id: cleanUtr || null,
+    verification_status: initialVerificationStatus,
+    team_members: validTeamMembers
+  };
+  const venueSnapshotStr = JSON.stringify(paymentMeta);
+
+  // Prepare registration ticket data payload
+  const ticketData = {
+    ticketCode,
+    registrationId,
+    id: registrationId,
+    eventName: currentEvent.name,
+    eventId: currentEvent.id,
+    category: currentEvent.category,
+    leadName: fields.fullName,
+    fullName: fields.fullName,
+    college: fields.college,
+    department: fields.department,
+    email: fields.email,
+    phone: fields.phone,
+    year: fields.year,
+    isTeam: Boolean(currentEvent.isTeam),
+    teamName: fields.teamName || null,
+    membersCount: 1 + validTeamMembers.length,
+    teamMembersList: validTeamMembers.map(m => m.fullName || m.name),
+    teamMembers: validTeamMembers,
+    totalFee: Number(totalFee) || 0,
+    totalAmount: Number(totalFee) || 0,
+    paymentStatus: paymentStatus || 'paid',
+    paymentMethod: paymentMethod || 'ON_SITE_DESK',
+    upiUtr: cleanUtr || null,
+    transactionId: cleanUtr || null,
+    verificationStatus: initialVerificationStatus,
+    isVerified: !isPaid,
+    isFlagged: false,
+    registrationStatus: 'active',
+    venue: currentEvent.venue,
+    timing: currentEvent.timing,
+    timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    createdAt: new Date().toISOString()
+  };
+
+  // 1. Save immediately to local persistent storage
   try {
-    // 0. Ensure event exists in database before registration foreign key constraint
+    const localRegs = readRegistrations();
+    localRegs.push(ticketData);
+    writeRegistrations(localRegs);
+  } catch (localErr) {
+    console.warn('[Register] Local JSON write note:', localErr.message);
+  }
+
+  // 2. Persist to Supabase Database (with auto-fallback on error)
+  try {
+    // Ensure event exists in DB before registration foreign key constraint
     const { data: existingEv } = await supabase.from('events').select('id').eq('id', currentEvent.id).maybeSingle();
     if (!existingEv) {
       await supabase.from('events').insert([{
@@ -650,17 +822,7 @@ exports.registerEvent = async (req, res) => {
       }]);
     }
 
-    const validTeamMembers = (fields.teamMembers || [])
-      .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
-
-    const paymentMeta = {
-      venue: currentEvent.venue || 'CSE Department Labs',
-      payment_method: paymentMethod || 'ON_SITE_DESK',
-      game: game || null
-    };
-    const venueSnapshotStr = JSON.stringify(paymentMeta);
-
-    // 1. Insert into registrations table
+    // Insert into registrations table
     const { data: regData, error: regError } = await supabase
       .from('registrations')
       .insert([{
@@ -676,90 +838,45 @@ exports.registerEvent = async (req, res) => {
         members_count: 1 + validTeamMembers.length,
         total_fee: totalFee,
         payment_status: paymentStatus,
-        registration_status: 'active',
+        registration_status: 'confirmed',
+        payment_method: paymentMethod || 'ON_SITE_DESK',
+        razorpay_payment_id: cleanUtr || null,
         venue_snapshot: venueSnapshotStr,
-        timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM'
+        timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM',
+        is_verified: !isPaid
       }])
       .select('id');
 
-    if (regError) throw regError;
-    const registrationId = regData[0].id;
-
-    // 2. Insert team members into registration_members table if any
-    if (validTeamMembers.length > 0) {
+    if (regError) {
+      console.warn('[Supabase Registration Warning]:', regError.message);
+    } else if (regData && regData[0] && validTeamMembers.length > 0) {
+      const dbRegId = regData[0].id;
       const membersToInsert = validTeamMembers.map((member, idx) => ({
-        registration_id: registrationId,
+        registration_id: dbRegId,
         member_number: idx + 2,
         member_name: (typeof member === 'string' ? member : (member.name || '')).trim()
       }));
 
-      const { error: membersError } = await supabase
-        .from('registration_members')
-        .insert(membersToInsert);
-
-      if (membersError) {
-        console.error('Registration members insert error:', membersError);
-        throw membersError;
-      }
+      await supabase.from('registration_members').insert(membersToInsert);
     }
-
-    // Prepare response data for the ticket PDF
-    const ticketData = {
-      ticketCode,
-      eventName: currentEvent.name,
-      category: currentEvent.category,
-      leadName: fields.fullName,
-      college: fields.college,
-      department: fields.department,
-      email: fields.email,
-      phone: fields.phone,
-      year: fields.year,
-      teamName: fields.teamName || null,
-      membersCount: 1 + validTeamMembers.length,
-      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : m.name),
-      totalFee,
-      venue: currentEvent.venue,
-      timing: currentEvent.timing,
-      timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-    };
-
-    // Save backup to local JSON as well
-    try {
-      const localRegs = readRegistrations();
-      localRegs.push({
-        registrationId: ticketCode,
-        id: registrationId,
-        fullName: fields.fullName,
-        email: fields.email,
-        phone: fields.phone,
-        college: fields.college,
-        department: fields.department,
-        year: fields.year,
-        eventId: currentEvent.id,
-        eventName: currentEvent.name,
-        isTeam: Boolean(currentEvent.isTeam),
-        teamName: fields.teamName || null,
-        totalAmount: Number(totalFee) || 0,
-        createdAt: new Date().toISOString()
-      });
-      writeRegistrations(localRegs);
-    } catch (localErr) {
-      console.warn('Local backup registration write error:', localErr);
-    }
-
-    res.json({
-      success: true,
-      message: 'Registration successful',
-      ticketData
-    });
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Database error during registration',
-      errorDetails: err.message || JSON.stringify(err)
-    });
+  } catch (dbEx) {
+    console.warn('[Supabase Registration Exception]:', dbEx.message);
   }
+
+  // 3. Broadcast real-time event via WebSocket to all dashboards and clients
+  try {
+    const { broadcastRegistrationUpdate } = require('../config/websocket');
+    broadcastRegistrationUpdate('CREATE', ticketData);
+  } catch (wsErr) {
+    console.warn('[WebSocket Broadcast]:', wsErr.message);
+  }
+
+  // 4. Return successful ticket response
+  return res.json({
+    success: true,
+    message: 'Registration successful',
+    ticketData
+  });
 };
 
 exports.getHealth = (req, res) => {
@@ -872,12 +989,61 @@ const enrichRegistrationRecord = (r) => {
         copy.razorpay_order_id = parsed.razorpay_order_id;
         copy.razorpayOrderId = parsed.razorpay_order_id;
       }
+      if (parsed.upi_utr || parsed.upiUtr) {
+        copy.upi_utr = parsed.upi_utr || parsed.upiUtr;
+        copy.upiUtr = copy.upi_utr;
+      }
+      if (parsed.transaction_id || parsed.transactionId) {
+        copy.transaction_id = parsed.transaction_id || parsed.transactionId;
+        copy.transactionId = copy.transaction_id;
+      }
+      if (parsed.verification_status || parsed.verificationStatus) {
+        copy.verification_status = parsed.verification_status || parsed.verificationStatus;
+        copy.verificationStatus = copy.verification_status;
+      }
+      if (parsed.flag_reason || parsed.flagReason) {
+        copy.flag_reason = parsed.flag_reason || parsed.flagReason;
+        copy.flagReason = copy.flag_reason;
+      }
       if (parsed.venue) {
         copy.venue = parsed.venue;
+      }
+      if (Array.isArray(parsed.team_members) && parsed.team_members.length > 0 && (!copy.teamMembers || copy.teamMembers.length === 0)) {
+        copy.teamMembers = parsed.team_members;
+        copy.teamMembersList = parsed.team_members.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
       }
     } catch (e) {
       // Not JSON or parse error, keep venue_snapshot as venue string
     }
+  }
+
+  // Standardize UTR / Reference number resolution
+  const resolvedUtr = copy.upiUtr || copy.upi_utr || copy.transactionId || copy.transaction_id || 
+    ((copy.paymentMethod === 'UPI_QR' || copy.payment_method === 'UPI_QR' || (!copy.razorpayPaymentId?.startsWith('pay_') && copy.razorpayPaymentId)) ? (copy.razorpayPaymentId || copy.razorpay_payment_id) : null);
+  
+  if (resolvedUtr) {
+    copy.upiUtr = String(resolvedUtr).trim();
+    copy.upi_utr = copy.upiUtr;
+    copy.transactionId = copy.transactionId || copy.upiUtr;
+  }
+
+  // Harmonize flag status and verification status
+  const isFlagged = Boolean(copy.is_flagged || copy.isFlagged || copy.verification_status === 'flagged' || copy.verificationStatus === 'flagged');
+  copy.is_flagged = isFlagged;
+  copy.isFlagged = isFlagged;
+  copy.flagReason = copy.flag_reason || copy.flagReason || null;
+  copy.flaggedAt = copy.flagged_at || copy.flaggedAt || null;
+  copy.flaggedBy = copy.flagged_by || copy.flaggedBy || null;
+
+  if (isFlagged) {
+    copy.verificationStatus = 'flagged';
+    copy.verification_status = 'flagged';
+  } else if (copy.is_verified) {
+    copy.verificationStatus = 'verified';
+    copy.verification_status = 'verified';
+  } else {
+    copy.verificationStatus = copy.verification_status || copy.verificationStatus || 'pending';
+    copy.verification_status = copy.verificationStatus;
   }
 
   return copy;

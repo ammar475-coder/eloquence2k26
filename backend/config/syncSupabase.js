@@ -180,7 +180,7 @@ async function syncTableData() {
           registration_status: r.registrationStatus || r.registration_status || 'CONFIRMED',
           payment_method: r.paymentMethod || r.payment_method || 'ONLINE',
           razorpay_order_id: r.razorpayOrderId || r.razorpay_order_id || null,
-          razorpay_payment_id: r.razorpayPaymentId || r.razorpay_payment_id || null,
+          razorpay_payment_id: r.razorpayPaymentId || r.razorpay_payment_id || r.upiUtr || r.upi_utr || r.transactionId || null,
           razorpay_signature: r.razorpaySignature || r.razorpay_signature || null,
           venue_snapshot: typeof r.venue_snapshot === 'string' ? r.venue_snapshot : JSON.stringify(r.venue_snapshot || {}),
           timing_snapshot: r.timing_snapshot || '',
@@ -205,8 +205,10 @@ async function syncTableData() {
         id: 'general',
         is_registration_closed: Boolean(st.isRegistrationClosed),
         closed_reason: st.closedReason || '',
+        on_spot_notice: st.onSpotNotice || '',
         closed_at: st.closedAt || null,
-        closed_by: st.closedBy || null
+        closed_by: st.closedBy || null,
+        updated_at: st.updatedAt || new Date().toISOString()
       }, { onConflict: 'id' });
     }
   } catch (err) {}

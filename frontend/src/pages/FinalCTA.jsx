@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { getApiUrl, getWsUrl } from '../config/api';
+import { getWsUrl } from '../config/api';
+import { fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api';
 
 export default function FinalCTA({ onRegister }) {
   const sectionRef = useRef(null);
@@ -11,18 +12,13 @@ export default function FinalCTA({ onRegister }) {
     let isMounted = true;
     let ws = null;
 
-    const checkStatus = () => {
-      fetch(getApiUrl('/api/registration-status'))
-        .then((res) => res.json())
-        .then((data) => {
-          if (isMounted && data.success) {
-            setIsRegClosed(Boolean(data.isRegistrationClosed));
-          }
-        })
-        .catch(() => {});
-    };
-
-    checkStatus();
+    fetchRegistrationStatus()
+      .then((data) => {
+        if (isMounted && data?.success) {
+          setIsRegClosed(Boolean(data.isRegistrationClosed));
+        }
+      })
+      .catch(() => {});
 
     try {
       ws = new WebSocket(getWsUrl('/ws/registrations'));
@@ -30,7 +26,10 @@ export default function FinalCTA({ onRegister }) {
         try {
           const msg = JSON.parse(evt.data);
           if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'REGISTRATION_STATUS_UPDATED') {
-            if (isMounted) setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+            if (isMounted) {
+              setCachedRegistrationStatus(msg.data);
+              setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
+            }
           }
         } catch (e) {}
       };
@@ -39,7 +38,13 @@ export default function FinalCTA({ onRegister }) {
     return () => {
       isMounted = false;
       if (ws) {
-        try { ws.close(); } catch (e) {}
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.close(); } catch (e) {}
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.onopen = () => {
+            try { ws.close(); } catch (e) {}
+          };
+        }
       }
     };
   }, []);

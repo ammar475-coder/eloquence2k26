@@ -74,6 +74,7 @@ import rulesData from '../data/rules.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
+import RegistrationVerification from '../components/RegistrationVerification.jsx';
 import {
   fetchAdminHomepageCoordinators,
   createHomepageCoordinatorTeam,
@@ -189,6 +190,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isOnSiteRegisterModalOpen, setIsOnSiteRegisterModalOpen] = useState(false);
   const [isDeletingRegId, setIsDeletingRegId] = useState(null);
 
+  // UTR & Verification metrics for badge
+  const utrRegistrationsList = registrationsList.filter(r => {
+    const utr = r.upiUtr || r.upi_utr || r.transactionId || r.transaction_id || r.razorpayPaymentId || r.razorpay_payment_id;
+    const isOnline = (r.paymentMethod || r.payment_method || '').toUpperCase().includes('UPI') ||
+      (r.paymentMethod || r.payment_method || '').toUpperCase().includes('ONLINE');
+    return Boolean(utr) || isOnline;
+  });
+
+  const pendingUtrCount = utrRegistrationsList.filter(r => 
+    !r.is_verified && !r.isVerified && !r.is_flagged && !r.isFlagged && 
+    r.verificationStatus !== 'verified' && r.verification_status !== 'verified' && 
+    r.attendance_status !== 'verified'
+  ).length;
+
   // Registration Analytics & Event Helpers
   const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
 
@@ -197,25 +212,69 @@ export default function AdminDashboard({ token, user, onLogout }) {
     return evt ? evt.name : (r.eventName || r.event_id || r.eventId || 'General Registration');
   };
 
-  const getTeamMembers = (r) => {
-    if (Array.isArray(r.registration_members) && r.registration_members.length > 0) {
-      return r.registration_members.map(m => m.member_name || m.name || m);
-    }
-    if (Array.isArray(r.teamMembersList) && r.teamMembersList.length > 0) {
-      return r.teamMembersList;
-    }
+  const getDetailedTeamMembers = (r) => {
+    if (!r) return [];
+    const sanitizeMember = (m, idx) => {
+      if (typeof m === 'string') {
+        return {
+          memberNumber: idx + 2,
+          fullName: m,
+          name: m,
+          phone: '',
+          whatsapp: '',
+          email: '',
+          college: r.college || '',
+          department: r.department || '',
+          year: r.year || ''
+        };
+      }
+      const memberName = m.fullName || m.name || m.member_name || `Member ${idx + 2}`;
+      return {
+        memberNumber: m.member_number || m.memberNumber || idx + 2,
+        fullName: memberName,
+        name: memberName,
+        phone: m.phone || m.whatsapp || '',
+        whatsapp: m.whatsapp || m.phone || '',
+        email: m.email || '',
+        college: m.college || r.college || '',
+        department: m.department || r.department || '',
+        year: m.year || r.year || ''
+      };
+    };
+
     if (Array.isArray(r.teamMembers) && r.teamMembers.length > 0) {
-      return r.teamMembers;
+      return r.teamMembers.map(sanitizeMember);
     }
-    if (typeof r.team_members === 'string') {
+    if (Array.isArray(r.team_members) && r.team_members.length > 0) {
+      return r.team_members.map(sanitizeMember);
+    }
+    if (typeof r.team_members === 'string' && r.team_members.trim().startsWith('[')) {
       try {
         const parsed = JSON.parse(r.team_members);
-        if (Array.isArray(parsed)) return parsed.map(m => typeof m === 'string' ? m : (m.name || m));
-      } catch (e) {
-        if (r.team_members.trim()) return [r.team_members.trim()];
-      }
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(sanitizeMember);
+        }
+      } catch (e) {}
+    }
+    if (Array.isArray(r.registration_members) && r.registration_members.length > 0) {
+      return r.registration_members.map(sanitizeMember);
+    }
+    if (Array.isArray(r.teamMembersList) && r.teamMembersList.length > 0) {
+      return r.teamMembersList.map(sanitizeMember);
+    }
+    if (r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(r.venue_snapshot);
+        if (Array.isArray(parsed.team_members) && parsed.team_members.length > 0) {
+          return parsed.team_members.map(sanitizeMember);
+        }
+      } catch (e) {}
     }
     return [];
+  };
+
+  const getTeamMembers = (r) => {
+    return getDetailedTeamMembers(r).map(m => m.fullName || m.name);
   };
 
   const getEventCategory = (r) => {
@@ -2737,6 +2796,29 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
+          {/* Registration Verification (UTR Audit) Tab */}
+          <button 
+            type="button"
+            id="admin-nav-registration-verification-btn"
+            style={activeTab === 'registration-verification' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={(e) => { e.preventDefault(); setActiveTab('registration-verification'); setMobileSidebarOpen(false); }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaUserCheck style={S.navIcon} />
+                <span>Registration Verification</span>
+              </div>
+              <span style={{
+                ...S.badgeCount,
+                background: pendingUtrCount > 0 ? (isDark ? '#78350f' : '#fef3c7') : (isDark ? '#1e293b' : '#f1f5f9'),
+                color: pendingUtrCount > 0 ? (isDark ? '#fde68a' : '#b45309') : (isDark ? '#9ca3af' : '#64748b'),
+                border: pendingUtrCount > 0 ? (isDark ? '1px solid #92400e' : '1px solid #fde68a') : 'none'
+              }}>
+                {pendingUtrCount > 0 ? `${pendingUtrCount} PENDING` : `${utrRegistrationsList.length}`}
+              </span>
+            </div>
+          </button>
+
           {/* Search & Verify Participant Tab */}
           <button 
             type="button"
@@ -2824,6 +2906,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'allocate-events' && 'Event Coordinator Allocation'}
               {activeTab === 'homepage-coordinators' && 'Homepage Student-Coordinator Team'}
               {activeTab === 'registrations' && 'Participant Registrations & Verification'}
+              {activeTab === 'registration-verification' && 'Registration Verification'}
               {activeTab === 'search-participant' && 'Search & Verify Participant (QR Check-in)'}
               {activeTab === 'participant-list' && 'Event-Wise Participant & Team List'}
               {activeTab === 'close-rg' && 'Close RG — Registration Access Control'}
@@ -2838,6 +2921,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'allocate-events' && 'Allocate specific events to coordinator accounts. Coordinators can only see and manage their allocated event(s).'}
               {activeTab === 'homepage-coordinators' && (isLeadCoordinator ? 'View student coordinator teams displayed on the symposium homepage marquee.' : 'Manage student coordinator teams (Main Coordinator Team, Website Coordinator Team, etc.) displayed dynamically on the homepage marquee.')}
               {activeTab === 'registrations' && (isLeadCoordinator ? 'View all registered participants, verify ticket codes, and audit payment status.' : 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.')}
+              {activeTab === 'registration-verification' && 'Audit UPI UTR payment references, verify transactions, flag disputes, or delete entries.'}
               {activeTab === 'search-participant' && 'Search by ticket code, name, phone, email, college or scan participant ticket QR code for live on-site verification & admission.'}
               {activeTab === 'participant-list' && (isLeadCoordinator ? 'Filter participants by event, view team names, inspect members, and export PDF sheets.' : 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.')}
               {activeTab === 'close-rg' && 'Symposium-wide registration toggle. Instantly lock or open registrations across all events.'}
@@ -5785,6 +5869,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
           )}
 
           {/* ======================================================== */}
+          {/* REGISTRATION VERIFICATION (UTR AUDIT & CONTROLS)         */}
+          {/* ======================================================== */}
+          {activeTab === 'registration-verification' && (
+            <RegistrationVerification
+              registrationsList={registrationsList}
+              token={token}
+              user={user}
+              isDark={isDark}
+              onRefresh={() => {
+                fetchRegistrations();
+                fetchDashboardData();
+              }}
+              eventsList={eventsList}
+            />
+          )}
+
+          {/* ======================================================== */}
           {/* SEARCH & VERIFY PARTICIPANT VIEW (QR SCAN & ADMISSION)    */}
           {/* ======================================================== */}
           {activeTab === 'search-participant' && (
@@ -8221,27 +8322,79 @@ export default function AdminDashboard({ token, user, onLogout }) {
               </div>
 
               {/* Team Details (if team event) */}
-              {(getTeamMembers(selectedRegDetails).length > 0 || selectedRegDetails.team_name || selectedRegDetails.teamName) && (
+              {(getDetailedTeamMembers(selectedRegDetails).length > 0 || selectedRegDetails.team_name || selectedRegDetails.teamName) && (
                 <div>
-                  <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Team Details: {selectedRegDetails.team_name || selectedRegDetails.teamName || 'Team'}
-                  </h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Team Details: {selectedRegDetails.team_name || selectedRegDetails.teamName || 'Team'}
+                    </h4>
+                    <span style={{ fontSize: '0.75rem', background: isDark ? '#1e3a8a' : '#dbeafe', color: isDark ? '#93c5fd' : '#1e40af', padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: '700' }}>
+                      {1 + getDetailedTeamMembers(selectedRegDetails).length} Members
+                    </span>
+                  </div>
                   <div style={{ background: isDark ? '#161e2e' : '#f8fafc', padding: '1.2rem', borderRadius: '12px', border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.88rem' }}>1.</span>
-                        <span style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.9rem' }}>
-                          {selectedRegDetails.full_name || selectedRegDetails.fullName}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', background: isDark ? '#1e3a8a' : '#dbeafe', color: isDark ? '#93c5fd' : '#1e40af', padding: '0.15rem 0.45rem', borderRadius: '4px', fontWeight: '700' }}>
-                          Team Lead
-                        </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {/* 1. Team Lead Card */}
+                      <div style={{ paddingBottom: '0.6rem', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.88rem' }}>1.</span>
+                            <span style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.9rem' }}>
+                              {selectedRegDetails.full_name || selectedRegDetails.fullName}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', background: isDark ? '#1e3a8a' : '#dbeafe', color: isDark ? '#93c5fd' : '#1e40af', padding: '0.15rem 0.45rem', borderRadius: '4px', fontWeight: '700' }}>
+                              Team Lead
+                            </span>
+                          </div>
+                          {(selectedRegDetails.phone || selectedRegDetails.whatsapp) && (
+                            <a
+                              href={`https://wa.me/91${(selectedRegDetails.phone || selectedRegDetails.whatsapp).replace(/\D/g, '').slice(-10)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.78rem', textDecoration: 'none', fontWeight: '600' }}
+                            >
+                              <FaWhatsapp size={12} /> {selectedRegDetails.phone || selectedRegDetails.whatsapp}
+                            </a>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '3px', marginLeft: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                          {selectedRegDetails.email && <span>Email: {selectedRegDetails.email}</span>}
+                          {selectedRegDetails.college && <span>College: {selectedRegDetails.college}</span>}
+                          {selectedRegDetails.department && <span>Dept: {selectedRegDetails.department} ({selectedRegDetails.year || 'N/A'})</span>}
+                        </div>
                       </div>
-                      {getTeamMembers(selectedRegDetails).map((member, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.88rem' }}>{idx + 2}.</span>
-                          <span style={{ fontWeight: '500', color: isDark ? '#e2e8f0' : '#334155', fontSize: '0.9rem' }}>{member}</span>
-                          <span style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>(Member)</span>
+
+                      {/* Other Team Members */}
+                      {getDetailedTeamMembers(selectedRegDetails).map((member, idx) => (
+                        <div key={idx} style={{ paddingBottom: idx < getDetailedTeamMembers(selectedRegDetails).length - 1 ? '0.6rem' : '0', borderBottom: idx < getDetailedTeamMembers(selectedRegDetails).length - 1 ? (isDark ? '1px solid #1f2937' : '1px solid #e2e8f0') : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.88rem' }}>{idx + 2}.</span>
+                              <span style={{ fontWeight: '500', color: isDark ? '#e2e8f0' : '#334155', fontSize: '0.9rem' }}>
+                                {member.fullName || member.name}
+                              </span>
+                              <span style={{ fontSize: '0.72rem', background: isDark ? '#1f2937' : '#e2e8f0', color: isDark ? '#9ca3af' : '#64748b', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                                Member
+                              </span>
+                            </div>
+                            {(member.phone || member.whatsapp) && (
+                              <a
+                                href={`https://wa.me/91${(member.phone || member.whatsapp).replace(/\D/g, '').slice(-10)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.78rem', textDecoration: 'none', fontWeight: '600' }}
+                              >
+                                <FaWhatsapp size={12} /> {member.phone || member.whatsapp}
+                              </a>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '3px', marginLeft: '1.2rem', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                            {member.email && <span>Email: {member.email}</span>}
+                            {member.college && <span>College: {member.college}</span>}
+                            {(member.department || member.year) && (
+                              <span>Dept: {member.department || 'CSE'} {member.year ? `(${member.year})` : ''}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
