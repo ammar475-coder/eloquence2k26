@@ -205,8 +205,10 @@ async function syncTableData() {
         id: 'general',
         is_registration_closed: Boolean(st.isRegistrationClosed),
         closed_reason: st.closedReason || '',
+        on_spot_notice: st.onSpotNotice || '',
         closed_at: st.closedAt || null,
-        closed_by: st.closedBy || null
+        closed_by: st.closedBy || null,
+        updated_at: st.updatedAt || new Date().toISOString()
       }, { onConflict: 'id' });
     }
   } catch (err) {}

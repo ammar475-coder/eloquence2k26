@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
+const { broadcastRegistrationUpdate } = require('../config/websocket');
 const JWT_SECRET = process.env.JWT_SECRET || 'eloquence2k26_default_secure_jwt_secret_key';
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
@@ -2422,7 +2423,29 @@ exports.deleteHomepageCoordinator = async (req, res) => {
 // ==================== REGISTRATION ACCESS CONTROL (CLOSE RG) ====================
 exports.getAdminRegistrationStatus = async (req, res) => {
   try {
-    const settings = getSettingsData();
+    let settings = getSettingsData();
+    try {
+      const { data: dbSettings, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'general')
+        .maybeSingle();
+
+      if (dbSettings && !error) {
+        settings = {
+          isRegistrationClosed: Boolean(dbSettings.is_registration_closed),
+          closedReason: dbSettings.closed_reason || settings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+          closedAt: dbSettings.closed_at || settings.closedAt || null,
+          closedBy: dbSettings.closed_by || settings.closedBy || null,
+          onSpotNotice: dbSettings.on_spot_notice || settings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
+          updatedAt: dbSettings.updated_at || new Date().toISOString()
+        };
+        saveSettingsData(settings);
+      }
+    } catch (dbErr) {
+      console.warn('Supabase fetch settings warning:', dbErr.message);
+    }
+
     res.json({
       success: true,
       data: settings
@@ -2449,9 +2472,32 @@ exports.updateRegistrationStatus = async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
+    // 1. Save locally immediately
     saveSettingsData(updated);
 
-    // Broadcast real-time update via WebSocket to all connected clients
+    // 2. Persist to Supabase live database
+    try {
+      const dbPayload = {
+        id: 'general',
+        is_registration_closed: updated.isRegistrationClosed,
+        closed_reason: updated.closedReason,
+        on_spot_notice: updated.onSpotNotice,
+        closed_at: updated.closedAt,
+        closed_by: updated.closedBy,
+        updated_at: updated.updatedAt
+      };
+      const { error: dbErr } = await supabase
+        .from('settings')
+        .upsert([dbPayload], { onConflict: 'id' });
+
+      if (dbErr) {
+        console.warn('Supabase updateRegistrationStatus warning:', dbErr.message);
+      }
+    } catch (dbEx) {
+      console.warn('Supabase settings upsert exception:', dbEx.message);
+    }
+
+    // 3. Broadcast real-time update via WebSocket to all connected clients
     try {
       broadcastRegistrationUpdate('REGISTRATION_STATUS_UPDATED', updated);
     } catch (wsErr) {
