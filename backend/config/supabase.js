@@ -8,6 +8,7 @@ require('dotenv').config({ path: envPath, quiet: true });
 
 const { createClient } = require("@supabase/supabase-js");
 
+
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_ANON_KEY || process.env['SUPABASE_anon-key'];
 
@@ -38,4 +39,4 @@ if (supabaseUrl && supabaseKey) {
   };
 }
 
-module.exports = supabase;
+module.exports = supabase;
