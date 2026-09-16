@@ -13,7 +13,7 @@
     ],
     "displayOrder": 1,
     "isActive": true,
-    "updatedAt": "2026-09-16T10:22:16.432Z"
+    "updatedAt": "2026-09-16T16:31:44.976Z"
   },
   {
     "id": "coord-tech-01-b",
@@ -322,39 +322,6 @@
     "isActive": true,
     "createdAt": "2026-09-16T10:24:57.407Z",
     "updatedAt": "2026-09-16T10:24:57.407Z"
-  },
-  {
-    "id": "coord-1789229485490",
-    "name": "shahid Ahamed",
-    "phone": "9876543210",
-    "whatsapp": "9876543210",
-    "email": "shahid@gmail.com",
-    "department": "CSE",
-    "year": "3rd Year",
-    "role": "Coordinator",
-    "assignedEvents": [
-      "tech-06"
-    ],
-    "displayOrder": 31,
-    "isActive": true,
-    "createdAt": "2026-09-12T16:11:25.490Z",
-    "updatedAt": "2026-09-15T05:32:07.393Z"
-  },
-  {
-    "id": "coord-1789539486000",
-    "name": "Mohammed Sakhee B",
-    "phone": "8838731526",
-    "whatsapp": "8838731526",
-    "email": "",
-    "department": "CSE",
-    "year": "4th Year",
-    "role": "Lead Coordinator",
-    "assignedEvents": [
-      "nontech-01"
-    ],
-    "displayOrder": 32,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:30.554Z"
   },
   {
     "id": "coord-1789540820936",

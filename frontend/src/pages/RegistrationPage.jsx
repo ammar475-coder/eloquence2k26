@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
@@ -2254,7 +2255,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         {step === 'success' && ticketData && (
           <div className="reg-success-view">
             {/* Pop-up Modal to prompt user to take screenshot or download */}
-            {showSaveModal && (
+            {showSaveModal && typeof document !== 'undefined' && createPortal(
               <div className="save-pass-modal-overlay" onClick={() => setShowSaveModal(false)}>
                 <div className="save-pass-modal" onClick={(e) => e.stopPropagation()}>
                   <button
@@ -2307,7 +2308,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
 
             {(() => {
