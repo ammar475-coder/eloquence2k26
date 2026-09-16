@@ -269,6 +269,10 @@ const getEventsData = () => {
 const saveEventsData = (events) => {
   try {
     fs.writeFileSync(eventsFilePath, JSON.stringify(events, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateEventsCache) apiCtrl.invalidateEventsCache();
+    } catch (_) {}
   } catch (err) {
     console.error('Error writing events.json:', err);
   }
@@ -286,6 +290,10 @@ const getSponsorsData = () => {
 const saveSponsorsData = (sponsors) => {
   try {
     fs.writeFileSync(sponsorsFilePath, JSON.stringify(sponsors, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateSponsorsCache) apiCtrl.invalidateSponsorsCache();
+    } catch (_) {}
     return true;
   } catch (err) {
     console.error('Error writing sponsors.json:', err);
@@ -305,6 +313,10 @@ const getCoordinatorsData = () => {
 const saveCoordinatorsData = (coordinators) => {
   try {
     fs.writeFileSync(coordinatorsFilePath, JSON.stringify(coordinators, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateCoordinatorsCache) apiCtrl.invalidateCoordinatorsCache();
+    } catch (_) {}
     return true;
   } catch (err) {
     console.error('Error writing coordinators.json:', err);
@@ -324,6 +336,10 @@ const getHomepageCoordinatorsData = () => {
 const saveHomepageCoordinatorsData = (teams) => {
   try {
     fs.writeFileSync(homepageCoordinatorsFilePath, JSON.stringify(teams, null, 2), 'utf8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateHomepageTeamsCache) apiCtrl.invalidateHomepageTeamsCache();
+    } catch (_) {}
     if (fs.existsSync(frontendStudentCoordinatorsFilePath)) {
       try {
         const activeTeamsForFrontend = teams
@@ -1189,6 +1205,9 @@ exports.createEvent = async (req, res) => {
     ? Number(feePerHead) 
     : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : 50);
 
+  const cleanImage = image ? saveBase64ImageIfPresent(image, 'event') : '';
+  const cleanVenueImage = venueImage ? saveBase64ImageIfPresent(venueImage, 'venue') : '';
+
   const newEvent = {
     id: eventId,
     number: String(events.length + 1).padStart(2, '0'),
@@ -1205,10 +1224,10 @@ exports.createEvent = async (req, res) => {
     isTeam: teamSize ? (teamSize.toLowerCase().includes('team') || teamSize.toLowerCase().includes('max') || teamSize.toLowerCase().includes('squad')) : false,
     tag: tag ? tag.trim() : (cat === 'technical' ? 'Technical Presentation' : 'Non-Technical Event'),
     venue: venue ? venue.trim() : 'CSE Department',
-    venueImage: venueImage ? venueImage.trim() : '',
+    venueImage: cleanVenueImage ? cleanVenueImage.trim() : '',
     timing: timing ? timing.trim() : '10:00 AM – 01:00 PM',
     description: description ? description.trim() : '',
-    image: image ? image.trim() : '',
+    image: cleanImage ? cleanImage.trim() : '',
     rules: Array.isArray(rules) && rules.length > 0 ? rules : [],
     rounds: Array.isArray(rounds) && rounds.length > 0 ? rounds : [],
     guidelines: Array.isArray(guidelines) && guidelines.length > 0 ? guidelines : [],
@@ -1304,6 +1323,9 @@ exports.updateEvent = async (req, res) => {
     ? Number(feePerHead) 
     : (fee && fee.match(/\d+/) ? Number(fee.match(/\d+/)[0]) : undefined);
 
+  const cleanImage = image !== undefined ? saveBase64ImageIfPresent(image, 'event') : undefined;
+  const cleanVenueImage = venueImage !== undefined ? saveBase64ImageIfPresent(venueImage, 'venue') : undefined;
+
   const updateFields = {
     updated_at: new Date().toISOString()
   };
@@ -1313,7 +1335,7 @@ exports.updateEvent = async (req, res) => {
   if (subtitle !== undefined) updateFields.subtitle = subtitle.trim();
   if (category !== undefined) updateFields.category = category.trim().toLowerCase();
   if (venue !== undefined) updateFields.venue = venue.trim();
-  if (venueImage !== undefined) updateFields.venue_image = venueImage ? venueImage.trim() : '';
+  if (cleanVenueImage !== undefined) updateFields.venue_image = cleanVenueImage ? cleanVenueImage.trim() : '';
   if (timing !== undefined) updateFields.timing = timing.trim();
   if (fee !== undefined) updateFields.fee = fee.trim();
   if (parsedFeePerHead !== undefined) updateFields.fee_per_head = parsedFeePerHead;
@@ -1324,7 +1346,7 @@ exports.updateEvent = async (req, res) => {
   }
   if (tag !== undefined) updateFields.tag = tag.trim();
   if (description !== undefined) updateFields.description = description.trim();
-  if (image !== undefined) updateFields.image = image ? image.trim() : '';
+  if (cleanImage !== undefined) updateFields.image = cleanImage ? cleanImage.trim() : '';
   if (rules !== undefined && Array.isArray(rules)) updateFields.rules = rules;
   if (rounds !== undefined && Array.isArray(rounds)) updateFields.rounds = rounds;
   if (guidelines !== undefined && Array.isArray(guidelines)) updateFields.guidelines = guidelines;
@@ -1357,7 +1379,7 @@ exports.updateEvent = async (req, res) => {
     if (subtitle !== undefined) events[eventIndex].subtitle = subtitle.trim();
     if (category !== undefined) events[eventIndex].category = category.trim().toLowerCase();
     if (venue !== undefined) events[eventIndex].venue = venue.trim();
-    if (venueImage !== undefined) events[eventIndex].venueImage = venueImage ? venueImage.trim() : '';
+    if (cleanVenueImage !== undefined) events[eventIndex].venueImage = cleanVenueImage ? cleanVenueImage.trim() : '';
     if (timing !== undefined) events[eventIndex].timing = timing.trim();
     if (fee !== undefined) events[eventIndex].fee = fee.trim();
     if (parsedFeePerHead !== undefined) events[eventIndex].feePerHead = parsedFeePerHead;
@@ -1368,7 +1390,7 @@ exports.updateEvent = async (req, res) => {
     }
     if (tag !== undefined) events[eventIndex].tag = tag.trim();
     if (description !== undefined) events[eventIndex].description = description.trim();
-    if (image !== undefined) events[eventIndex].image = image ? image.trim() : '';
+    if (cleanImage !== undefined) events[eventIndex].image = cleanImage ? cleanImage.trim() : '';
     if (rules !== undefined && Array.isArray(rules)) events[eventIndex].rules = rules;
     if (rounds !== undefined && Array.isArray(rounds)) events[eventIndex].rounds = rounds;
     if (guidelines !== undefined && Array.isArray(guidelines)) events[eventIndex].guidelines = guidelines;
@@ -1660,45 +1682,26 @@ exports.deleteSponsor = async (req, res) => {
   res.json({ success: true, message: 'Sponsor deleted successfully from live database' });
 };
 
-// ==================== LOGO / EVENT IMAGE UPLOAD (DATABASE STORAGE ONLY) ====================
+// ==================== LOGO / EVENT IMAGE UPLOAD ====================
 exports.uploadLogo = async (req, res) => {
   try {
-    const { imageBase64, fileName } = req.body;
+    const { imageBase64, fileName, type } = req.body;
     if (!imageBase64) {
       return res.status(400).json({ success: false, message: 'No image data provided' });
     }
 
-    if (imageBase64.startsWith('http://') || imageBase64.startsWith('https://')) {
+    if (imageBase64.startsWith('http://') || imageBase64.startsWith('https://') || imageBase64.startsWith('/events/')) {
       return res.json({ success: true, url: imageBase64, fileName: fileName || 'external-image' });
     }
 
-    const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return res.status(400).json({ success: false, message: 'Invalid base64 image data' });
-    }
+    const prefix = type === 'venue' ? 'venue' : (type === 'sponsor' ? 'sponsor' : 'img');
+    const cleanUrl = saveBase64ImageIfPresent(imageBase64, prefix);
 
-    const mimeType = matches[1].toLowerCase();
-    const allowedMime = {
-      'image/jpeg': 'jpg',
-      'image/jpg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-      'image/svg+xml': 'svg',
-      'image/gif': 'gif'
-    };
-
-    if (!allowedMime[mimeType]) {
-      return res.status(400).json({ success: false, message: 'Unsupported file type. Use PNG, JPG, WEBP, or SVG.' });
-    }
-
-    const safeName = fileName || `img-${Date.now()}.${allowedMime[mimeType]}`;
-
-    // Return Base64 Data URL directly to be stored in Database (Zero local disk or file bucket storage!)
     return res.json({
       success: true,
-      message: 'Image processed successfully for database storage',
-      url: imageBase64,
-      fileName: safeName
+      message: 'Image uploaded and processed successfully',
+      url: cleanUrl,
+      fileName: fileName || cleanUrl.split('/').pop()
     });
 
   } catch (err) {

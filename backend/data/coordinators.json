@@ -11,9 +11,10 @@
     "assignedEvents": [
       "tech-01"
     ],
+    "isActive": false,
     "displayOrder": 1,
-    "isActive": true,
-    "updatedAt": "2026-09-16T09:01:52.448Z"
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-16T09:07:13.863Z"
   },
   {
     "id": "coord-tech-01-b",

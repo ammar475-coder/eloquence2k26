@@ -9,9 +9,9 @@
     "names": [
       "SYED MUSTHAFA S",
       "MOHAMMED AYAZ A",
+      "SHAHID AHAMED VS",
       "MD FAAZIL AMMAR P",
       "SHAWOOR SAQIB SK",
-      "SHAHID AHAMED VS",
       "MOHAMMED SAAD V"
     ],
     "members": [
@@ -22,13 +22,13 @@
         "name": "MOHAMMED AYAZ A"
       },
       {
+        "name": "SHAHID AHAMED VS"
+      },
+      {
         "name": "MD FAAZIL AMMAR P"
       },
       {
         "name": "SHAWOOR SAQIB SK"
-      },
-      {
-        "name": "SHAHID AHAMED VS"
       },
       {
         "name": "MOHAMMED SAAD V"
@@ -37,7 +37,7 @@
     "displayOrder": 1,
     "isActive": true,
     "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-09T06:41:01.793Z"
+    "updatedAt": "2026-09-15T09:55:17.675Z"
   },
   {
     "id": "main-coordinators",

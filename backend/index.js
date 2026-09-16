@@ -30,6 +30,10 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Static assets
+app.use('/events', express.static(path.join(__dirname, '../frontend/public/events')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // API Routes
 const apiRoutes = require('./routes/api');
 app.use('/api', apiRoutes);
@@ -65,6 +69,12 @@ app.use((req, res) => {
 // Start Server
 app.listen(PORT, HOST, () => {
   console.log(`[ELOQUENCE'26 Backend] Server running on http://${HOST}:${PORT}`);
+  try {
+    const { syncTableData } = require('./config/syncSupabase');
+    syncTableData();
+  } catch (err) {
+    console.warn('Sync table data warning:', err.message);
+  }
 });
 
 module.exports = app;

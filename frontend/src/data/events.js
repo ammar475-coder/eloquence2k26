@@ -25,7 +25,9 @@ const events = [
     rounds: rulesData['tech-01'].rounds,
     guidelines: rulesData['tech-01'].guidelines,
     coordinators: coordinatorsData['tech-01'].coordinators,
-    highlights: ['5 mins presentation', '2 mins Q&A', '< 7 slides limit', '₹100/head']
+    highlights: ['5 mins presentation', '2 mins Q&A', '< 7 slides limit', '₹100/head'],
+    image: '/events/img-1788936483698-9262.jpg',
+    venueImage: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'
   },
   {
     id: 'tech-02',
@@ -49,7 +51,8 @@ const events = [
     rounds: rulesData['tech-02'].rounds,
     guidelines: rulesData['tech-02'].guidelines,
     coordinators: coordinatorsData['tech-02'].coordinators,
-    highlights: ['No built-in libraries', 'Round 1: Written test', 'Round 2: Coding & Debugging']
+    highlights: ['No built-in libraries', 'Round 1: Written test', 'Round 2: Coding & Debugging'],
+    image: '/events/img-1788936494979-9577.png'
   },
   {
     id: 'tech-03',
@@ -73,7 +76,8 @@ const events = [
     rounds: rulesData['tech-03'].rounds,
     guidelines: rulesData['tech-03'].guidelines,
     coordinators: coordinatorsData['tech-03'].coordinators,
-    highlights: ['Screen lock enforcement', '3 Rounds (15 mins/round)', 'Total 45 mins']
+    highlights: ['Screen lock enforcement', '3 Rounds (15 mins/round)', 'Total 45 mins'],
+    image: '/events/img-1788936509546-563.png'
   },
   {
     id: 'tech-04',
@@ -97,7 +101,8 @@ const events = [
     rounds: rulesData['tech-04'].rounds,
     guidelines: rulesData['tech-04'].guidelines,
     coordinators: coordinatorsData['tech-04'].coordinators,
-    highlights: ['Systems provided', 'Round 1: Landing page', 'Round 2: Overall website']
+    highlights: ['Systems provided', 'Round 1: Landing page', 'Round 2: Overall website'],
+    image: '/events/img-1788936520321-7906.jpg'
   },
   {
     id: 'tech-06',
@@ -121,7 +126,8 @@ const events = [
     rounds: rulesData['tech-06'].rounds,
     guidelines: rulesData['tech-06'].guidelines,
     coordinators: coordinatorsData['tech-06'].coordinators,
-    highlights: ['Tools: Figma & Canva', 'AI strictly restricted', 'Round 1: Login page', 'Round 2: Dashboard']
+    highlights: ['Tools: Figma & Canva', 'AI strictly restricted', 'Round 1: Login page', 'Round 2: Dashboard'],
+    image: '/events/img-1788936536890-4163.jpg'
   },
 
   /* ───── NON-TECHNICAL EVENTS ───── */
@@ -147,7 +153,8 @@ const events = [
     rounds: rulesData['nontech-01'].rounds,
     guidelines: rulesData['nontech-01'].guidelines,
     coordinators: coordinatorsData['nontech-01'].coordinators,
-    highlights: ['Original campus footage', '30-60 sec reel length', 'Background music allowed']
+    highlights: ['Original campus footage', '30-60 sec reel length', 'Background music allowed'],
+    image: '/events/img-1788936705846-6346.png'
   },
   {
     id: 'nontech-02',
@@ -171,7 +178,9 @@ const events = [
     rounds: rulesData['nontech-02'].rounds,
     guidelines: rulesData['nontech-02'].guidelines,
     coordinators: coordinatorsData['nontech-02'].coordinators,
-    highlights: ['Visual connection puzzles', 'Fast buzzer mechanics', 'Max 3 per squad']
+    highlights: ['Visual connection puzzles', 'Fast buzzer mechanics', 'Max 3 per squad'],
+    image: '/events/img-1788936728593-6703.png',
+    venueImage: ''
   },
   {
     id: 'nontech-03',
@@ -195,7 +204,8 @@ const events = [
     rounds: rulesData['nontech-03'].rounds,
     guidelines: rulesData['nontech-03'].guidelines,
     coordinators: coordinatorsData['nontech-03'].coordinators,
-    highlights: ['Campus-wide trail', 'Cryptic clue checkpoints', 'Timed squad adventure']
+    highlights: ['Campus-wide trail', 'Cryptic clue checkpoints', 'Timed squad adventure'],
+    image: '/events/img-1788936739166-7206.png'
   },
   {
     id: 'nontech-04',
@@ -219,7 +229,8 @@ const events = [
     rounds: rulesData['nontech-04'].rounds,
     guidelines: rulesData['nontech-04'].guidelines,
     coordinators: coordinatorsData['nontech-04'].coordinators,
-    highlights: ['1 hour duration', 'Intricate traditional & modern patterns', 'Bring cones']
+    highlights: ['1 hour duration', 'Intricate traditional & modern patterns', 'Bring cones'],
+    image: '/events/img-1788936748696-6930.png'
   },
   {
     id: 'nontech-05',
@@ -243,7 +254,8 @@ const events = [
     rounds: rulesData['nontech-05'].rounds,
     guidelines: rulesData['nontech-05'].guidelines,
     coordinators: coordinatorsData['nontech-05'].coordinators,
-    highlights: ['Emotes strictly restricted', '4-Player squad match only', 'Flat ₹200 per squad']
+    highlights: ['Emotes strictly restricted', '4-Player squad match only', 'Flat ₹200 per squad'],
+    image: '/events/img-1788936367834-6940.png'
   },
   {
     id: 'nontech-06',
@@ -267,7 +279,8 @@ const events = [
     rounds: rulesData['nontech-06'].rounds,
     guidelines: rulesData['nontech-06'].guidelines,
     coordinators: coordinatorsData['nontech-06'].coordinators,
-    highlights: ['Rapid / Blitz time control', 'FIDE standard rules', 'Digital clocks provided']
+    highlights: ['Rapid / Blitz time control', 'FIDE standard rules', 'Digital clocks provided'],
+    image: '/events/img-1788936382590-1827.png'
   },
   {
     id: 'nontech-07',
@@ -292,7 +305,8 @@ const events = [
     guidelines: rulesData['nontech-07'].guidelines,
     coordinators: coordinatorsData['nontech-07']?.coordinators || [],
     highlights: ['Strictly 5 members per team', 'Flat ₹250 per team', 'Strategic bidding & purse management'],
-    image: '/events/auction.png'
+    image: '/events/nontech-07-1788936459595-9726.png',
+    venueImage: ''
   }
 ];
 

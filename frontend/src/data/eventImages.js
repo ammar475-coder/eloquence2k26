@@ -14,20 +14,20 @@ import cardAuctionImg from '../assets/card_auction.jpg';
 import cardBotathonImg from '../assets/card_botathon.png';
 
 export const defaultEventImages = {
-  'tech-01': cardPptImg,
-  'tech-02': cardCodingImg,
-  'tech-03': cardQuizImg,
-  'tech-04': cardWebImg,
+  'tech-01': '/events/img-1788936483698-9262.jpg',
+  'tech-02': '/events/img-1788936494979-9577.png',
+  'tech-03': '/events/img-1788936509546-563.png',
+  'tech-04': '/events/img-1788936520321-7906.jpg',
   'tech-05': cardPosterImg,
-  'tech-06': cardUiUxImg,
+  'tech-06': '/events/img-1788936536890-4163.jpg',
   'tech-07': cardBotathonImg,
-  'nontech-01': cardSnapImg,
-  'nontech-02': cardLinkUpImg,
-  'nontech-03': cardHuntZoneImg,
-  'nontech-04': cardHennaImg,
-  'nontech-05': cardBattleImg,
-  'nontech-06': cardChessImg,
-  'nontech-07': cardAuctionImg,
+  'nontech-01': '/events/img-1788936705846-6346.png',
+  'nontech-02': '/events/img-1788936728593-6703.png',
+  'nontech-03': '/events/img-1788936739166-7206.png',
+  'nontech-04': '/events/img-1788936748696-6930.png',
+  'nontech-05': '/events/img-1788936367834-6940.png',
+  'nontech-06': '/events/img-1788936382590-1827.png',
+  'nontech-07': '/events/nontech-07-1788936459595-9726.png',
 };
 
 /**

@@ -34,10 +34,12 @@ import {
   FaFire,
   FaCreditCard,
   FaChevronRight,
-  FaInfoCircle
+  FaInfoCircle,
+  FaCopy
 } from 'react-icons/fa';
-import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister } from '../services/api.js';
+import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
+import paymentQrImg from '../assets/payment_upi_qr.jpg';
 
 // Helper to dynamically load official Razorpay Checkout SDK
 const loadRazorpayScript = () => {
@@ -74,8 +76,13 @@ const createEmptyMember = (defaultCollege = '') => ({
 });
 
 export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
-  const [eventsList, setEventsList] = useState([]);
-  const [selectedEvent, setSelectedEvent] = useState(null);
+  const initialEvents = getCachedEvents() || [];
+  const initialSelected = eventId
+    ? initialEvents.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase())
+    : (initialEvents.length > 0 ? initialEvents[0] : null);
+
+  const [eventsList, setEventsList] = useState(initialEvents);
+  const [selectedEvent, setSelectedEvent] = useState(initialSelected);
 
   // Registration Closed Status State
   const [isRegClosed, setIsRegClosed] = useState(false);
@@ -177,13 +184,14 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   }, []);
 
   useEffect(() => {
-    fetch(getApiUrl('/api/events'))
-      .then((res) => res.json())
-      .then((result) => {
-        if (result.success && Array.isArray(result.data)) {
-          setEventsList(result.data);
+    let isMounted = true;
+    fetchEventsData()
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setEventsList(data);
           if (eventId) {
-            const found = result.data.find(
+            const found = data.find(
               (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
             );
             if (found) setSelectedEvent(found);
@@ -193,7 +201,19 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       .catch((err) => {
         console.error('Failed to load events in registration page:', err);
       });
+    return () => {
+      isMounted = false;
+    };
   }, [eventId]);
+
+  useEffect(() => {
+    if (eventId && eventsList.length > 0) {
+      const found = eventsList.find(
+        (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
+      );
+      if (found) setSelectedEvent(found);
+    }
+  }, [eventId, eventsList]);
 
   // Stepper: 'participant' | 'team' | 'review' | 'success'
   const [step, setStep] = useState('participant');
@@ -258,6 +278,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [serverError, setServerError] = useState(null);
   const [ticketData, setTicketData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [upiUtr, setUpiUtr] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
   const [showEventModal, setShowEventModal] = useState(false);
   const [modalCategory, setModalCategory] = useState('all');
 
@@ -716,9 +738,122 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       return;
     }
 
-    // ── CASE B: PAID EVENT → RAZORPAY PAYMENT FLOW ──
+    // ── CASE B: PAID EVENT → UPI QR PAYMENT FLOW ──
+    const cleanUtr = (upiUtr || '').trim();
+    if (!cleanUtr) {
+      toast.error('Please enter the 12-digit UPI UTR / Transaction ID after completing payment.', {
+        icon: '⚠️'
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (cleanUtr.length < 6) {
+      toast.error('Please enter a valid 12-digit UPI UTR / Reference number from your payment app.', {
+        icon: '⚠️'
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      // 1. Ensure Razorpay Checkout SDK is loaded
+      const whatsappRaw = (fields.whatsapp && fields.whatsapp.trim()) || (fields.phone && fields.phone.trim()) || '';
+      const clean10Digits = whatsappRaw.replace(/\D/g, '').slice(-10);
+      const formattedContact = clean10Digits.length === 10
+        ? `+91${clean10Digits}`
+        : (whatsappRaw.startsWith('+91') ? whatsappRaw : (whatsappRaw ? `+91${whatsappRaw}` : ''));
+
+      const response = await fetch(getApiUrl('/api/register'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentEvent: activeEventPayload,
+          fields: {
+            ...fields,
+            whatsapp: whatsappRaw,
+            phone: whatsappRaw || fields.phone,
+            contact: formattedContact,
+            upiUtr: cleanUtr,
+            transactionId: cleanUtr
+          },
+          totalFee: totalPayable,
+          paymentMethod: 'UPI_QR',
+          paymentStatus: 'paid',
+          game: isEsports ? selectedGame : null
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Congratulations, you are an Avenger now!', {
+          icon: '🛡️',
+          duration: 5000,
+          id: 'avenger-success-toast'
+        });
+        const resTicket = data.ticketData || {};
+        setTicketData({
+          ...resTicket,
+          registrationId: resTicket.ticketCode || data.registrationId || 'ELQ26-REG',
+          fullName: fields.fullName,
+          college: fields.college,
+          department: fields.department,
+          year: fields.year,
+          phone: fields.phone,
+          email: fields.email,
+          eventId: selectedEvent?.id,
+          eventName: activeEventPayload.name,
+          eventCategory: selectedEvent.category,
+          isTeam: selectedEvent.isTeam,
+          teamName: fields.teamName,
+          participantCount: 1 + (fields.teamMembers ? fields.teamMembers.length : 0),
+          totalFee: totalPayable,
+          totalAmount: totalPayable,
+          paymentStatus: 'PAID',
+          paymentMethod: 'UPI_QR',
+          transactionId: cleanUtr,
+          upiUtr: cleanUtr,
+          game: isEsports ? selectedGame : null
+        });
+        setShowSaveModal(true);
+        setStep('success');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        toast.error('Registration failed: ' + (data.message || 'Server error'));
+        setServerError(data.message || 'Registration failed.');
+      }
+    } catch (err) {
+      console.error('UPI QR registration error:', err);
+      toast.error('Server connection error. Please try again.');
+      setServerError('Network error while communicating with registration server.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Helper to copy official UPI ID
+  const handleCopyUpiId = () => {
+    try {
+      navigator.clipboard.writeText('6374229503@yesfam');
+      setCopiedUpi(true);
+      toast.success('UPI ID copied: 6374229503@yesfam', { icon: '📋' });
+      setTimeout(() => setCopiedUpi(false), 3000);
+    } catch (e) {
+      toast.success('UPI ID: 6374229503@yesfam');
+    }
+  };
+
+  // ── PRESERVED: Official Razorpay Payment Integration (Keys & logic 100% intact) ──
+  const handleRazorpayCheckout = async () => {
+    setIsSubmitting(true);
+    setServerError(null);
+
+    const activeEventPayload = isEsports
+      ? { ...selectedEvent, name: `${selectedEvent.name} (${selectedGame})`, game: selectedGame }
+      : selectedEvent;
+
+    const totalPayable = Number(feeInfo.total) || 0;
+
+    try {
       const isLoaded = await loadRazorpayScript();
       if (!isLoaded) {
         toast.error('Could not load Razorpay payment gateway. Please check your internet connection.');
@@ -726,14 +861,12 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         return;
       }
 
-      // Leader's WhatsApp number in proper international +91 format (fetching directly from WhatsApp)
       const whatsappRaw = (fields.whatsapp && fields.whatsapp.trim()) || (fields.phone && fields.phone.trim()) || '';
       const clean10Digits = whatsappRaw.replace(/\D/g, '').slice(-10);
       const formattedContact = clean10Digits.length === 10
         ? `+91${clean10Digits}`
         : (whatsappRaw.startsWith('+91') ? whatsappRaw : (whatsappRaw ? `+91${whatsappRaw}` : ''));
 
-      // 2. Request backend to create Razorpay Order
       const orderPayload = {
         currentEvent: activeEventPayload,
         fields: {
@@ -754,7 +887,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         return;
       }
 
-      // 3. Configure and Launch Razorpay Checkout Popup (Direct UPI)
       const options = {
         key: orderData.keyId,
         amount: orderData.amount,
@@ -777,17 +909,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             blocks: {
               upi: {
                 name: "Pay via UPI (GPay, PhonePe, Paytm, QR)",
-                instruments: [
-                  {
-                    method: "upi"
-                  }
-                ]
+                instruments: [{ method: "upi" }]
               }
             },
             sequence: ["block.upi"],
-            preferences: {
-              show_default_blocks: true
-            }
+            preferences: { show_default_blocks: true }
           }
         },
         notes: {
@@ -800,9 +926,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           phone: formattedContact,
           chosenPaymentMethod: 'UPI'
         },
-        theme: {
-          color: '#00f5ff'
-        },
+        theme: { color: '#00f5ff' },
         modal: {
           ondismiss: () => {
             setIsSubmitting(false);
@@ -814,7 +938,6 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         handler: async (response) => {
           setIsSubmitting(true);
           try {
-            // 4. Send payment proof to backend for HMAC verification and Supabase persistence
             const verifyRes = await verifyPaymentAndRegister({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -1955,22 +2078,93 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     </div>
                   </div>
 
-                  {feeInfo.total > 0 && (
-                    <div style={{ marginTop: '1.15rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#00f5ff', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem', letterSpacing: '0.04em' }}>
-                        <FaBolt /> DIRECT UPI CHECKOUT (GOOGLE PAY, PHONEPE, PAYTM, QR)
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: 'rgba(255, 255, 255, 0.65)', display: 'flex', alignItems: 'center' }}>
-                        <FaShieldAlt style={{ marginRight: '0.3rem', color: '#00f5ff' }} /> 100% Encrypted & Secure
-                      </span>
-                    </div>
-                  )}
+                  {feeInfo.total > 0 ? (
+                    <div className="upi-qr-payment-card">
+                      <div className="upi-qr-header">
+                        <div className="upi-qr-badge-left">
+                          <FaQrcode style={{ color: '#00f5ff', fontSize: '1.05rem' }} />
+                          <span>DIRECT UPI QR CODE PAYMENT</span>
+                        </div>
+                        <div className="upi-qr-badge-right">
+                          <FaShieldAlt style={{ marginRight: '4px' }} />
+                          <span>100% Verified UPI</span>
+                        </div>
+                      </div>
 
-                  <p className="fin-desk-reminder">
-                    {feeInfo.total === 0
-                      ? '* Free event entry. Registration will be confirmed immediately.'
-                      : '* Fast UPI checkout: Directly opens Razorpay with Google Pay, PhonePe, Paytm or UPI QR Code scan.'}
-                  </p>
+                      <div className="upi-qr-body">
+                        {/* The QR Image */}
+                        <div className="upi-qr-img-wrap">
+                          <img
+                            src={paymentQrImg}
+                            alt="Samnesh S - 6374229503@yesfam UPI QR Code"
+                            className="upi-qr-image"
+                          />
+                          <div className="upi-qr-amount-pill">
+                            AMOUNT TO PAY: <strong>₹{feeInfo.total}</strong>
+                          </div>
+                        </div>
+
+                        {/* Payment Info & UTR Entry */}
+                        <div className="upi-qr-info-col">
+                          <div className="upi-info-item">
+                            <span className="upi-info-label">BENEFICIARY / PAYEE NAME</span>
+                            <span className="upi-info-val">Samnesh S</span>
+                          </div>
+
+                          <div className="upi-info-item upi-id-row">
+                            <div>
+                              <span className="upi-info-label">UPI ID / VPA</span>
+                              <span className="upi-info-val code-font">6374229503@yesfam</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn-copy-upi"
+                              onClick={handleCopyUpiId}
+                              title="Copy UPI ID"
+                            >
+                              {copiedUpi ? (
+                                <><FaCheck style={{ color: '#39ff88' }} /> Copied!</>
+                              ) : (
+                                <><FaCopy /> Copy UPI ID</>
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Mobile Quick Link to open in GPay / PhonePe / Paytm */}
+                          <a
+                            href={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${feeInfo.total}&cu=INR&tn=ELOQUENCE26`}
+                            className="btn-mobile-upi-pay"
+                          >
+                            <FaBolt style={{ marginRight: '6px' }} />
+                            Pay ₹{feeInfo.total} in UPI App (GPay / PhonePe)
+                          </a>
+
+                          {/* UTR Input */}
+                          <div className="upi-utr-input-group">
+                            <label htmlFor="upi-utr-input" className="upi-utr-label">
+                              ENTER 12-DIGIT UPI TRANSACTION REF / UTR NUMBER <span style={{ color: '#ff4d4d' }}>*</span>
+                            </label>
+                            <input
+                              id="upi-utr-input"
+                              type="text"
+                              className="form-control upi-utr-field"
+                              placeholder="e.g. 423819283741 (from UPI receipt)"
+                              value={upiUtr}
+                              maxLength={22}
+                              onChange={(e) => setUpiUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
+                            />
+                            <p className="upi-utr-help">
+                              Scan QR above with any UPI app (Google Pay, PhonePe, Paytm, BHIM), pay <strong>₹{feeInfo.total}</strong>, and enter your 12-digit UTR/Ref number to complete registration.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="fin-desk-reminder">
+                      * Free event entry. Registration will be confirmed immediately.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1994,18 +2188,39 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   {isSubmitting ? (
                     <>
                       <FaSpinner className="spinner-rotate" style={{ marginRight: '0.5rem' }} />
-                      OPENING RAZORPAY GATEWAY...
+                      CONFIRMING REGISTRATION...
                     </>
                   ) : feeInfo.total === 0 ? (
                     <>CONFIRM REGISTRATION (FREE) →</>
                   ) : (
                     <>
-                      <FaBolt style={{ marginRight: '0.45rem', fontSize: '1.05rem' }} />
-                      PAY ₹{feeInfo.total} VIA UPI (RAZORPAY) →
+                      <FaCheckCircle style={{ marginRight: '0.45rem', fontSize: '1.05rem' }} />
+                      I HAVE PAID ₹{feeInfo.total} — CONFIRM REGISTRATION →
                     </>
                   )}
                 </button>
               </div>
+
+              {feeInfo.total > 0 && (
+                <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleRazorpayCheckout}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(255, 255, 255, 0.45)',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: '4px 8px'
+                    }}
+                    title="Pay with Razorpay Gateway"
+                  >
+                    Need standard Razorpay gateway? Click here to pay via Razorpay
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2245,17 +2460,23 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                       <span className="ticket-val" style={{ color: '#00f5ff', fontWeight: '700' }}>
                         {ticketData.paymentMethod === 'RAZORPAY_UPI'
                           ? 'UPI (Razorpay)'
+                          : ticketData.paymentMethod === 'UPI_QR'
+                          ? 'UPI QR Scan'
                           : ticketData.paymentMethod === 'RAZORPAY'
                           ? 'Cards / Netbanking (Razorpay)'
+                          : ticketData.paymentMethod === 'FREE_EVENT'
+                          ? 'Free Entry'
                           : (ticketData.paymentMethod || 'ONLINE')}
                       </span>
                     </div>
 
-                    {ticketData.razorpayPaymentId && (
+                    {(ticketData.razorpayPaymentId || ticketData.transactionId || ticketData.upiUtr) && (
                       <div className="ticket-info-item">
-                        <span className="ticket-label">RAZORPAY PAYMENT ID</span>
+                        <span className="ticket-label">
+                          {ticketData.razorpayPaymentId ? 'RAZORPAY PAYMENT ID' : 'UPI TRANSACTION REF / UTR'}
+                        </span>
                         <span className="ticket-val" style={{ color: '#00f5ff', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                          {ticketData.razorpayPaymentId}
+                          {ticketData.razorpayPaymentId || ticketData.transactionId || ticketData.upiUtr}
                         </span>
                       </div>
                     )}
