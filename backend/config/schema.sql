@@ -234,10 +234,13 @@ CREATE TABLE IF NOT EXISTS public.settings (
     id TEXT PRIMARY KEY DEFAULT 'general',
     is_registration_closed BOOLEAN DEFAULT false,
     closed_reason TEXT,
+    on_spot_notice TEXT,
     closed_at TIMESTAMPTZ,
     closed_by TEXT,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS on_spot_notice TEXT;
 
 -- ------------------------------------------------------------------------------
 -- 11. WINNERS & SCORES TABLES

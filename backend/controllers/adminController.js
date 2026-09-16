@@ -2405,7 +2405,7 @@ exports.getAdminRegistrationStatus = async (req, res) => {
         saveSettingsData(settings);
       }
     } catch (dbErr) {
-      console.warn('DB note fetching settings:', dbErr.message);
+      console.warn('Supabase fetch settings warning:', dbErr.message);
     }
 
     res.json({
@@ -2434,26 +2434,32 @@ exports.updateRegistrationStatus = async (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
-    // Save locally
+    // 1. Save locally immediately
     saveSettingsData(updated);
 
-    // Save to Supabase table
+    // 2. Persist to Supabase live database
     try {
-      await supabase
+      const dbPayload = {
+        id: 'general',
+        is_registration_closed: updated.isRegistrationClosed,
+        closed_reason: updated.closedReason,
+        on_spot_notice: updated.onSpotNotice,
+        closed_at: updated.closedAt,
+        closed_by: updated.closedBy,
+        updated_at: updated.updatedAt
+      };
+      const { error: dbErr } = await supabase
         .from('settings')
-        .upsert({
-          id: 'general',
-          is_registration_closed: updated.isRegistrationClosed,
-          closed_reason: updated.closedReason,
-          closed_at: updated.closedAt,
-          closed_by: updated.closedBy,
-          updated_at: updated.updatedAt
-        }, { onConflict: 'id' });
-    } catch (dbErr) {
-      console.warn('Error saving settings to Supabase:', dbErr.message);
+        .upsert([dbPayload], { onConflict: 'id' });
+
+      if (dbErr) {
+        console.warn('Supabase updateRegistrationStatus warning:', dbErr.message);
+      }
+    } catch (dbEx) {
+      console.warn('Supabase settings upsert exception:', dbEx.message);
     }
 
-    // Broadcast real-time update via WebSocket to all connected clients
+    // 3. Broadcast real-time update via WebSocket to all connected clients
     try {
       broadcastRegistrationUpdate('REGISTRATION_STATUS_UPDATED', updated);
     } catch (wsErr) {
