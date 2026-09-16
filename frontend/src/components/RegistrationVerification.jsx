@@ -48,6 +48,71 @@ export default function RegistrationVerification({
   // Details Modal State
   const [selectedReg, setSelectedReg] = useState(null);
 
+  // View Flag Reason Modal State
+  const [viewFlagModalReg, setViewFlagModalReg] = useState(null);
+
+  // Helper to extract detailed team members from any record format
+  const extractTeamMembers = (r) => {
+    if (!r) return [];
+    const sanitizeMember = (m, idx) => {
+      if (typeof m === 'string') {
+        return {
+          memberNumber: idx + 2,
+          fullName: m,
+          name: m,
+          phone: '',
+          whatsapp: '',
+          email: '',
+          college: r.college || '',
+          department: r.department || '',
+          year: r.year || ''
+        };
+      }
+      const memberName = m.fullName || m.name || m.member_name || `Member ${idx + 2}`;
+      return {
+        memberNumber: m.member_number || m.memberNumber || idx + 2,
+        fullName: memberName,
+        name: memberName,
+        phone: m.phone || m.whatsapp || '',
+        whatsapp: m.whatsapp || m.phone || '',
+        email: m.email || '',
+        college: m.college || r.college || '',
+        department: m.department || r.department || '',
+        year: m.year || r.year || ''
+      };
+    };
+
+    if (Array.isArray(r.teamMembers) && r.teamMembers.length > 0) {
+      return r.teamMembers.map(sanitizeMember);
+    }
+    if (Array.isArray(r.team_members) && r.team_members.length > 0) {
+      return r.team_members.map(sanitizeMember);
+    }
+    if (typeof r.team_members === 'string' && r.team_members.trim().startsWith('[')) {
+      try {
+        const parsed = JSON.parse(r.team_members);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(sanitizeMember);
+        }
+      } catch (e) {}
+    }
+    if (Array.isArray(r.teamMembersList) && r.teamMembersList.length > 0) {
+      return r.teamMembersList.map(sanitizeMember);
+    }
+    if (Array.isArray(r.registration_members) && r.registration_members.length > 0) {
+      return r.registration_members.map(sanitizeMember);
+    }
+    if (r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(r.venue_snapshot);
+        if (Array.isArray(parsed.team_members) && parsed.team_members.length > 0) {
+          return parsed.team_members.map(sanitizeMember);
+        }
+      } catch (e) {}
+    }
+    return [];
+  };
+
   // Helper to extract UTR from a registration record
   const getRegUtr = (r) => {
     return (
@@ -763,19 +828,19 @@ export default function RegistrationVerification({
               <thead>
                 <tr style={{ borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0' }}>
                   <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
-                    UTR / REF NUMBER
-                  </th>
-                  <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
-                    STATUS
-                  </th>
-                  <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
                     PARTICIPANT / CONTACT
                   </th>
                   <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
-                    EVENT & TICKET
+                    EVENT
                   </th>
                   <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
                     AMOUNT
+                  </th>
+                  <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
+                    UTR NO
+                  </th>
+                  <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
+                    STATUS
                   </th>
                   <th style={{ background: isDark ? '#111827' : '#ffffff', padding: '1rem 1.25rem', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: isDark ? '#9ca3af' : '#64748b', letterSpacing: '0.05em' }}>
                     SUBMITTED AT
@@ -807,7 +872,71 @@ export default function RegistrationVerification({
                           : 'transparent'
                       }}
                     >
-                      {/* UTR NUMBER CELL */}
+                      {/* 1. PARTICIPANT / CONTACT CELL */}
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.92rem' }}>
+                          {r.fullName || r.full_name || r.leadName || 'Anonymous'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                          {r.phone && (
+                            <a
+                              href={`https://wa.me/91${r.phone.replace(/\D/g, '').slice(-10)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                color: '#22c55e',
+                                fontSize: '0.78rem',
+                                textDecoration: 'none'
+                              }}
+                              title="Chat on WhatsApp"
+                            >
+                              <FaWhatsapp size={11} /> {r.phone}
+                            </a>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '2px' }}>
+                          {r.college || 'CAHCET'} • {r.department || 'CSE'}
+                        </div>
+                      </td>
+
+                      {/* 2. EVENT CELL */}
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <div style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.88rem' }}>
+                          {r.eventName || 'Symposium Event'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                          <span
+                            style={{
+                              fontFamily: 'monospace',
+                              fontSize: '0.75rem',
+                              color: isDark ? '#93c5fd' : '#1d4ed8',
+                              background: isDark ? '#1e293b' : '#eff6ff',
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '4px',
+                              fontWeight: '700'
+                            }}
+                          >
+                            {r.ticketCode || r.ticket_code || r.registrationId || 'TICKET'}
+                          </span>
+                          {(r.teamName || r.team_name || (r.membersCount && r.membersCount > 1) || (r.members_count && r.members_count > 1)) && (
+                            <span style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                              Team: {r.teamName || r.team_name || `${r.membersCount || r.members_count} Members`}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 3. AMOUNT CELL */}
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span style={{ fontSize: '1rem', fontWeight: '800', color: '#10b981' }}>
+                          ₹{Number(r.totalAmount || r.totalFee || r.total_fee || 0)}
+                        </span>
+                      </td>
+
+                      {/* 4. UTR NO CELL */}
                       <td style={{ padding: '1rem 1.25rem' }}>
                         {utr ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -853,7 +982,7 @@ export default function RegistrationVerification({
                         </div>
                       </td>
 
-                      {/* STATUS CELL */}
+                      {/* 5. STATUS CELL */}
                       <td style={{ padding: '1rem 1.25rem' }}>
                         {isVerified && (
                           <span
@@ -876,24 +1005,41 @@ export default function RegistrationVerification({
 
                         {isFlagged && (
                           <div>
-                            <span
+                            <button
+                              type="button"
+                              onClick={() => setViewFlagModalReg(r)}
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '5px',
-                                padding: '0.25rem 0.65rem',
+                                padding: '0.28rem 0.7rem',
                                 borderRadius: '999px',
                                 fontSize: '0.75rem',
                                 fontWeight: '800',
                                 background: isDark ? '#451a1a' : '#fef2f2',
                                 color: '#ef4444',
-                                border: isDark ? '1px solid #7f1d1d' : '1px solid #fecaca'
+                                border: isDark ? '1px solid #991b1b' : '1px solid #fecaca',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
                               }}
+                              title="Click to view reason"
                             >
                               <FaExclamationTriangle size={11} /> FLAGGED
-                            </span>
+                            </button>
                             {(r.flagReason || r.flag_reason) && (
-                              <div style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px', maxWidth: '160px', wordBreak: 'break-word' }}>
+                              <div
+                                onClick={() => setViewFlagModalReg(r)}
+                                style={{
+                                  fontSize: '0.72rem',
+                                  color: '#ef4444',
+                                  marginTop: '4px',
+                                  maxWidth: '160px',
+                                  cursor: 'pointer',
+                                  textDecoration: 'underline',
+                                  fontWeight: '600'
+                                }}
+                                title="Click to view reason"
+                              >
                                 Reason: {r.flagReason || r.flag_reason}
                               </div>
                             )}
@@ -920,71 +1066,7 @@ export default function RegistrationVerification({
                         )}
                       </td>
 
-                      {/* PARTICIPANT CELL */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
-                        <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.92rem' }}>
-                          {r.fullName || r.full_name || r.leadName || 'Anonymous'}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
-                          {r.phone && (
-                            <a
-                              href={`https://wa.me/91${r.phone.replace(/\D/g, '').slice(-10)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                color: '#22c55e',
-                                fontSize: '0.78rem',
-                                textDecoration: 'none'
-                              }}
-                              title="Chat on WhatsApp"
-                            >
-                              <FaWhatsapp size={11} /> {r.phone}
-                            </a>
-                          )}
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '2px' }}>
-                          {r.college || 'CAHCET'} • {r.department || 'CSE'}
-                        </div>
-                      </td>
-
-                      {/* EVENT & TICKET CELL */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
-                        <div style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.88rem' }}>
-                          {r.eventName || 'Symposium Event'}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
-                          <span
-                            style={{
-                              fontFamily: 'monospace',
-                              fontSize: '0.75rem',
-                              color: isDark ? '#93c5fd' : '#1d4ed8',
-                              background: isDark ? '#1e293b' : '#eff6ff',
-                              padding: '0.1rem 0.4rem',
-                              borderRadius: '4px',
-                              fontWeight: '700'
-                            }}
-                          >
-                            {r.ticketCode || r.ticket_code || r.registrationId || 'TICKET'}
-                          </span>
-                          {(r.teamName || r.membersCount > 1) && (
-                            <span style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                              Team: {r.teamName || `${r.membersCount} Members`}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* AMOUNT CELL */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
-                        <span style={{ fontSize: '1rem', fontWeight: '800', color: '#10b981' }}>
-                          ₹{Number(r.totalAmount || r.totalFee || r.total_fee || 0)}
-                        </span>
-                      </td>
-
-                      {/* SUBMITTED AT CELL */}
+                      {/* 6. SUBMITTED AT CELL */}
                       <td style={{ padding: '1rem 1.25rem', fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b' }}>
                         <div>{r.timestamp || (r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : 'N/A')}</div>
                         {isVerified && (r.verifiedAt || r.verified_at) && (
@@ -999,7 +1081,7 @@ export default function RegistrationVerification({
                         )}
                       </td>
 
-                      {/* ACTIONS CELL */}
+                      {/* 7. ACTIONS CELL */}
                       <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'nowrap' }}>
                           {/* 1. VERIFY BUTTON */}
@@ -1395,30 +1477,108 @@ export default function RegistrationVerification({
                 </div>
               </div>
 
-              {/* Team Members if any */}
-              {Array.isArray(selectedReg.teamMembers) && selectedReg.teamMembers.length > 0 && (
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>
-                    Team Members ({selectedReg.teamMembers.length})
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {selectedReg.teamMembers.map((m, i) => (
-                      <span
-                        key={i}
+              {/* Team Details (Full squad roster) */}
+              {(() => {
+                const members = extractTeamMembers(selectedReg);
+                const hasTeam = members.length > 0 || Boolean(selectedReg.teamName || selectedReg.team_name);
+                if (!hasTeam) return null;
+
+                return (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: '800', color: isDark ? '#93c5fd' : '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Squad Details: {selectedReg.teamName || selectedReg.team_name || 'Team'} ({1 + members.length} Total)
+                      </div>
+                      <span style={{ fontSize: '0.72rem', background: isDark ? '#1e3a8a' : '#dbeafe', color: isDark ? '#93c5fd' : '#1e40af', padding: '0.15rem 0.5rem', borderRadius: '999px', fontWeight: '700' }}>
+                        {1 + members.length} Members
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {/* 1. Team Lead Card */}
+                      <div
                         style={{
-                          background: isDark ? '#1f2937' : '#f1f5f9',
-                          color: isDark ? '#e5e7eb' : '#334155',
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '6px',
-                          fontSize: '0.8rem'
+                          background: isDark ? '#1a2234' : '#f1f5f9',
+                          border: isDark ? '1px solid #2563eb' : '1px solid #bfdbfe',
+                          borderRadius: '10px',
+                          padding: '0.75rem 1rem'
                         }}
                       >
-                        {typeof m === 'string' ? m : m.name || m.fullName}
-                      </span>
-                    ))}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: '800', color: isDark ? '#93c5fd' : '#2563eb', fontSize: '0.85rem' }}>1.</span>
+                            <span style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.9rem' }}>
+                              {selectedReg.fullName || selectedReg.full_name}
+                            </span>
+                            <span style={{ fontSize: '0.68rem', background: '#2563eb', color: '#ffffff', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '700' }}>
+                              Team Lead
+                            </span>
+                          </div>
+                          {selectedReg.phone && (
+                            <a
+                              href={`https://wa.me/91${selectedReg.phone.replace(/\D/g, '').slice(-10)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.78rem', textDecoration: 'none', fontWeight: '600' }}
+                            >
+                              <FaWhatsapp size={12} /> {selectedReg.phone}
+                            </a>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                          {selectedReg.email && <span>Email: {selectedReg.email}</span>}
+                          {selectedReg.college && <span>College: {selectedReg.college}</span>}
+                          {selectedReg.department && <span>Dept: {selectedReg.department} ({selectedReg.year || 'N/A'})</span>}
+                        </div>
+                      </div>
+
+                      {/* Other Team Members */}
+                      {members.map((m, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            background: isDark ? '#161e2e' : '#f8fafc',
+                            border: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            padding: '0.75rem 1rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontWeight: '800', color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.85rem' }}>{idx + 2}.</span>
+                              <span style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.9rem' }}>
+                                {m.fullName || m.name}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', background: isDark ? '#374151' : '#e2e8f0', color: isDark ? '#cbd5e1' : '#475569', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: '700' }}>
+                                Member
+                              </span>
+                            </div>
+                            {m.phone && (
+                              <a
+                                href={`https://wa.me/91${m.phone.replace(/\D/g, '').slice(-10)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontSize: '0.78rem', textDecoration: 'none', fontWeight: '600' }}
+                              >
+                                <FaWhatsapp size={12} /> {m.phone}
+                              </a>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                            {m.email && <span>Email: {m.email}</span>}
+                            {m.college && <span>College: {m.college}</span>}
+                            {(m.department || m.year) && (
+                              <span>
+                                Dept: {m.department || 'CSE'} {m.year ? `(${m.year})` : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
@@ -1431,6 +1591,139 @@ export default function RegistrationVerification({
                   color: '#ffffff',
                   padding: '0.6rem 1.5rem',
                   borderRadius: '8px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: FLAGGED REGISTRATION REASON & DETAILS ───────────────── */}
+      {viewFlagModalReg && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem'
+          }}
+          onClick={() => setViewFlagModalReg(null)}
+        >
+          <div
+            style={{
+              background: isDark ? '#111827' : '#ffffff',
+              border: isDark ? '1px solid #7f1d1d' : '1px solid #fecaca',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: isDark ? '1px solid #1f2937' : '1px solid #e2e8f0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444' }}>
+                <FaExclamationTriangle size={20} />
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800' }}>Flagged Registration Reason</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewFlagModalReg(null)}
+                style={{ background: 'none', border: 'none', color: isDark ? '#9ca3af' : '#64748b', cursor: 'pointer', fontSize: '1.1rem' }}
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
+              {/* Reason Highlight Card */}
+              <div
+                style={{
+                  background: isDark ? '#451a1a' : '#fef2f2',
+                  border: isDark ? '1px solid #991b1b' : '1px solid #fecaca',
+                  borderRadius: '12px',
+                  padding: '1.1rem'
+                }}
+              >
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Recorded Flag Reason
+                </div>
+                <div style={{ fontSize: '1.05rem', fontWeight: '700', color: isDark ? '#fca5a5' : '#b91c1c', marginTop: '4px' }}>
+                  {viewFlagModalReg.flagReason || viewFlagModalReg.flag_reason || 'Payment amount not credited / UTR mismatch'}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: isDark ? '#f87171' : '#dc2626', marginTop: '6px' }}>
+                  {viewFlagModalReg.flaggedBy || viewFlagModalReg.flagged_by ? `Flagged by: ${viewFlagModalReg.flaggedBy || viewFlagModalReg.flagged_by}` : 'Flagged by: Admin'}
+                  {viewFlagModalReg.flaggedAt || viewFlagModalReg.flagged_at ? ` • ${new Date(viewFlagModalReg.flaggedAt || viewFlagModalReg.flagged_at).toLocaleString('en-IN')}` : ''}
+                </div>
+              </div>
+
+              {/* Registration Meta */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', background: isDark ? '#1f2937' : '#f8fafc', padding: '1rem', borderRadius: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Participant</div>
+                  <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a' }}>{viewFlagModalReg.fullName || viewFlagModalReg.full_name}</div>
+                  {viewFlagModalReg.phone && <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>{viewFlagModalReg.phone}</div>}
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Ticket / Event</div>
+                  <div style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb' }}>{viewFlagModalReg.ticketCode || viewFlagModalReg.ticket_code}</div>
+                  <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>{viewFlagModalReg.eventName}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>UTR / Reference</div>
+                  <div style={{ fontFamily: 'monospace', fontWeight: '800', color: isDark ? '#fde047' : '#b45309' }}>
+                    {getRegUtr(viewFlagModalReg) || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Fee Amount</div>
+                  <div style={{ fontWeight: '800', color: '#10b981' }}>
+                    ₹{Number(viewFlagModalReg.totalAmount || viewFlagModalReg.totalFee || viewFlagModalReg.total_fee || 0)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  handleUnflag(viewFlagModalReg);
+                  setViewFlagModalReg(null);
+                }}
+                style={{
+                  background: isDark ? '#1f2937' : '#f1f5f9',
+                  border: isDark ? '1px solid #374151' : '1px solid #cbd5e1',
+                  color: isDark ? '#e5e7eb' : '#334155',
+                  padding: '0.6rem 1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Resolve & Reset to Pending
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewFlagModalReg(null)}
+                style={{
+                  background: '#2563eb',
+                  border: 'none',
+                  color: '#ffffff',
+                  padding: '0.6rem 1.25rem',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
                   fontWeight: '700',
                   cursor: 'pointer'
                 }}
