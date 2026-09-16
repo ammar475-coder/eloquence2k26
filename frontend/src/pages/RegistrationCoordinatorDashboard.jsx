@@ -266,7 +266,10 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     const validMembers = onSiteTeamMembers.filter(m => m.trim().length > 0);
     const memberCount = 1 + validMembers.length;
     const feePerHead = selectedEvt.feePerHead || 50;
-    const totalFee = selectedEvt.isTeam && selectedEvt.feeType === 'fixed' ? feePerHead : (feePerHead * memberCount);
+    const isFixedTeam = selectedEvt.feeType === 'per_team' || selectedEvt.feeType === 'per_squad' || selectedEvt.feeType === 'fixed';
+    const totalFee = selectedEvt.isTeam && isFixedTeam
+      ? (selectedEvt.id === 'nontech-07' ? 250 : (selectedEvt.id === 'nontech-05' ? 200 : (selectedEvt.feePerHead || 250)))
+      : (feePerHead * memberCount);
 
     const payload = {
       currentEvent: selectedEvt,
@@ -1122,13 +1125,15 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                             )}
                           </div>
                         ))}
-                        <button
-                          type="button"
-                          onClick={() => setOnSiteTeamMembers([...onSiteTeamMembers, ''])}
-                          style={{ ...S.filterBtn, alignSelf: 'flex-start', marginTop: '0.2rem' }}
-                        >
-                          <FaPlus size={10} /> Add Member
-                        </button>
+                        {onSiteTeamMembers.length < ((eventsList.find(e => e.id === onSiteEventId)?.maxMembers || 4) - 1) && (
+                          <button
+                            type="button"
+                            onClick={() => setOnSiteTeamMembers([...onSiteTeamMembers, ''])}
+                            style={{ ...S.filterBtn, alignSelf: 'flex-start', marginTop: '0.2rem' }}
+                          >
+                            <FaPlus size={10} /> Add Member
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

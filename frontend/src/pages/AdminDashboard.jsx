@@ -1237,7 +1237,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
     const validMembers = onSiteTeamMembers.filter(m => m.trim().length > 0);
     const memberCount = 1 + validMembers.length;
     const feePerHead = selectedEvt.feePerHead || 50;
-    const totalFee = selectedEvt.isTeam && selectedEvt.feeType === 'fixed' ? feePerHead : (feePerHead * memberCount);
+    const isFixedTeam = selectedEvt.feeType === 'per_team' || selectedEvt.feeType === 'per_squad' || selectedEvt.feeType === 'fixed';
+    const totalFee = selectedEvt.isTeam && isFixedTeam
+      ? (selectedEvt.id === 'nontech-07' ? 250 : (selectedEvt.id === 'nontech-05' ? 200 : (selectedEvt.feePerHead || 250)))
+      : (feePerHead * memberCount);
 
     const payload = {
       currentEvent: selectedEvt,
@@ -8422,7 +8425,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                             )}
                           </div>
                         ))}
-                        {onSiteTeamMembers.length < (selEvt.maxTeam ? selEvt.maxTeam - 1 : 3) && (
+                        {onSiteTeamMembers.length < ((selEvt.maxMembers || selEvt.maxTeam || 4) - 1) && (
                           <button
                             type="button"
                             onClick={() => setOnSiteTeamMembers(prev => [...prev, ''])}
@@ -8443,7 +8446,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   const validMembers = onSiteTeamMembers.filter(m => m.trim().length > 0);
                   const memberCount = 1 + validMembers.length;
                   const feePerHead = selEvt.feePerHead || 50;
-                  const totalFee = selEvt.isTeam && selEvt.feeType === 'fixed' ? feePerHead : (feePerHead * memberCount);
+                  const isFixedTeam = selEvt.feeType === 'per_team' || selEvt.feeType === 'per_squad' || selEvt.feeType === 'fixed';
+                  const totalFee = selEvt.isTeam && isFixedTeam
+                    ? (selEvt.id === 'nontech-07' ? 250 : (selEvt.id === 'nontech-05' ? 200 : (selEvt.feePerHead || 250)))
+                    : (feePerHead * memberCount);
 
                   return (
                     <div style={{ background: isDark ? '#1a2333' : '#eff6ff', padding: '0.85rem 1.2rem', borderRadius: '10px', border: isDark ? '1px solid #1e3a8a' : '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
