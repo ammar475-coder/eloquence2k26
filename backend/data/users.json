@@ -44,7 +44,7 @@
   {
     "id": 1788337851969,
     "username": "shahid_reg",
-    "password": "coordinator123",
+    "password": "admin",
     "role": "Event Coordinator",
     "assignedEvents": [],
     "eventId": null

@@ -5693,7 +5693,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <th style={S.th}>Event Enrolled</th>
                         <th style={S.th}>Mode</th>
                         <th style={S.th}>Fee & Status</th>
-                        <th style={S.th}>Date & Time</th>
+                        <th style={{ ...S.th, whiteSpace: 'nowrap', minWidth: '135px' }}>Date & Time</th>
                         <th style={{ ...S.th, textAlign: 'center' }}>Actions</th>
                       </tr>
                     </thead>
@@ -5708,9 +5708,32 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         const feeAmt = getFee(reg);
                         const members = getTeamMembers(reg);
                         const isTeam = Boolean(members.length > 0 || reg.team_name || reg.teamName || reg.isTeam || reg.is_team);
-                        const dateText = reg.created_at 
-                          ? new Date(reg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                          : (reg.createdAtFormatted || 'N/A');
+                        
+                        // Parse both Date and Time cleanly
+                        const rawTimestamp = reg.created_at || reg.createdAt;
+                        let datePart = '';
+                        let timePart = '';
+
+                        if (rawTimestamp) {
+                          try {
+                            const d = new Date(rawTimestamp);
+                            if (!isNaN(d.getTime())) {
+                              datePart = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                              timePart = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                            }
+                          } catch (e) {}
+                        }
+
+                        if (!datePart && (reg.timestamp || reg.createdAtFormatted)) {
+                          const str = reg.timestamp || reg.createdAtFormatted;
+                          if (str.includes(',')) {
+                            const [d, ...rest] = str.split(',');
+                            datePart = d.trim();
+                            timePart = rest.join(',').trim();
+                          } else {
+                            datePart = str;
+                          }
+                        }
 
                         return (
                           <tr key={ticketId} style={S.tr}>
@@ -5791,11 +5814,19 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               </div>
                             </td>
 
-                            {/* Date */}
-                            <td style={S.td}>
-                              <span style={{ fontSize: '0.85rem', color: isDark ? '#cbd5e1' : '#475569' }}>
-                                {dateText}
-                              </span>
+                            {/* Date & Time */}
+                            <td style={{ ...S.td, whiteSpace: 'nowrap', minWidth: '135px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <span style={{ fontSize: '0.85rem', color: isDark ? '#cbd5e1' : '#1e293b', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                  {datePart || 'N/A'}
+                                </span>
+                                {timePart && (
+                                  <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <FaClock size={10} style={{ opacity: 0.8 }} />
+                                    <span>{timePart}</span>
+                                  </span>
+                                )}
+                              </div>
                             </td>
 
                             {/* Actions */}
