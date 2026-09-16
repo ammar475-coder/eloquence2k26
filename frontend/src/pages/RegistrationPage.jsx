@@ -40,6 +40,7 @@ import {
 import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import paymentQrImg from '../assets/payment_upi_qr.jpg';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Helper to dynamically load official Razorpay Checkout SDK
 const loadRazorpayScript = () => {
@@ -221,6 +222,13 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
   const formRef = useRef(null);
   const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
+  const isFixedTeam = Boolean(
+    selectedEvent && (
+      selectedEvent.feeType === 'per_squad' ||
+      selectedEvent.feeType === 'per_team' ||
+      (selectedEvent.isTeam && selectedEvent.minMembers > 1 && selectedEvent.minMembers === selectedEvent.maxMembers)
+    )
+  );
 
   const getValidGame = (g) => {
     if (!g) return 'FREE FIRE';
@@ -273,6 +281,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [copied, setCopied] = useState(false);
   const [upiUtr, setUpiUtr] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [qrViewMode, setQrViewMode] = useState('dynamic'); // 'dynamic' | 'original'
   const [showEventModal, setShowEventModal] = useState(false);
   const [modalCategory, setModalCategory] = useState('all');
 
@@ -311,9 +320,10 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     setFields((prev) => {
       const existing = Array.isArray(prev.teamMembers) ? prev.teamMembers : [];
       let nextMembers = [...existing];
+      const isFixed = event.feeType === 'per_squad' || event.feeType === 'per_team' || (event.isTeam && event.minMembers > 1 && event.minMembers === event.maxMembers);
 
-      if (event.feeType === 'per_squad' && event.maxMembers > 1) {
-        // Fixed 4-player squad: 1 lead + 3 members
+      if (isFixed && event.maxMembers > 1) {
+        // Fixed squad / team (e.g. 4-player squad or 5-member team): 1 lead + (event.maxMembers - 1) members
         const targetCount = event.maxMembers - 1;
         while (nextMembers.length < targetCount) {
           nextMembers.push(createEmptyMember(prev.college));
@@ -330,6 +340,14 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         if (event.maxMembers && nextMembers.length > event.maxMembers - 1) {
           nextMembers = nextMembers.slice(0, event.maxMembers - 1);
         }
+      } else if (event.isTeam && event.minMembers <= 1) {
+        // Optional extra members: start solo unless extra members already entered, capped at maxMembers - 1
+        if (event.maxMembers && nextMembers.length > event.maxMembers - 1) {
+          nextMembers = nextMembers.slice(0, event.maxMembers - 1);
+        }
+      } else {
+        // Solo event: clear additional team members
+        nextMembers = [];
       }
       return {
         ...prev,
@@ -342,12 +360,32 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const calculateTotalFee = () => {
     if (!selectedEvent) return { total: 0, formula: 'No event selected', count: 0, feePerHead: 0 };
 
-    if (selectedEvent.feeType === 'per_squad') {
+    if (selectedEvent.id === 'nontech-07' || (selectedEvent.feeType === 'per_team' && selectedEvent.id === 'nontech-07')) {
+      return {
+        total: 250,
+        formula: 'Flat ₹250 for 5-Member Team',
+        count: 5,
+        feePerHead: 50,
+      };
+    }
+
+    if (selectedEvent.id === 'nontech-05' || selectedEvent.feeType === 'per_squad') {
       return {
         total: 200,
         formula: 'Flat ₹200 for 4-Player Squad',
         count: 4,
         feePerHead: 50,
+      };
+    }
+
+    if (selectedEvent.feeType === 'per_team' || selectedEvent.feeType === 'fixed') {
+      const flatTotal = selectedEvent.feePerHead || 250;
+      const memCount = selectedEvent.maxMembers || 5;
+      return {
+        total: flatTotal,
+        formula: `Flat ₹${flatTotal} for ${memCount}-Member Team`,
+        count: memCount,
+        feePerHead: Math.round(flatTotal / memCount),
       };
     }
 
@@ -428,6 +466,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   };
 
   const removeTeamMember = (index) => {
+    if (isFixedTeam) return;
     setFields((prev) => {
       const updated = prev.teamMembers.filter((_, i) => i !== index);
       return { ...prev, teamMembers: updated };
@@ -509,10 +548,24 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     const errs = {};
     if (!selectedEvent || !selectedEvent.isTeam) return errs;
 
-    if (!fields.teamName.trim()) {
-      errs.teamName = 'Team / Squad Name is required.';
-    } else if (fields.teamName.trim().length < 2) {
-      errs.teamName = 'Team Name must be at least 2 characters.';
+    const hasExtraMembers = Array.isArray(fields.teamMembers) && fields.teamMembers.length > 0;
+    const isRequiredTeam = (selectedEvent.minMembers && selectedEvent.minMembers > 1) || hasExtraMembers;
+
+    if (isRequiredTeam) {
+      if (!fields.teamName?.trim()) {
+        errs.teamName = 'Team / Squad Name is required.';
+      } else if (fields.teamName.trim().length < 2) {
+        errs.teamName = 'Team Name must be at least 2 characters.';
+      }
+    }
+
+    const totalCount = 1 + (Array.isArray(fields.teamMembers) ? fields.teamMembers.length : 0);
+    if (selectedEvent.minMembers && totalCount < selectedEvent.minMembers) {
+      if (selectedEvent.minMembers === selectedEvent.maxMembers) {
+        errs.teamMembers = `This event strictly requires exactly ${selectedEvent.minMembers} team members to be filled.`;
+      } else {
+        errs.teamMembers = `This event requires at least ${selectedEvent.minMembers} team members.`;
+      }
     }
 
     fields.teamMembers.forEach((member, idx) => {
@@ -594,6 +647,15 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       return;
     }
     setErrors({});
+
+    // If solo without an entered team name, auto-default gracefully
+    if (!fields.teamName?.trim()) {
+      setFields((prev) => ({
+        ...prev,
+        teamName: `${prev.fullName || 'Solo'} Squad`
+      }));
+    }
+
     setStep('review');
     window.scrollTo({ top: 120, behavior: 'smooth' });
   };
@@ -1555,13 +1617,19 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
                   <p className="team-intro-note">
                     Leader is automatically <strong>{fields.fullName || 'Lead Participant'}</strong>.
-                    Add squad members according to the competition rules (Maximum {selectedEvent.maxMembers} total participants).
+                    {selectedEvent.minMembers === selectedEvent.maxMembers && selectedEvent.minMembers > 1
+                      ? ` This event strictly requires a team of exactly ${selectedEvent.maxMembers} members (Leader + ${selectedEvent.maxMembers - 1} members) — ₹${feeInfo.total} flat per team.`
+                      : ` Add squad members according to the competition rules (Maximum ${selectedEvent.maxMembers} total participants).`}
                   </p>
 
                   {/* Team Name */}
                   <div className={`form-group ${errors.teamName ? 'form-group-error' : ''}`} id="field-teamName" style={{ marginBottom: '1.5rem' }}>
                     <label className="form-label">
-                      Squad / Team Name <span className="required-star">*</span>
+                      Squad / Team Name {(selectedEvent.minMembers && selectedEvent.minMembers > 1) || fields.teamMembers.length > 0 ? (
+                        <span className="required-star">*</span>
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', color: '#9cb1a2', fontWeight: 400, marginLeft: '0.4rem' }}>(Optional for Solo)</span>
+                      )}
                     </label>
                     <input
                       type="text"
@@ -1588,7 +1656,13 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   <div className="team-members-container">
                     <h4 className="members-subheading">// ADDITIONAL SQUAD MEMBERS:</h4>
 
-                    {fields.teamMembers.length === 0 && selectedEvent.feeType !== 'per_squad' && (
+                    {errors.teamMembers && (
+                      <div className="error-message" style={{ marginBottom: '1rem', padding: '0.6rem 0.85rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '6px', fontSize: '0.85rem' }}>
+                        {errors.teamMembers}
+                      </div>
+                    )}
+
+                    {fields.teamMembers.length === 0 && !isFixedTeam && (
                       <p className="no-members-hint">No extra members added yet. You can compete as a solo participant or add team members below.</p>
                     )}
 
@@ -1610,7 +1684,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                                 SQUAD MEMBER
                               </span>
                             </div>
-                            {selectedEvent.feeType !== 'per_squad' && (
+                            {!isFixedTeam && (
                               <button
                                 type="button"
                                 className="remove-member-btn"
@@ -1762,9 +1836,9 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     })}
 
                     {/* Add Member Button if limit not reached */}
-                    {selectedEvent.feeType !== 'per_squad' && fields.teamMembers.length + 1 < selectedEvent.maxMembers && (
+                    {!isFixedTeam && fields.teamMembers.length + 1 < selectedEvent.maxMembers && (
                       <button type="button" className="add-member-btn" onClick={addTeamMember}>
-                        + ADD TEAM MEMBER (UP TO {selectedEvent.maxMembers} PARTICIPANTS TOTAL)
+                        + ADD TEAM MEMBER (+₹{selectedEvent.feePerHead || 50}) • UP TO {selectedEvent.maxMembers} PARTICIPANTS
                       </button>
                     )}
                   </div>
@@ -2019,17 +2093,72 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                         </div>
                       </div>
 
+                      {/* Mode Switcher */}
+                      <div className="upi-mode-switch-wrap">
+                        <button
+                          type="button"
+                          className={`upi-mode-btn ${qrViewMode === 'dynamic' ? 'active' : ''}`}
+                          onClick={() => setQrViewMode('dynamic')}
+                        >
+                          <FaBolt style={{ marginRight: '5px' }} />
+                          Auto-Fill Amount QR (₹{feeInfo.total})
+                        </button>
+                        <button
+                          type="button"
+                          className={`upi-mode-btn ${qrViewMode === 'original' ? 'active' : ''}`}
+                          onClick={() => setQrViewMode('original')}
+                        >
+                          <FaQrcode style={{ marginRight: '5px' }} />
+                          FamPay Card Photo
+                        </button>
+                      </div>
+
                       <div className="upi-qr-body">
                         {/* The QR Image */}
                         <div className="upi-qr-img-wrap">
-                          <img
-                            src={paymentQrImg}
-                            alt="Samnesh S - 6374229503@yesfam UPI QR Code"
-                            className="upi-qr-image"
-                          />
-                          <div className="upi-qr-amount-pill">
-                            AMOUNT TO PAY: <strong>₹{feeInfo.total}</strong>
-                          </div>
+                          {qrViewMode === 'dynamic' ? (
+                            <div className="fampay-card-mockup">
+                              <div className="fampay-card-header">
+                                <span className="fampay-card-name">Samnesh S</span>
+                                <div className="fampay-card-vpa-pill">6374229503@yesfam</div>
+                              </div>
+                              <div className="fampay-qr-frame">
+                                <QRCodeSVG
+                                  value={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${Number(feeInfo.total) || 0}&cu=INR&tn=Eloquence26`}
+                                  size={215}
+                                  bgColor="#ffffff"
+                                  fgColor="#000000"
+                                  level="H"
+                                  marginSize={2}
+                                  imageSettings={{
+                                    src: '/fampay_center.png',
+                                    height: 38,
+                                    width: 38,
+                                    excavate: true
+                                  }}
+                                />
+                              </div>
+                              <div className="fampay-card-footer">
+                                <div className="fampay-amount-pill">
+                                  AMOUNT: <strong>₹{feeInfo.total}</strong>
+                                </div>
+                                <div className="fampay-hint-text">
+                                  ⚡ Scan with GPay / PhonePe / Paytm to auto-fill ₹{feeInfo.total}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="upi-original-card-wrap">
+                              <img
+                                src={paymentQrImg}
+                                alt="Samnesh S - 6374229503@yesfam UPI QR Code"
+                                className="upi-qr-image"
+                              />
+                              <div className="upi-qr-amount-pill">
+                                AMOUNT TO PAY: <strong>₹{feeInfo.total}</strong>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Payment Info & UTR Entry */}
@@ -2060,7 +2189,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
                           {/* Mobile Quick Link to open in GPay / PhonePe / Paytm */}
                           <a
-                            href={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${feeInfo.total}&cu=INR&tn=ELOQUENCE26`}
+                            href={`upi://pay?pa=6374229503@yesfam&pn=Samnesh%20S&am=${Number(feeInfo.total) || 0}&cu=INR&tn=Eloquence26`}
                             className="btn-mobile-upi-pay"
                           >
                             <FaBolt style={{ marginRight: '6px' }} />
@@ -2082,7 +2211,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                               onChange={(e) => setUpiUtr(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
                             />
                             <p className="upi-utr-help">
-                              Scan QR above with any UPI app (Google Pay, PhonePe, Paytm, BHIM), pay <strong>₹{feeInfo.total}</strong>, and enter your 12-digit UTR/Ref number to complete registration.
+                              Scan QR above with any UPI app (Google Pay, PhonePe, Paytm, BHIM) — the <strong>₹{feeInfo.total}</strong> amount will appear automatically. Complete payment and enter your 12-digit UTR/Ref number to complete registration.
                             </p>
                           </div>
                         </div>
