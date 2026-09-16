@@ -459,6 +459,7 @@ exports.verifyPaymentAndRegister = async (req, res) => {
   // 2. Generate unique Ticket Code
   const eventCat = currentEvent.category === 'technical' ? 'TCH' : 'NT';
   const ticketCode = `ELQ26-${eventCat}-${Math.floor(10000 + Math.random() * 90000)}`;
+  let registrationId = crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}`;
 
   try {
     // Ensure event exists in Supabase events table
@@ -526,8 +527,8 @@ exports.verifyPaymentAndRegister = async (req, res) => {
 
       if (regError) {
         console.warn('Supabase registration insert warning:', regError.message);
-      } else {
-        registrationId = regData && regData[0] ? regData[0].id : null;
+      } else if (regData && regData[0]) {
+        registrationId = regData[0].id;
       }
     } catch (dbErr) {
       console.error('Supabase registration insert exception:', dbErr.message);
@@ -568,7 +569,7 @@ exports.verifyPaymentAndRegister = async (req, res) => {
       isTeam: Boolean(currentEvent.isTeam),
       membersCount: 1 + validTeamMembers.length,
       participantCount: 1 + validTeamMembers.length,
-      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : m.name),
+      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : (m?.name || '')),
       totalFee,
       totalAmount: totalFee,
       paymentStatus: 'PAID',
@@ -600,16 +601,24 @@ exports.verifyPaymentAndRegister = async (req, res) => {
       console.warn('Local backup registration write error:', localErr);
     }
 
+    // Broadcast real-time event via WebSocket
+    try {
+      const { broadcastRegistrationUpdate } = require('../config/websocket');
+      broadcastRegistrationUpdate('CREATE', ticketData);
+    } catch (wsErr) {
+      console.warn('[WebSocket Broadcast]:', wsErr.message);
+    }
+
     return res.json({
       success: true,
-      message: 'Payment verified and registration successfully confirmed',
+      message: 'Payment verified and registration confirmed successfully',
       ticketData
     });
   } catch (err) {
-    console.error('Registration processing error:', err);
+    console.error('Payment verification registration error:', err);
     return res.status(500).json({
       success: false,
-      message: 'Server error processing registration after payment',
+      message: 'Failed to complete registration after payment verification',
       errorDetails: err.message || err.toString()
     });
   }
