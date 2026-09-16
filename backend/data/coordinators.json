@@ -9,12 +9,11 @@
     "year": "3rd Year",
     "role": "Lead Coordinator",
     "assignedEvents": [
-      "tech-02"
+      "tech-01"
     ],
-    "isActive": false,
     "displayOrder": 1,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-16T09:07:13.863Z"
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:22:16.432Z"
   },
   {
     "id": "coord-tech-01-b",
@@ -62,10 +61,10 @@
     "assignedEvents": [
       "tech-02"
     ],
-    "isActive": false,
+    "isActive": true,
     "displayOrder": 4,
     "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-08T04:43:44.724Z"
+    "updatedAt": "2026-09-16T10:22:31.077Z"
   },
   {
     "id": "coord-tech-03-a",
@@ -142,15 +141,14 @@
     "whatsapp": "8428487798",
     "email": "azhan@cahcet.edu.in",
     "department": "CSE",
-    "year": "3rd Year",
+    "year": "4th Year",
     "role": "Lead Coordinator",
     "assignedEvents": [
-      "tech-02"
+      "tech-06"
     ],
-    "isActive": true,
     "displayOrder": 11,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:22:55.182Z"
   },
   {
     "id": "coord-tech-06-b",
@@ -311,15 +309,14 @@
     "whatsapp": "9344200079",
     "email": "mussadiq@cahcet.edu.in",
     "department": "CSE",
-    "year": "3rd Year",
+    "year": "4th Year",
     "role": "Lead Coordinator",
     "assignedEvents": [
-      "tech-02"
+      "nontech-06"
     ],
-    "isActive": true,
     "displayOrder": 21,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:23:29.196Z"
   },
   {
     "id": "coord-nontech-06-b",
@@ -331,12 +328,11 @@
     "year": "3rd Year",
     "role": "Lead Coordinator",
     "assignedEvents": [
-      "tech-02"
+      "nontech-06"
     ],
-    "isActive": true,
     "displayOrder": 22,
-    "createdAt": "2026-09-01T00:00:00.000Z",
-    "updatedAt": "2026-09-01T00:00:00.000Z"
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:23:39.887Z"
   },
   {
     "id": "coord-1789229485490",
@@ -354,5 +350,22 @@
     "isActive": true,
     "createdAt": "2026-09-12T16:11:25.490Z",
     "updatedAt": "2026-09-15T05:32:07.393Z"
+  },
+  {
+    "id": "coord-1789554297407",
+    "name": "Mohammed Sakhee B",
+    "phone": "8838731526",
+    "whatsapp": "8838731526",
+    "email": "",
+    "department": "CSE",
+    "year": "4th Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-01"
+    ],
+    "displayOrder": 22,
+    "isActive": true,
+    "createdAt": "2026-09-16T10:24:57.407Z",
+    "updatedAt": "2026-09-16T10:24:57.407Z"
   }
 ]

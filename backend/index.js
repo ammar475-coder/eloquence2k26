@@ -61,13 +61,20 @@ if (fs.existsSync(frontendDist)) {
   });
 }
 
+const http = require('http');
+const { initWebSocketServer } = require('./config/websocket');
+
 // 404 handler for unmatched API requests or invalid paths
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'API endpoint or resource not found' });
 });
 
+// Create HTTP and WebSocket Server
+const server = http.createServer(app);
+initWebSocketServer(server);
+
 // Start Server
-app.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, () => {
   console.log(`[ELOQUENCE'26 Backend] Server running on http://${HOST}:${PORT}`);
   try {
     const { syncTableData } = require('./config/syncSupabase');
@@ -77,4 +84,4 @@ app.listen(PORT, HOST, () => {
   }
 });
 
-module.exports = app;
+module.exports = server;

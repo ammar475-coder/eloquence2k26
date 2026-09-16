@@ -630,11 +630,64 @@ exports.registerEvent = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Missing required data' });
   }
 
-  // Generate a mock ticket code
-  const ticketCode = `ELQ26-${currentEvent.category === 'technical' ? 'TCH' : 'NT'}-${Math.floor(10000 + Math.random() * 90000)}`;
+  // Generate unique ticket code & UUID
+  const catPrefix = (currentEvent.category || '').toLowerCase() === 'technical' ? 'TCH' : 'NT';
+  const ticketCode = `ELQ26-${catPrefix}-${Math.floor(10000 + Math.random() * 90000)}`;
+  const registrationId = crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}`;
 
+  const validTeamMembers = (fields.teamMembers || [])
+    .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
+
+  const paymentMeta = {
+    venue: currentEvent.venue || 'CSE Department Labs',
+    payment_method: paymentMethod || 'ON_SITE_DESK',
+    game: game || null
+  };
+  const venueSnapshotStr = JSON.stringify(paymentMeta);
+
+  // Prepare registration ticket data payload
+  const ticketData = {
+    ticketCode,
+    registrationId,
+    id: registrationId,
+    eventName: currentEvent.name,
+    eventId: currentEvent.id,
+    category: currentEvent.category,
+    leadName: fields.fullName,
+    fullName: fields.fullName,
+    college: fields.college,
+    department: fields.department,
+    email: fields.email,
+    phone: fields.phone,
+    year: fields.year,
+    isTeam: Boolean(currentEvent.isTeam),
+    teamName: fields.teamName || null,
+    membersCount: 1 + validTeamMembers.length,
+    teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : (m?.name || '')),
+    teamMembers: validTeamMembers.map(m => typeof m === 'string' ? m : (m?.name || '')),
+    totalFee: Number(totalFee) || 0,
+    totalAmount: Number(totalFee) || 0,
+    paymentStatus: paymentStatus || 'paid',
+    paymentMethod: paymentMethod || 'ON_SITE_DESK',
+    registrationStatus: 'active',
+    venue: currentEvent.venue,
+    timing: currentEvent.timing,
+    timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    createdAt: new Date().toISOString()
+  };
+
+  // 1. Save immediately to local persistent storage
   try {
-    // 0. Ensure event exists in database before registration foreign key constraint
+    const localRegs = readRegistrations();
+    localRegs.push(ticketData);
+    writeRegistrations(localRegs);
+  } catch (localErr) {
+    console.warn('[Register] Local JSON write note:', localErr.message);
+  }
+
+  // 2. Persist to Supabase Database (with auto-fallback on error)
+  try {
+    // Ensure event exists in DB before registration foreign key constraint
     const { data: existingEv } = await supabase.from('events').select('id').eq('id', currentEvent.id).maybeSingle();
     if (!existingEv) {
       await supabase.from('events').insert([{
@@ -650,17 +703,7 @@ exports.registerEvent = async (req, res) => {
       }]);
     }
 
-    const validTeamMembers = (fields.teamMembers || [])
-      .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
-
-    const paymentMeta = {
-      venue: currentEvent.venue || 'CSE Department Labs',
-      payment_method: paymentMethod || 'ON_SITE_DESK',
-      game: game || null
-    };
-    const venueSnapshotStr = JSON.stringify(paymentMeta);
-
-    // 1. Insert into registrations table
+    // Insert into registrations table
     const { data: regData, error: regError } = await supabase
       .from('registrations')
       .insert([{
@@ -676,90 +719,43 @@ exports.registerEvent = async (req, res) => {
         members_count: 1 + validTeamMembers.length,
         total_fee: totalFee,
         payment_status: paymentStatus,
-        registration_status: 'active',
+        registration_status: 'confirmed',
+        payment_method: paymentMethod || 'ON_SITE_DESK',
         venue_snapshot: venueSnapshotStr,
         timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM'
       }])
       .select('id');
 
-    if (regError) throw regError;
-    const registrationId = regData[0].id;
-
-    // 2. Insert team members into registration_members table if any
-    if (validTeamMembers.length > 0) {
+    if (regError) {
+      console.warn('[Supabase Registration Warning]:', regError.message);
+    } else if (regData && regData[0] && validTeamMembers.length > 0) {
+      const dbRegId = regData[0].id;
       const membersToInsert = validTeamMembers.map((member, idx) => ({
-        registration_id: registrationId,
+        registration_id: dbRegId,
         member_number: idx + 2,
         member_name: (typeof member === 'string' ? member : (member.name || '')).trim()
       }));
 
-      const { error: membersError } = await supabase
-        .from('registration_members')
-        .insert(membersToInsert);
-
-      if (membersError) {
-        console.error('Registration members insert error:', membersError);
-        throw membersError;
-      }
+      await supabase.from('registration_members').insert(membersToInsert);
     }
-
-    // Prepare response data for the ticket PDF
-    const ticketData = {
-      ticketCode,
-      eventName: currentEvent.name,
-      category: currentEvent.category,
-      leadName: fields.fullName,
-      college: fields.college,
-      department: fields.department,
-      email: fields.email,
-      phone: fields.phone,
-      year: fields.year,
-      teamName: fields.teamName || null,
-      membersCount: 1 + validTeamMembers.length,
-      teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : m.name),
-      totalFee,
-      venue: currentEvent.venue,
-      timing: currentEvent.timing,
-      timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-    };
-
-    // Save backup to local JSON as well
-    try {
-      const localRegs = readRegistrations();
-      localRegs.push({
-        registrationId: ticketCode,
-        id: registrationId,
-        fullName: fields.fullName,
-        email: fields.email,
-        phone: fields.phone,
-        college: fields.college,
-        department: fields.department,
-        year: fields.year,
-        eventId: currentEvent.id,
-        eventName: currentEvent.name,
-        isTeam: Boolean(currentEvent.isTeam),
-        teamName: fields.teamName || null,
-        totalAmount: Number(totalFee) || 0,
-        createdAt: new Date().toISOString()
-      });
-      writeRegistrations(localRegs);
-    } catch (localErr) {
-      console.warn('Local backup registration write error:', localErr);
-    }
-
-    res.json({
-      success: true,
-      message: 'Registration successful',
-      ticketData
-    });
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Database error during registration',
-      errorDetails: err.message || JSON.stringify(err)
-    });
+  } catch (dbEx) {
+    console.warn('[Supabase Registration Exception]:', dbEx.message);
   }
+
+  // 3. Broadcast real-time event via WebSocket to all dashboards and clients
+  try {
+    const { broadcastRegistrationUpdate } = require('../config/websocket');
+    broadcastRegistrationUpdate('CREATE', ticketData);
+  } catch (wsErr) {
+    console.warn('[WebSocket Broadcast]:', wsErr.message);
+  }
+
+  // 4. Return successful ticket response
+  return res.json({
+    success: true,
+    message: 'Registration successful',
+    ticketData
+  });
 };
 
 exports.getHealth = (req, res) => {
