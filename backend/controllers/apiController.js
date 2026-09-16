@@ -308,9 +308,31 @@ exports.getStatus = (req, res) => {
   });
 };
 
-exports.getRegistrationStatus = (req, res) => {
+exports.getRegistrationStatus = async (req, res) => {
   try {
-    const settings = readSettings();
+    let settings = readSettings();
+    try {
+      const { data: dbSettings, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'general')
+        .maybeSingle();
+
+      if (dbSettings && !error) {
+        settings = {
+          isRegistrationClosed: Boolean(dbSettings.is_registration_closed),
+          closedReason: dbSettings.closed_reason || settings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+          closedAt: dbSettings.closed_at || settings.closedAt || null,
+          closedBy: dbSettings.closed_by || settings.closedBy || null,
+          onSpotNotice: dbSettings.on_spot_notice || settings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
+          updatedAt: dbSettings.updated_at || new Date().toISOString()
+        };
+        writeSettings(settings);
+      }
+    } catch (dbErr) {
+      // Non-blocking fallback to local settings
+    }
+
     res.json({
       success: true,
       data: settings,
