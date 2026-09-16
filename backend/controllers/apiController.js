@@ -639,6 +639,52 @@ exports.registerEvent = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Missing required data' });
   }
 
+  // Extract and normalize UPI UTR / Transaction Reference
+  const rawUtr = (fields && (fields.upiUtr || fields.transactionId || fields.utr)) || req.body.upiUtr || req.body.transactionId || '';
+  const cleanUtr = typeof rawUtr === 'string' ? rawUtr.trim() : '';
+
+  // Enforce single-use UTR constraint: Each UTR number can only be used once
+  if (cleanUtr) {
+    const cleanUtrNorm = cleanUtr.toUpperCase();
+    const localRegs = readRegistrations();
+    const isDuplicateLocal = localRegs.some(r => {
+      const rUtr = (r.upiUtr || r.upi_utr || r.transactionId || r.transaction_id || '').toString().trim().toUpperCase();
+      let snapUtr = '';
+      if (r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(r.venue_snapshot);
+          snapUtr = (parsed.upi_utr || parsed.upiUtr || parsed.transaction_id || parsed.transactionId || '').toString().trim().toUpperCase();
+        } catch (e) {}
+      }
+      return (rUtr && rUtr === cleanUtrNorm) || (snapUtr && snapUtr === cleanUtrNorm);
+    });
+
+    if (isDuplicateLocal) {
+      return res.status(400).json({
+        success: false,
+        message: `This UPI UTR / Transaction Reference number "${cleanUtr}" has already been used for another registration. Each UTR number can only be used once.`
+      });
+    }
+
+    // Also check Supabase for duplicate UTR
+    try {
+      const { data: supaMatches } = await supabase
+        .from('registrations')
+        .select('id, ticket_code, razorpay_payment_id')
+        .ilike('razorpay_payment_id', cleanUtr)
+        .limit(1);
+
+      if (Array.isArray(supaMatches) && supaMatches.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `This UPI UTR / Transaction Reference number "${cleanUtr}" has already been registered. Each UTR number can only be used once.`
+        });
+      }
+    } catch (supaErr) {
+      console.warn('[UTR Duplicate Check] Supabase check note:', supaErr.message);
+    }
+  }
+
   // Generate unique ticket code & UUID
   const catPrefix = (currentEvent.category || '').toLowerCase() === 'technical' ? 'TCH' : 'NT';
   const ticketCode = `ELQ26-${catPrefix}-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -647,10 +693,16 @@ exports.registerEvent = async (req, res) => {
   const validTeamMembers = (fields.teamMembers || [])
     .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
 
+  const isPaid = Number(totalFee) > 0;
+  const initialVerificationStatus = isPaid ? 'pending' : 'verified';
+
   const paymentMeta = {
     venue: currentEvent.venue || 'CSE Department Labs',
     payment_method: paymentMethod || 'ON_SITE_DESK',
-    game: game || null
+    game: game || null,
+    upi_utr: cleanUtr || null,
+    transaction_id: cleanUtr || null,
+    verification_status: initialVerificationStatus
   };
   const venueSnapshotStr = JSON.stringify(paymentMeta);
 
@@ -678,6 +730,11 @@ exports.registerEvent = async (req, res) => {
     totalAmount: Number(totalFee) || 0,
     paymentStatus: paymentStatus || 'paid',
     paymentMethod: paymentMethod || 'ON_SITE_DESK',
+    upiUtr: cleanUtr || null,
+    transactionId: cleanUtr || null,
+    verificationStatus: initialVerificationStatus,
+    isVerified: !isPaid,
+    isFlagged: false,
     registrationStatus: 'active',
     venue: currentEvent.venue,
     timing: currentEvent.timing,
@@ -730,8 +787,10 @@ exports.registerEvent = async (req, res) => {
         payment_status: paymentStatus,
         registration_status: 'confirmed',
         payment_method: paymentMethod || 'ON_SITE_DESK',
+        razorpay_payment_id: cleanUtr || null,
         venue_snapshot: venueSnapshotStr,
-        timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM'
+        timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM',
+        is_verified: !isPaid
       }])
       .select('id');
 
@@ -877,12 +936,57 @@ const enrichRegistrationRecord = (r) => {
         copy.razorpay_order_id = parsed.razorpay_order_id;
         copy.razorpayOrderId = parsed.razorpay_order_id;
       }
+      if (parsed.upi_utr || parsed.upiUtr) {
+        copy.upi_utr = parsed.upi_utr || parsed.upiUtr;
+        copy.upiUtr = copy.upi_utr;
+      }
+      if (parsed.transaction_id || parsed.transactionId) {
+        copy.transaction_id = parsed.transaction_id || parsed.transactionId;
+        copy.transactionId = copy.transaction_id;
+      }
+      if (parsed.verification_status || parsed.verificationStatus) {
+        copy.verification_status = parsed.verification_status || parsed.verificationStatus;
+        copy.verificationStatus = copy.verification_status;
+      }
+      if (parsed.flag_reason || parsed.flagReason) {
+        copy.flag_reason = parsed.flag_reason || parsed.flagReason;
+        copy.flagReason = copy.flag_reason;
+      }
       if (parsed.venue) {
         copy.venue = parsed.venue;
       }
     } catch (e) {
       // Not JSON or parse error, keep venue_snapshot as venue string
     }
+  }
+
+  // Standardize UTR / Reference number resolution
+  const resolvedUtr = copy.upiUtr || copy.upi_utr || copy.transactionId || copy.transaction_id || 
+    ((copy.paymentMethod === 'UPI_QR' || copy.payment_method === 'UPI_QR' || (!copy.razorpayPaymentId?.startsWith('pay_') && copy.razorpayPaymentId)) ? (copy.razorpayPaymentId || copy.razorpay_payment_id) : null);
+  
+  if (resolvedUtr) {
+    copy.upiUtr = String(resolvedUtr).trim();
+    copy.upi_utr = copy.upiUtr;
+    copy.transactionId = copy.transactionId || copy.upiUtr;
+  }
+
+  // Harmonize flag status and verification status
+  const isFlagged = Boolean(copy.is_flagged || copy.isFlagged || copy.verification_status === 'flagged' || copy.verificationStatus === 'flagged');
+  copy.is_flagged = isFlagged;
+  copy.isFlagged = isFlagged;
+  copy.flagReason = copy.flag_reason || copy.flagReason || null;
+  copy.flaggedAt = copy.flagged_at || copy.flaggedAt || null;
+  copy.flaggedBy = copy.flagged_by || copy.flaggedBy || null;
+
+  if (isFlagged) {
+    copy.verificationStatus = 'flagged';
+    copy.verification_status = 'flagged';
+  } else if (copy.is_verified) {
+    copy.verificationStatus = 'verified';
+    copy.verification_status = 'verified';
+  } else {
+    copy.verificationStatus = copy.verification_status || copy.verificationStatus || 'pending';
+    copy.verification_status = copy.verificationStatus;
   }
 
   return copy;

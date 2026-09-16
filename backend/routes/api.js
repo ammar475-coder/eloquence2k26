@@ -75,6 +75,10 @@ router.delete('/admin/coordinators/:id', adminController.verifyToken, adminContr
 router.delete('/admin/registrations/:id', adminController.verifyToken, adminController.requireWriteAccess, adminController.deleteRegistration);
 router.patch('/admin/registrations/:id/verify', adminController.verifyToken, adminController.verifyRegistration);
 router.post('/admin/registrations/:id/verify', adminController.verifyToken, adminController.verifyRegistration);
+router.patch('/admin/registrations/:id/verification', adminController.verifyToken, adminController.verifyRegistration);
+router.post('/admin/registrations/:id/verification', adminController.verifyToken, adminController.verifyRegistration);
+router.patch('/admin/registrations/:id/flag', adminController.verifyToken, adminController.verifyRegistration);
+router.post('/admin/registrations/:id/flag', adminController.verifyToken, adminController.verifyRegistration);
 
 // ── Admin Homepage Coordinator Team Management ───────────────────────────
 router.get('/admin/homepage-coordinators', adminController.verifyToken, adminController.getHomepageCoordinators);

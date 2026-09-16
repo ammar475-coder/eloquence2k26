@@ -1961,14 +1961,41 @@ exports.deleteRegistration = async (req, res) => {
   }
 };
 
-// ==================== PARTICIPANT VERIFICATION ====================
+// ==================== PARTICIPANT & UTR REGISTRATION VERIFICATION ====================
 exports.verifyRegistration = async (req, res) => {
   const { id } = req.params;
-  const { isVerified = true } = req.body;
-  const verifiedBy = req.user?.username || req.user?.role || 'Coordinator';
-  const verifiedAt = isVerified ? new Date().toISOString() : null;
+  const { 
+    isVerified, 
+    status, 
+    action, 
+    flagReason, 
+    reason 
+  } = req.body;
+
+  const operatorName = req.user?.username || req.user?.role || 'Admin';
   const normId = String(id || '').trim();
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
+
+  // Determine target state
+  let newStatus = 'pending';
+  if (status === 'verified' || action === 'verify' || isVerified === true) {
+    newStatus = 'verified';
+  } else if (status === 'flagged' || action === 'flag' || req.body.isFlagged === true) {
+    newStatus = 'flagged';
+  } else if (status === 'pending' || action === 'unverify' || action === 'unflag' || isVerified === false) {
+    newStatus = 'pending';
+  }
+
+  const isNowVerified = newStatus === 'verified';
+  const isNowFlagged = newStatus === 'flagged';
+  const nowIso = new Date().toISOString();
+  const noteReason = flagReason || reason || 'Flagged for UTR review';
+
+  const verifiedAt = isNowVerified ? nowIso : null;
+  const verifiedBy = isNowVerified ? operatorName : null;
+  const flaggedAt = isNowFlagged ? nowIso : null;
+  const flaggedBy = isNowFlagged ? operatorName : null;
+  const finalFlagReason = isNowFlagged ? noteReason : null;
 
   let supabaseUpdated = null;
 
@@ -1976,43 +2003,43 @@ exports.verifyRegistration = async (req, res) => {
     // 1. Update in Supabase if present
     try {
       const updatePayload = {
-        is_verified: Boolean(isVerified),
+        is_verified: isNowVerified,
         verified_at: verifiedAt,
-        verified_by: isVerified ? verifiedBy : null,
-        attendance_status: isVerified ? 'verified' : 'pending'
+        verified_by: verifiedBy,
+        attendance_status: isNowVerified ? 'verified' : 'pending',
+        verification_status: newStatus,
+        is_flagged: isNowFlagged,
+        flag_reason: finalFlagReason,
+        flagged_at: flaggedAt,
+        flagged_by: flaggedBy
       };
 
-      if (isUUID) {
-        const { data: dbData } = await supabase
-          .from('registrations')
-          .update(updatePayload)
-          .eq('id', normId)
-          .select();
-        if (Array.isArray(dbData) && dbData.length > 0) supabaseUpdated = dbData[0];
-      } else {
-        const { data: dbData } = await supabase
-          .from('registrations')
-          .update(updatePayload)
-          .ilike('ticket_code', normId)
-          .select();
-        if (Array.isArray(dbData) && dbData.length > 0) supabaseUpdated = dbData[0];
+      const query = isUUID
+        ? supabase.from('registrations').update(updatePayload).eq('id', normId)
+        : supabase.from('registrations').update(updatePayload).ilike('ticket_code', normId);
+
+      const { data: dbData, error: supaErr } = await query.select();
+      if (!supaErr && Array.isArray(dbData) && dbData.length > 0) {
+        supabaseUpdated = dbData[0];
+      } else if (supaErr) {
+        // Fallback for minimal column schema without new columns
+        const fallbackPayload = {
+          is_verified: isNowVerified,
+          verified_at: verifiedAt,
+          verified_by: verifiedBy,
+          attendance_status: isNowVerified ? 'verified' : 'pending'
+        };
+        const fbQuery = isUUID
+          ? supabase.from('registrations').update(fallbackPayload).eq('id', normId)
+          : supabase.from('registrations').update(fallbackPayload).ilike('ticket_code', normId);
+        const { data: fbData } = await fbQuery.select();
+        if (Array.isArray(fbData) && fbData.length > 0) supabaseUpdated = fbData[0];
       }
     } catch (e) {
       console.warn('Supabase verifyRegistration error:', e.message);
     }
 
-    // If not returned by update, attempt select
-    if (!supabaseUpdated) {
-      try {
-        const query = isUUID
-          ? supabase.from('registrations').select('*').eq('id', normId).single()
-          : supabase.from('registrations').select('*').ilike('ticket_code', normId).single();
-        const { data: singleItem } = await query;
-        if (singleItem) supabaseUpdated = singleItem;
-      } catch (e) {}
-    }
-
-    // 2. Update in local file (Case-insensitive & string safe)
+    // 2. Update in local JSON file (Case-insensitive & string safe)
     let registrations = getRegistrationsData();
     let updatedRecord = null;
     const normLower = normId.toLowerCase();
@@ -2025,61 +2052,112 @@ exports.verifyRegistration = async (req, res) => {
       const match = rId === normLower || rRegId === normLower || rTicket === normLower;
 
       if (match) {
+        // Update embedded venue_snapshot metadata if present
+        let updatedSnapshot = r.venue_snapshot;
+        if (r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(r.venue_snapshot);
+            parsed.verification_status = newStatus;
+            parsed.flag_reason = finalFlagReason;
+            updatedSnapshot = JSON.stringify(parsed);
+          } catch (e) {}
+        }
+
         updatedRecord = {
           ...r,
-          is_verified: Boolean(isVerified),
-          isVerified: Boolean(isVerified),
-          attendance_status: isVerified ? 'verified' : 'pending',
-          attendanceStatus: isVerified ? 'verified' : 'pending',
+          is_verified: isNowVerified,
+          isVerified: isNowVerified,
+          is_flagged: isNowFlagged,
+          isFlagged: isNowFlagged,
+          verification_status: newStatus,
+          verificationStatus: newStatus,
+          attendance_status: isNowVerified ? 'verified' : 'pending',
+          attendanceStatus: isNowVerified ? 'verified' : 'pending',
           verified_at: verifiedAt,
           verifiedAt: verifiedAt,
-          verified_by: isVerified ? verifiedBy : null,
-          verifiedBy: isVerified ? verifiedBy : null
+          verified_by: verifiedBy,
+          verifiedBy: verifiedBy,
+          flagged_at: flaggedAt,
+          flaggedAt: flaggedAt,
+          flagged_by: flaggedBy,
+          flaggedBy: flaggedBy,
+          flag_reason: finalFlagReason,
+          flagReason: finalFlagReason,
+          venue_snapshot: updatedSnapshot
         };
         return updatedRecord;
       }
       return r;
     });
 
-    // If record was found in Supabase but not in local JSON, add it to local JSON
+    // If record was found in Supabase but not in local JSON, add it
     if (!updatedRecord && supabaseUpdated) {
       updatedRecord = {
         ...supabaseUpdated,
-        is_verified: Boolean(isVerified),
-        isVerified: Boolean(isVerified),
-        attendance_status: isVerified ? 'verified' : 'pending',
-        attendanceStatus: isVerified ? 'verified' : 'pending',
+        is_verified: isNowVerified,
+        isVerified: isNowVerified,
+        is_flagged: isNowFlagged,
+        isFlagged: isNowFlagged,
+        verification_status: newStatus,
+        verificationStatus: newStatus,
+        attendance_status: isNowVerified ? 'verified' : 'pending',
+        attendanceStatus: isNowVerified ? 'verified' : 'pending',
         verified_at: verifiedAt,
         verifiedAt: verifiedAt,
-        verified_by: isVerified ? verifiedBy : null,
-        verifiedBy: isVerified ? verifiedBy : null
+        verified_by: verifiedBy,
+        verifiedBy: verifiedBy,
+        flagged_at: flaggedAt,
+        flaggedAt: flaggedAt,
+        flagged_by: flaggedBy,
+        flaggedBy: flaggedBy,
+        flag_reason: finalFlagReason,
+        flagReason: finalFlagReason
       };
       registrations.push(updatedRecord);
     }
 
     if (updatedRecord) {
       saveRegistrationsData(registrations);
+
+      // Broadcast WebSocket real-time update
+      try {
+        const { broadcastRegistrationUpdate } = require('../config/websocket');
+        broadcastRegistrationUpdate('UPDATE', updatedRecord);
+      } catch (wsErr) {}
+
+      let statusMsg = 'Participant verified and payment confirmed successfully!';
+      if (isNowFlagged) statusMsg = 'Registration flagged for UTR / payment investigation.';
+      else if (!isNowVerified) statusMsg = 'Registration verification status reset to pending.';
+
       return res.json({
         success: true,
-        message: isVerified ? 'Participant verified and confirmed successfully!' : 'Participant verification reset',
+        message: statusMsg,
         data: updatedRecord
       });
     }
 
-    // Fallback if record was in Supabase
+    // Fallback response if record was only in Supabase
     return res.json({
       success: true,
-      message: isVerified ? 'Participant verified and confirmed successfully!' : 'Participant verification reset',
+      message: isNowVerified ? 'Registration verified successfully' : (isNowFlagged ? 'Registration flagged' : 'Status reset'),
       data: {
         id: normId,
         ticket_code: normId,
         ticketCode: normId,
-        is_verified: Boolean(isVerified),
-        isVerified: Boolean(isVerified),
-        attendance_status: isVerified ? 'verified' : 'pending',
-        attendanceStatus: isVerified ? 'verified' : 'pending',
+        is_verified: isNowVerified,
+        isVerified: isNowVerified,
+        is_flagged: isNowFlagged,
+        isFlagged: isNowFlagged,
+        verification_status: newStatus,
+        verificationStatus: newStatus,
+        attendance_status: isNowVerified ? 'verified' : 'pending',
+        attendanceStatus: isNowVerified ? 'verified' : 'pending',
         verified_at: verifiedAt,
-        verified_by: isVerified ? verifiedBy : null
+        verified_by: verifiedBy,
+        flagged_at: flaggedAt,
+        flagged_by: flaggedBy,
+        flag_reason: finalFlagReason,
+        flagReason: finalFlagReason
       }
     });
   } catch (err) {
@@ -2087,6 +2165,8 @@ exports.verifyRegistration = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Failed to update verification status' });
   }
 };
+
+exports.updateRegistrationVerification = exports.verifyRegistration;
 
 // ==================== HOMEPAGE STUDENT COORDINATOR TEAMS ============================
 exports.getHomepageCoordinators = async (req, res) => {
