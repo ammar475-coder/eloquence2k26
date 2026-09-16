@@ -4102,7 +4102,7 @@ img {
   user-select: none;
   -webkit-user-select: none;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
   position: relative;
   z-index: 2;
   padding: 0.5rem 0;
@@ -5272,7 +5272,7 @@ img {
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y;
 }
 
 /* Tiered card sizes — Elite > Premium > Standard */

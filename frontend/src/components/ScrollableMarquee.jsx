@@ -218,6 +218,36 @@ export default function ScrollableMarquee({
     let dragAxis = null; // 'x' for horizontal swipe, 'y' for vertical page scroll, or null
     let isTouchActive = false;
 
+    // Unified helper to suppress accidental click/flip triggers ONLY when user actually dragged
+    let activeCaptureClick = null;
+    let captureTimer = null;
+
+    const suppressNextClick = (duration = 200) => {
+      if (activeCaptureClick) {
+        window.removeEventListener('click', activeCaptureClick, true);
+        activeCaptureClick = null;
+      }
+      clearTimeout(captureTimer);
+
+      const captureClick = (clickEvent) => {
+        clickEvent.stopPropagation();
+        clickEvent.preventDefault();
+        if (activeCaptureClick) {
+          window.removeEventListener('click', activeCaptureClick, true);
+          activeCaptureClick = null;
+        }
+      };
+
+      activeCaptureClick = captureClick;
+      window.addEventListener('click', captureClick, true);
+      captureTimer = setTimeout(() => {
+        if (activeCaptureClick) {
+          window.removeEventListener('click', activeCaptureClick, true);
+          activeCaptureClick = null;
+        }
+      }, duration);
+    };
+
     const handleTouchStart = (e) => {
       if (!e.touches || e.touches.length !== 1) return;
       stopMomentum();
@@ -302,15 +332,7 @@ export default function ScrollableMarquee({
 
       if (wasHorizontalDrag && touchDist > 14) {
         // Suppress accidental click/flip triggers ONLY if user actually dragged
-        const captureClick = (clickEvent) => {
-          clickEvent.stopPropagation();
-          clickEvent.preventDefault();
-          window.removeEventListener('click', captureClick, true);
-        };
-        window.addEventListener('click', captureClick, true);
-        setTimeout(() => {
-          window.removeEventListener('click', captureClick, true);
-        }, 120);
+        suppressNextClick(200);
 
         // Apply smooth momentum glide if user flicked with velocity
         if (Math.abs(touchVelocity) > 0.12) {
@@ -389,8 +411,8 @@ export default function ScrollableMarquee({
     const handleMouseMove = (e) => {
       if (!isMouseDown) return;
       const dx = e.pageX - startX;
-      dragDist += Math.abs(dx);
-      if (dragDist > 6 && !isDragging) {
+      dragDist = Math.abs(dx);
+      if (dragDist > 12 && !isDragging) {
         setIsDragging(true);
       }
       let targetScroll = startScroll - dx;
@@ -414,17 +436,9 @@ export default function ScrollableMarquee({
       isMouseDown = false;
       setIsDragging(false);
 
-      if (dragDist > 6) {
-        // Suppress accidental click trigger on cards/buttons when dragging
-        const captureClick = (clickEvent) => {
-          clickEvent.stopPropagation();
-          clickEvent.preventDefault();
-          window.removeEventListener('click', captureClick, true);
-        };
-        window.addEventListener('click', captureClick, true);
-        setTimeout(() => {
-          window.removeEventListener('click', captureClick, true);
-        }, 100);
+      if (dragDist > 12) {
+        // Suppress accidental click trigger on cards/buttons ONLY when actually dragging
+        suppressNextClick(200);
       }
 
       clearTimeout(interactionTimer);
@@ -455,6 +469,11 @@ export default function ScrollableMarquee({
       if (rafId) cancelAnimationFrame(rafId);
       stopMomentum();
       clearTimeout(interactionTimer);
+      clearTimeout(captureTimer);
+      if (activeCaptureClick) {
+        window.removeEventListener('click', activeCaptureClick, true);
+        activeCaptureClick = null;
+      }
       observer.disconnect();
       if (resizeObserver) resizeObserver.disconnect();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
