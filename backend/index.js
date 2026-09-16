@@ -69,6 +69,12 @@ app.use((req, res) => {
 // Start Server
 app.listen(PORT, HOST, () => {
   console.log(`[ELOQUENCE'26 Backend] Server running on http://${HOST}:${PORT}`);
+  try {
+    const { syncTableData } = require('./config/syncSupabase');
+    syncTableData();
+  } catch (err) {
+    console.warn('Sync table data warning:', err.message);
+  }
 });
 
 module.exports = app;

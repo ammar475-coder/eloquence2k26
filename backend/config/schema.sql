@@ -1,7 +1,8 @@
 -- ==============================================================================
 -- ELOQUENCE '26 SUPABASE DATABASE COMPLETE LIVE SCHEMA & MIGRATION SCRIPT
+-- Project: https://dfdugnahbtazkgdkqebs.supabase.co
 -- Copy & Paste this entire script into your Supabase SQL Editor:
--- https://supabase.com/dashboard/project/wgvpbcosrpyoioplzafa/sql
+-- https://supabase.com/dashboard/project/dfdugnahbtazkgdkqebs/sql
 -- ==============================================================================
 
 -- Enable UUID extension
@@ -26,19 +27,21 @@ CREATE TABLE IF NOT EXISTS public.events (
     is_team BOOLEAN DEFAULT false,
     tag TEXT,
     venue TEXT,
+    venue_image TEXT,
     timing TEXT,
     description TEXT,
     image TEXT,
-    rules JSONB,
-    rounds JSONB,
-    guidelines JSONB,
-    highlights JSONB,
+    rules JSONB DEFAULT '[]'::jsonb,
+    rounds JSONB DEFAULT '[]'::jsonb,
+    guidelines JSONB DEFAULT '[]'::jsonb,
+    highlights JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Ensure event fee column is TEXT type and image column exists
 ALTER TABLE public.events ALTER COLUMN fee TYPE TEXT USING fee::text;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS alias TEXT;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS subtitle TEXT;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS image TEXT;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS fee_per_head NUMERIC DEFAULT 0;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS fee_type TEXT DEFAULT 'per_head';
@@ -46,6 +49,10 @@ ALTER TABLE public.events ADD COLUMN IF NOT EXISTS min_members INT DEFAULT 1;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS max_members INT DEFAULT 1;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS team_size TEXT;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS venue_image TEXT;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS rules JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS rounds JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS guidelines JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS highlights JSONB DEFAULT '[]'::jsonb;
 
 -- ------------------------------------------------------------------------------
 -- 2. REGISTRATIONS TABLE
@@ -63,19 +70,30 @@ CREATE TABLE IF NOT EXISTS public.registrations (
     team_name TEXT,
     members_count INT DEFAULT 1,
     total_fee NUMERIC DEFAULT 0,
-    payment_status TEXT DEFAULT 'pending',
-    registration_status TEXT DEFAULT 'confirmed',
+    payment_status TEXT DEFAULT 'PENDING',
+    registration_status TEXT DEFAULT 'CONFIRMED',
+    payment_method TEXT DEFAULT 'ONLINE',
+    razorpay_order_id TEXT,
+    razorpay_payment_id TEXT,
+    razorpay_signature TEXT,
     venue_snapshot TEXT,
     timing_snapshot TEXT,
+    is_verified BOOLEAN DEFAULT false,
+    attendance_status TEXT DEFAULT 'pending',
+    verified_at TIMESTAMPTZ,
+    verified_by TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Ensure Razorpay Payment Gateway Columns Exist in registrations
 ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT;
 ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT;
 ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS razorpay_signature TEXT;
-ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'razorpay';
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'ONLINE';
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS attendance_status TEXT DEFAULT 'pending';
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS verified_by TEXT;
 
 -- ------------------------------------------------------------------------------
 -- 3. REGISTRATION MEMBERS TABLE
@@ -89,12 +107,9 @@ CREATE TABLE IF NOT EXISTS public.registration_members (
 );
 
 -- ------------------------------------------------------------------------------
--- 4. COORDINATORS TABLE & CLEAN RECREATION
+-- 4. COORDINATORS TABLE
 -- ------------------------------------------------------------------------------
-DROP TABLE IF EXISTS public.event_coordinators CASCADE;
-DROP TABLE IF EXISTS public.coordinators CASCADE;
-
-CREATE TABLE public.coordinators (
+CREATE TABLE IF NOT EXISTS public.coordinators (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     phone TEXT,
@@ -110,6 +125,11 @@ CREATE TABLE public.coordinators (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS assigned_events JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 999;
+
 -- ------------------------------------------------------------------------------
 -- 5. SPONSORS TABLE
 -- ------------------------------------------------------------------------------
@@ -120,6 +140,7 @@ CREATE TABLE IF NOT EXISTS public.sponsors (
     logo TEXT,
     description TEXT,
     website TEXT,
+    location_url TEXT,
     contact_name TEXT,
     contact_email TEXT,
     contact_phone TEXT,
@@ -130,17 +151,26 @@ CREATE TABLE IF NOT EXISTS public.sponsors (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.sponsors ADD COLUMN IF NOT EXISTS location_url TEXT;
+ALTER TABLE public.sponsors ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 999;
+ALTER TABLE public.sponsors ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
 -- ------------------------------------------------------------------------------
--- 6. USERS TABLE (Admin & Staff Accounts)
+-- 6. USERS TABLE (Admin, Lead Coordinators & Staff Accounts)
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.users (
     id BIGINT PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'admin',
+    assigned_events JSONB DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS assigned_events JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 
 -- ------------------------------------------------------------------------------
 -- 7. ROLES TABLE
@@ -148,10 +178,13 @@ CREATE TABLE IF NOT EXISTS public.users (
 CREATE TABLE IF NOT EXISTS public.roles (
     id BIGINT PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    permissions JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE public.roles ALTER COLUMN id TYPE BIGINT;
+ALTER TABLE public.roles ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.roles ADD COLUMN IF NOT EXISTS permissions JSONB DEFAULT '[]'::jsonb;
 
 -- ------------------------------------------------------------------------------
 -- 8. DISPATCHES TABLE (Participant List Dispatch History)
@@ -168,7 +201,63 @@ CREATE TABLE IF NOT EXISTS public.dispatches (
 );
 
 -- ------------------------------------------------------------------------------
--- 9. SEARCH LOGS TABLE (Search Queries & History Logs)
+-- 9. HOMEPAGE STUDENT-COORDINATOR TEAMS TABLE
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.homepage_coordinators (
+    id TEXT PRIMARY KEY,
+    role TEXT NOT NULL,
+    tag TEXT,
+    icon TEXT DEFAULT 'Users',
+    color TEXT DEFAULT 'from-blue-500 to-cyan-500',
+    desc_text TEXT,
+    members JSONB DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT true,
+    display_order INT DEFAULT 999,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS icon TEXT DEFAULT 'Users';
+ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS color TEXT DEFAULT 'from-blue-500 to-cyan-500';
+ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS desc_text TEXT;
+
+-- ------------------------------------------------------------------------------
+-- 10. SETTINGS TABLE (Close Registration & System Flags)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.settings (
+    id TEXT PRIMARY KEY DEFAULT 'general',
+    is_registration_closed BOOLEAN DEFAULT false,
+    closed_reason TEXT,
+    closed_at TIMESTAMPTZ,
+    closed_by TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------------------------
+-- 11. WINNERS & SCORES TABLES
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.event_winners (
+    id TEXT PRIMARY KEY,
+    event_id TEXT REFERENCES public.events(id) ON DELETE CASCADE,
+    winner_name TEXT NOT NULL,
+    college TEXT,
+    position TEXT,
+    prize TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.event_scores (
+    id TEXT PRIMARY KEY,
+    event_id TEXT REFERENCES public.events(id) ON DELETE CASCADE,
+    team_name TEXT NOT NULL,
+    round INT DEFAULT 1,
+    score NUMERIC DEFAULT 0,
+    judges JSONB DEFAULT '[]'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------------------------
+-- 12. SEARCH LOGS TABLE
 -- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.search_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -180,36 +269,8 @@ CREATE TABLE IF NOT EXISTS public.search_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Full-Text Search Indexes for High-Performance Searching
-CREATE INDEX IF NOT EXISTS idx_registrations_search ON public.registrations USING gin(to_tsvector('english', coalesce(full_name, '') || ' ' || coalesce(email, '') || ' ' || coalesce(phone, '') || ' ' || coalesce(team_name, '') || ' ' || coalesce(ticket_code, '')));
-CREATE INDEX IF NOT EXISTS idx_events_search ON public.events USING gin(to_tsvector('english', coalesce(name, '') || ' ' || coalesce(description, '') || ' ' || coalesce(venue, '')));
-CREATE INDEX IF NOT EXISTS idx_sponsors_search ON public.sponsors USING gin(to_tsvector('english', coalesce(name, '') || ' ' || coalesce(company_name, '')));
-CREATE INDEX IF NOT EXISTS idx_search_logs_query ON public.search_logs(search_query);
-
--- ------------------------------------------------------------------------------
--- 11. HOMEPAGE STUDENT-COORDINATOR TEAMS TABLE
--- ------------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.homepage_coordinators (
-    id TEXT PRIMARY KEY,
-    role TEXT NOT NULL,
-    tag TEXT,
-    icon_name TEXT DEFAULT 'Users',
-    tier TEXT DEFAULT 'emerald',
-    description TEXT,
-    members JSONB DEFAULT '[]'::jsonb,
-    is_active BOOLEAN DEFAULT true,
-    display_order INT DEFAULT 999,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ------------------------------------------------------------------------------
--- 10. SUPABASE STORAGE BUCKET FOR UPLOADS
--- ------------------------------------------------------------------------------
-INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true) ON CONFLICT (id) DO NOTHING;
-
 -- ==============================================================================
--- DISABLE ROW LEVEL SECURITY (RLS) FOR LIVE CLIENT READ/WRITE ACCESS
+-- 13. DISABLE ROW LEVEL SECURITY (RLS) & GRANT FULL READ/WRITE ACCESS
 -- ==============================================================================
 ALTER TABLE public.events DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.registrations DISABLE ROW LEVEL SECURITY;
@@ -220,6 +281,9 @@ ALTER TABLE public.sponsors DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.roles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.dispatches DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.settings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.event_winners DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.event_scores DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.search_logs DISABLE ROW LEVEL SECURITY;
 
 -- Grant permissions to public/anon/authenticated roles
@@ -228,4 +292,5 @@ GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role
 
 -- Notify schema cache reload
 NOTIFY pgrst, 'reload schema';
+
 
