@@ -37,7 +37,7 @@ const infoItems = [
   {
     key: 'date',
     label: 'DATE',
-    value: '29-09-2026',
+    value: '26-09-2026',
     icon: (
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#39FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="location-icon-svg">
         <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />

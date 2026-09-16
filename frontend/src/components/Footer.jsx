@@ -85,12 +85,13 @@ export default function Footer({ onNavigate }) {
               <li key={event.id}>
                 <a
                   href={`#/events/${event.id}`}
+                  title={event.name}
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav('event-rules', event.id);
                   }}
                 >
-                  {event.name}
+                  {event.alias || event.name}
                 </a>
               </li>
             ))}
@@ -108,12 +109,13 @@ export default function Footer({ onNavigate }) {
               <li key={event.id}>
                 <a
                   href={`#/events/${event.id}`}
+                  title={event.name}
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav('event-rules', event.id);
                   }}
                 >
-                  {event.name}
+                  {event.alias || event.name}
                 </a>
               </li>
             ))}
