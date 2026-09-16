@@ -74,11 +74,7 @@ export default function EventCard({ event, onRegister, onViewRules }) {
   const eventSticker = getEventSticker(event);
 
   return (
-    <div
-      className={`event-poster-card ${isTech ? 'poster-tech' : 'poster-nontech'}`}
-      onClick={handleRegister}
-      style={{ cursor: 'pointer' }}
-    >
+    <div className={`event-poster-card ${isTech ? 'poster-tech' : 'poster-nontech'}`}>
       {/* Top Banner Container with Poster Illustration */}
       <div className="event-card-top-banner">
         {getEventIllustration(event)}

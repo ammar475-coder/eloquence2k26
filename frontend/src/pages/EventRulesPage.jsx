@@ -22,20 +22,130 @@ import {
   FaLayerGroup,
   FaCheckCircle,
   FaGamepad,
-  FaStar
+  FaStar,
+  FaRedoAlt
 } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
 import { getCachedEvents, fetchEventsData } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import VenueImageModal from '../components/VenueImageModal.jsx';
 
-export default function EventRulesPage({ eventId, from, categoryFilter, onNavigate }) {
+const ESPORTS_GAMES_DATA = {
+  'FREE FIRE': {
+    title: 'FREE FIRE',
+    tagline: 'Battle Royale Squad Showdown',
+    badge: 'Mobile Only • 4-Player Squad',
+    description: 'High-octane mobile battle royale showdown on custom symposium rooms. Drop into Bermuda and Purgatory with your 4-player squad, out-survive opponents with superior tactics, gunplay, and teamwork to seize the Booyah!',
+    subtitle: 'Free Fire Custom Room Tournament',
+    venue: 'Seminar Hall 2 / Annex',
+    timing: '10:00 AM – 02:00 PM',
+    fee: '₹200 per squad',
+    feeType: 'per_squad',
+    teamSize: '4 Players / Squad',
+    isTeam: true,
+    rules: [
+      'Strictly 4 players per squad (mobile phones only, no iPads, tablets, or emulators).',
+      'Official Free Fire custom room matches played on Bermuda and Purgatory maps.',
+      'Gun Property / Attributes will be turned OFF for fair competitive esports play.',
+      'Hacks, scripts, triggers, or third-party boosters will result in immediate squad ban.',
+      'All players must join the room using their registered In-Game Name (IGN) and UID on time.',
+      'Scoring is calculated strictly using the official Free Fire Esports Points System (Placement + Kills).',
+      'Participants must bring their own charged mobile devices, earphones, and active internet connection.'
+    ],
+    rounds: [
+      {
+        name: 'Match 1: Bermuda Qualifying Drop',
+        time: '35 Mins',
+        desc: 'All squads drop into Bermuda. Placements and kill points determine the top advancing teams.'
+      },
+      {
+        name: 'Match 2: Purgatory Grand Finals',
+        time: '40 Mins',
+        desc: 'Top seeded surviving squads battle on Purgatory for the ultimate championship trophy and cash prize.'
+      }
+    ],
+    highlights: [
+      'Gun Attributes OFF',
+      'Bermuda & Purgatory',
+      'Flat ₹200 / Squad'
+    ]
+  },
+  'BGMI': {
+    title: 'BGMI',
+    tagline: 'Battlegrounds Mobile India Squad Championship',
+    badge: 'Smartphone / iPad • 4-Player Squad',
+    description: 'Premier squad tactical tournament on classic custom tournament rooms. Coordinate tactical rotations, zone dominance, and precise team assaults across Erangel and Miramar to claim the Winner Winner Chicken Dinner!',
+    subtitle: 'BGMI Custom Room Tournament',
+    venue: 'Seminar Hall 2 / Annex',
+    timing: '10:00 AM – 02:00 PM',
+    fee: '₹200 per squad',
+    feeType: 'per_squad',
+    teamSize: '4 Players / Squad',
+    isTeam: true,
+    rules: [
+      'Strictly 4 players per squad (smartphones & iPads permitted; emulators, PCs, and triggers are prohibited).',
+      'Matches are hosted on official BGMI Custom Tournament Rooms in TPP Squad mode.',
+      'Official competition maps: Erangel (Qualifiers) and Miramar (Grand Finals).',
+      'Any form of cheating, wallhacks, aimbots, GFX configs, or iPad-view mods on mobile will result in an instant permanent ban.',
+      'Teams must enter the custom room within the allotted time using their registered In-Game Character IDs.',
+      'Scoring follows the official BGIS points matrix (10 pts for #1 + 1 pt per finish).',
+      'Players must bring fully charged devices, chargers, and personal wired/wireless earphones.'
+    ],
+    rounds: [
+      {
+        name: 'Match 1: Erangel Battle Drop',
+        time: '35 Mins',
+        desc: 'Squads drop across Erangel. Survival placement and finish points rank the leaderboard.'
+      },
+      {
+        name: 'Match 2: Miramar Desert Showdown',
+        time: '40 Mins',
+        desc: 'Top qualified squads duel in the dunes of Miramar to crown the ELOQUENCE ’26 E-Sports Champion!'
+      }
+    ],
+    highlights: [
+      'TPP Squad Mode',
+      'Erangel & Miramar',
+      'Flat ₹200 / Squad'
+    ]
+  }
+};
+
+export default function EventRulesPage({ eventId, from, categoryFilter, initialGame, onNavigate }) {
   const [eventsList, setEventsList] = useState(() => getCachedEvents() || []);
   const [loading, setLoading] = useState(false);
   const [liveCoordinators, setLiveCoordinators] = useState([]);
   const [isRegClosed, setIsRegClosed] = useState(false);
   const [showVenueModal, setShowVenueModal] = useState(false);
+
+  const getInitialEsportsGame = () => {
+    if (initialGame) {
+      const g = String(initialGame).toUpperCase();
+      if (g.includes('BGMI')) return 'BGMI';
+      if (g.includes('FREE') || g.includes('FIRE')) return 'FREE FIRE';
+    }
+    try {
+      const hash = window.location.hash || '';
+      const [, query] = hash.split('?');
+      if (query) {
+        const p = new URLSearchParams(query);
+        const gParam = p.get('game');
+        if (gParam) {
+          const up = gParam.toUpperCase();
+          if (up.includes('BGMI')) return 'BGMI';
+          if (up.includes('FREE') || up.includes('FIRE')) return 'FREE FIRE';
+        }
+      }
+    } catch (_) {}
+    return null;
+  };
+
+  const [selectedEsportsGame, setSelectedEsportsGame] = useState(getInitialEsportsGame);
+
+  useEffect(() => {
+    setSelectedEsportsGame(getInitialEsportsGame());
+  }, [eventId, initialGame]);
 
   useEffect(() => {
     let isMounted = true;
@@ -136,14 +246,50 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     return () => { isMounted = false; };
   }, [event?.id]);
 
-  const rulesList = (event && Array.isArray(event.rules) && event.rules.length > 0)
-    ? event.rules
-    : [];
+  const isEsports = event && (event.id === 'nontech-05' || event.name?.toLowerCase().includes('gaming') || event.name?.toLowerCase().includes('battle of champions'));
+  const activeEsportsData = (isEsports && selectedEsportsGame && ESPORTS_GAMES_DATA[selectedEsportsGame])
+    ? ESPORTS_GAMES_DATA[selectedEsportsGame]
+    : null;
 
+  const rulesList = activeEsportsData
+    ? activeEsportsData.rules
+    : ((event && Array.isArray(event.rules) && event.rules.length > 0) ? event.rules : []);
 
-  const rounds = (event && Array.isArray(event.rounds) && event.rounds.length > 0)
-    ? event.rounds
-    : [];
+  const rounds = activeEsportsData
+    ? activeEsportsData.rounds
+    : ((event && Array.isArray(event.rounds) && event.rounds.length > 0) ? event.rounds : []);
+
+  const displayDescription = activeEsportsData
+    ? activeEsportsData.description
+    : (event?.description || event?.subtitle);
+
+  const displaySubtitle = activeEsportsData
+    ? activeEsportsData.subtitle
+    : event?.subtitle;
+
+  const displayVenue = activeEsportsData
+    ? activeEsportsData.venue
+    : (event?.venue || 'Seminar Hall 2 / Annex');
+
+  const displayTiming = activeEsportsData
+    ? activeEsportsData.timing
+    : (event?.timing || '10:00 AM – 02:00 PM');
+
+  const displayFee = activeEsportsData
+    ? activeEsportsData.fee
+    : event?.fee;
+
+  const displayTeamSize = activeEsportsData
+    ? activeEsportsData.teamSize
+    : event?.teamSize;
+
+  const displayFeeType = activeEsportsData
+    ? activeEsportsData.feeType
+    : event?.feeType;
+
+  const displayIsTeam = activeEsportsData
+    ? activeEsportsData.isTeam
+    : event?.isTeam;
 
   const allCoords = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
     ? liveCoordinators
@@ -178,7 +324,6 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const isEsports = event && (event.id === 'nontech-05' || event.name?.toLowerCase().includes('gaming') || event.name?.toLowerCase().includes('battle of champions'));
   const eventSticker = getEventSticker(event);
 
   const handleRegister = () => {
@@ -188,21 +333,51 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
     }
   };
 
+  const handleSelectGame = (game) => {
+    setSelectedEsportsGame(game);
+    try {
+      const hash = window.location.hash || '';
+      const [baseHash, currentQuery] = hash.split('?');
+      const params = new URLSearchParams(currentQuery || '');
+      if (game) {
+        params.set('game', game);
+      } else {
+        params.delete('game');
+      }
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      window.history.replaceState(null, '', `${baseHash}${queryStr}`);
+    } catch (_) {}
+  };
+
   const handleRegisterGame = (game) => {
     if (isRegClosed) return;
+    const targetGame = game || selectedEsportsGame;
     if (onNavigate && event) {
-      onNavigate('register', { eventId: event.id, game });
+      onNavigate('register', { eventId: event.id, game: targetGame });
     }
   };
 
   const handleTopRegisterClick = () => {
     if (isRegClosed) return;
     if (isEsports) {
-      const el = document.querySelector('.esports-cta-wrap');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (!selectedEsportsGame) {
+        toast('Please choose Free Fire or BGMI below to proceed', {
+          icon: '🎮',
+          style: {
+            background: '#04140a',
+            color: '#39FF88',
+            border: '1px solid #39FF88',
+            fontFamily: 'monospace'
+          }
+        });
+        const el = document.getElementById('esports-game-selector');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
         return;
       }
+      handleRegisterGame(selectedEsportsGame);
+      return;
     }
     handleRegister();
   };
@@ -306,7 +481,8 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
               </>
             ) : (
               <>
-                Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+                {isEsports && selectedEsportsGame ? `Register ${selectedEsportsGame}` : 'Register Now'}{' '}
+                <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
               </>
             )}
           </button>
@@ -356,286 +532,359 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
           )}
         </motion.div>
 
-        {/* 2-Column Split: Overview (Left) & Rules (Right) */}
-        <div className="rules-split-grid">
-          {/* Left Side: Overview Stack (4 Small Boxes + 1 Long Diagonal Card) */}
+        {/* E-Sports Top Game Selector: Two Options initially, then ONLY the chosen one after selection */}
+        {isEsports && (
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="rules-left-overview-stack"
+            id="esports-game-selector"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.15 }}
+            className="esports-top-game-selector-container"
           >
-            {/* 4 Small Detail Boxes Grid */}
-            <div className="rules-overview-quad-grid">
-              {/* Box 1: Venue (Entire card clickable to view picture) */}
-              <div
-                className="rules-overview-box rules-overview-box-venue rules-overview-box-clickable"
-                onClick={() => setShowVenueModal(true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setShowVenueModal(true);
-                  }
-                }}
-                title="Click to view venue picture"
-              >
-                <div className="rules-box-top">
-                  <span className="rules-box-icon"><FaBuilding /></span>
-                  <span className="rules-box-label">VENUE</span>
-                  <span className="rules-box-corner-indicator" title="Click to view picture"><FaExternalLinkAlt style={{ fontSize: '0.75rem' }} /></span>
-                </div>
-                <div className="rules-box-value">{event.venue || 'CSE Department Labs'}</div>
-                <span className="rules-box-subhint">Click to view photo</span>
-              </div>
-
-              {/* Box 2: Timing */}
-              <div className="rules-overview-box">
-                <div className="rules-box-top">
-                  <span className="rules-box-icon"><FaClock /></span>
-                  <span className="rules-box-label">TIMING</span>
-                </div>
-                <div className="rules-box-value">{event.timing || '10:40 AM – 12:40 PM'}</div>
-                <span className="rules-box-subhint">Reporting: 15 mins prior</span>
-              </div>
-
-              {/* Box 3: Registration Fee */}
-              <div className="rules-overview-box">
-                <div className="rules-box-top">
-                  <span className="rules-box-icon"><FaMoneyBillWave /></span>
-                  <span className="rules-box-label">REGISTRATION FEE</span>
-                </div>
-                <div className="rules-box-value fee-highlight">{event.fee}</div>
-                <span className="rules-box-subhint">
-                  {event.feeType === 'per_head' ? 'Per participant' : 'Per team'}
-                </span>
-              </div>
-
-              {/* Box 4: Members / Team Size */}
-              <div className="rules-overview-box">
-                <div className="rules-box-top">
-                  <span className="rules-box-icon"><FaUsers /></span>
-                  <span className="rules-box-label">MEMBERS</span>
-                </div>
-                <div className="rules-box-value">{event.teamSize}</div>
-                <span className="rules-box-subhint">
-                  {event.isTeam ? 'Team competition' : 'Solo entry'}
-                </span>
-              </div>
+            <div className="esports-selector-header-line">
+              <span className="esports-selector-label">
+                {selectedEsportsGame ? `SELECTED ARENA: ${selectedEsportsGame}` : 'CHOOSE GAME TO REGISTER'}
+              </span>
+              <span className="esports-selector-divider-bar" />
             </div>
 
-            {/* One Long Diagonal Card for Description */}
-            <div className="rules-desc-diagonal-card">
-              <div className="diagonal-card-header">
-                <div className="diagonal-card-badge">
-                  <span className="diagonal-badge-dot" />
-                  <span>OVERVIEW & BRIEF</span>
-                </div>
-                <span className="diagonal-cut-corner-decor" />
-              </div>
-              <div className="diagonal-card-content">
-                <p className="diagonal-desc-text">
-                  {event.description || event.subtitle}
-                </p>
-                {event.subtitle && (
-                  <div className="rules-subtitle-banner">
-                    <span><FaStar style={{ marginRight: '0.35rem', fontSize: '0.75rem' }} /> {event.subtitle}</span>
+            <AnimatePresence mode="wait">
+              {!selectedEsportsGame ? (
+                /* Initially: Show BOTH options */
+                <motion.div
+                  key="both-options"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25 }}
+                  className="esports-pills-row"
+                >
+                  <button
+                    type="button"
+                    className="esports-game-pill-btn"
+                    onClick={() => handleSelectGame('FREE FIRE')}
+                    id="btn-select-freefire"
+                  >
+                    <span className="esports-pill-text">FREE FIRE</span>
+                    <FaArrowRight className="esports-pill-arrow" />
+                  </button>
+
+                  <button
+                    type="button"
+                    className="esports-game-pill-btn"
+                    onClick={() => handleSelectGame('BGMI')}
+                    id="btn-select-bgmi"
+                  >
+                    <span className="esports-pill-text">BGMI</span>
+                    <FaArrowRight className="esports-pill-arrow" />
+                  </button>
+                </motion.div>
+              ) : (
+                /* After selection: Show ONLY the chosen option, NOT the other one! */
+                <motion.div
+                  key={`selected-${selectedEsportsGame}`}
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.25 }}
+                  className="esports-pills-row esports-selected-single-row"
+                >
+                  <div className="esports-game-pill-btn is-active is-selected-single">
+                    <span className="esports-pill-text">{selectedEsportsGame}</span>
+                    <FaCheckCircle className="esports-pill-check" />
                   </div>
-                )}
-              </div>
+
+                  <button
+                    type="button"
+                    className="esports-change-game-btn"
+                    onClick={() => handleSelectGame(null)}
+                    id="btn-change-game"
+                    title="Choose another game"
+                  >
+                    <FaRedoAlt className="esports-change-icon" />
+                    <span>Change Game</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {/* When in E-Sports and no game is chosen yet: Show only the prompt */}
+        {isEsports && !selectedEsportsGame && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+            className="esports-select-prompt-card"
+          >
+            <div className="esports-prompt-icon-ring">
+              <FaGamepad className="esports-prompt-icon" />
+            </div>
+            <h3 className="esports-prompt-title">SELECT YOUR ARENA TO VIEW DETAILS</h3>
+            <p className="esports-prompt-desc">
+              Choose either <strong>FREE FIRE</strong> or <strong>BGMI</strong> above to unlock event rules, map schedule, guidelines, and squad registration.
+            </p>
+            <div className="esports-prompt-tags">
+              <span className="esports-prompt-tag"><FaUsers style={{ marginRight: '6px' }} /> 4-Player Squad Match</span>
+              <span className="esports-prompt-tag"><FaMoneyBillWave style={{ marginRight: '6px' }} /> Flat ₹200 / Squad</span>
+              <span className="esports-prompt-tag"><FaBolt style={{ marginRight: '6px' }} /> Custom Tournament Rooms</span>
             </div>
           </motion.div>
+        )}
 
-          {/* Right Side: Separate Rules Card and Coordinator Contact Card */}
-          <div className="rules-right-stack">
-            {/* Card 1: Rules & Guidelines */}
+        {/* Animated Details: Shown when standard event OR once an E-Sports game is selected */}
+        <AnimatePresence mode="wait">
+          {(!isEsports || selectedEsportsGame) && (
             <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.25 }}
-              className="rules-card-glass rules-right-rules-card"
+              key={isEsports ? selectedEsportsGame : 'event-content'}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="rules-details-animated-wrapper"
             >
-              <div className="rules-card-header">
-                <h2 className="rules-card-title">
-                  <FaListOl className="rules-card-icon" /> Rules & Guidelines
-                </h2>
-                {rulesList.length > 0 && (
-                  <span className="rules-count-badge">{rulesList.length} Rules</span>
-                )}
-              </div>
-
-              {rulesList.length > 0 ? (
-                <ol className="rules-unified-list">
-                  {rulesList.map((rule, idx) => (
-                    <motion.li
-                      key={idx}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.15 + idx * 0.03 }}
-                      className="rules-unified-item"
-                    >
-                      <span className="rules-item-index">{String(idx + 1).padStart(2, '0')}.</span>
-                      <span className="rules-item-text">{rule}</span>
-                    </motion.li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="rules-empty-text">Standard event guidelines apply. Contact event coordinators for details.</p>
-              )}
-            </motion.div>
-
-            {/* Round Structure (if provided) */}
-            {rounds.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.3 }}
-                className="rules-card-glass rules-rounds-card"
-              >
-                <div className="rules-card-header">
-                  <h2 className="rules-card-title">
-                    <FaLayerGroup className="rules-card-icon" /> Round Structure
-                  </h2>
-                  <span className="rules-count-badge">{rounds.length} Rounds</span>
-                </div>
-                <div className="rules-rounds-grid">
-                  {rounds.map((rnd, i) => (
-                    <div key={i} className="rules-round-card">
-                      <div className="rules-round-header">
-                        <span className="rules-round-num">ROUND {i + 1}</span>
-                        {rnd.time && <span className="rules-round-time">{rnd.time}</span>}
-                      </div>
-                      <h4 className="rules-round-title">{rnd.name}</h4>
-                      {rnd.desc && <p className="rules-round-desc">{rnd.desc}</p>}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Card 2: Event Coordinators & Contact (Separate Card) */}
-            {coordsList.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.35 }}
-                className="rules-card-glass rules-coords-card"
-              >
-                <div className="rules-card-header">
-                  <h2 className="rules-card-title">
-                    <FaHeadset className="rules-card-icon" /> Event Coordinators & Contact
-                  </h2>
-                  <span className="rules-count-badge">
-                    {coordsList.length} Lead Coordinator{coordsList.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-
-                <div className="rules-coords-grid">
-                  {coordsList.map((coord, idx) => (
-                    <div key={idx} className="rules-embedded-coord-chip">
-                      <div className="coord-chip-info">
-                        <span className="coord-chip-badge">{coord.role || 'Lead Coordinator'}</span>
-                        <h4 className="coord-chip-name">{coord.name}</h4>
-                      </div>
-                      <a
-                        href={`tel:${coord.phone}`}
-                        className="coord-chip-call-btn"
-                        title={`Call ${coord.name}`}
-                      >
-                        <FaPhoneAlt size={11} style={{ marginRight: '6px' }} />
-                        <span>{coord.displayPhone || coord.phone}</span>
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Primary Register CTA (shown lastly, after all rules & details) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.35 }}
-          className="rules-bottom-cta-section"
-        >
-          {isEsports ? (
-            <div className="overview-card-cta-wrap esports-cta-wrap">
-              <div className="esports-cta-heading">
-                {isRegClosed ? 'REGISTRATIONS STATUS' : 'CHOOSE GAME TO REGISTER'}
-              </div>
-              {isRegClosed ? (
-                <button
-                  type="button"
-                  className="btn btn-primary btn-full-width"
-                  disabled={true}
-                  style={{
-                    background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
-                    borderColor: '#ef4444',
-                    color: '#fca5a5',
-                    cursor: 'not-allowed',
-                    boxShadow: 'none',
-                    transform: 'none',
-                    opacity: 0.95
-                  }}
+              {/* 2-Column Split: Overview (Left) & Rules (Right) */}
+              <div className="rules-split-grid">
+                {/* Left Side: Overview Stack (4 Small Boxes + 1 Long Diagonal Card) */}
+                <motion.div
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                  className="rules-left-overview-stack"
                 >
-                  <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
-                </button>
-              ) : (
-                <div className="esports-buttons-grid">
+                  {/* 4 Small Detail Boxes Grid */}
+                  <div className="rules-overview-quad-grid">
+                    {/* Box 1: Venue */}
+                    <div
+                      className="rules-overview-box rules-overview-box-venue rules-overview-box-clickable"
+                      onClick={() => setShowVenueModal(true)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setShowVenueModal(true);
+                        }
+                      }}
+                      title="Click to view venue picture"
+                    >
+                      <div className="rules-box-top">
+                        <span className="rules-box-icon"><FaBuilding /></span>
+                        <span className="rules-box-label">VENUE</span>
+                        <span className="rules-box-corner-indicator" title="Click to view picture"><FaExternalLinkAlt style={{ fontSize: '0.75rem' }} /></span>
+                      </div>
+                      <div className="rules-box-value">{displayVenue}</div>
+                      <span className="rules-box-subhint">Click to view photo</span>
+                    </div>
+
+                    {/* Box 2: Timing */}
+                    <div className="rules-overview-box">
+                      <div className="rules-box-top">
+                        <span className="rules-box-icon"><FaClock /></span>
+                        <span className="rules-box-label">TIMING</span>
+                      </div>
+                      <div className="rules-box-value">{displayTiming}</div>
+                      <span className="rules-box-subhint">Reporting: 15 mins prior</span>
+                    </div>
+
+                    {/* Box 3: Registration Fee */}
+                    <div className="rules-overview-box">
+                      <div className="rules-box-top">
+                        <span className="rules-box-icon"><FaMoneyBillWave /></span>
+                        <span className="rules-box-label">REGISTRATION FEE</span>
+                      </div>
+                      <div className="rules-box-value fee-highlight">{displayFee}</div>
+                      <span className="rules-box-subhint">
+                        {displayFeeType === 'per_head' ? 'Per participant' : 'Per team / squad'}
+                      </span>
+                    </div>
+
+                    {/* Box 4: Members / Team Size */}
+                    <div className="rules-overview-box">
+                      <div className="rules-box-top">
+                        <span className="rules-box-icon"><FaUsers /></span>
+                        <span className="rules-box-label">MEMBERS</span>
+                      </div>
+                      <div className="rules-box-value">{displayTeamSize}</div>
+                      <span className="rules-box-subhint">
+                        {displayIsTeam ? 'Team competition' : 'Solo entry'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* One Long Diagonal Card for Description */}
+                  <div className="rules-desc-diagonal-card">
+                    <div className="diagonal-card-header">
+                      <div className="diagonal-card-badge">
+                        <span className="diagonal-badge-dot" />
+                        <span>OVERVIEW & BRIEF</span>
+                      </div>
+                      <span className="diagonal-cut-corner-decor" />
+                    </div>
+                    <div className="diagonal-card-content">
+                      <p className="diagonal-desc-text">
+                        {displayDescription}
+                      </p>
+                      {displaySubtitle && (
+                        <div className="rules-subtitle-banner">
+                          <span><FaStar style={{ marginRight: '0.35rem', fontSize: '0.75rem' }} /> {displaySubtitle}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Right Side: Separate Rules Card and Coordinator Contact Card */}
+                <div className="rules-right-stack">
+                  {/* Card 1: Rules & Guidelines */}
+                  <motion.div
+                    initial={{ opacity: 0, x: 30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.5, delay: 0.15 }}
+                    className="rules-card-glass rules-right-rules-card"
+                  >
+                    <div className="rules-card-header">
+                      <h2 className="rules-card-title">
+                        <FaListOl className="rules-card-icon" /> Rules & Guidelines
+                      </h2>
+                      {rulesList.length > 0 && (
+                        <span className="rules-count-badge">{rulesList.length} Rules</span>
+                      )}
+                    </div>
+
+                    {rulesList.length > 0 ? (
+                      <ol className="rules-unified-list">
+                        {rulesList.map((rule, idx) => (
+                          <motion.li
+                            key={idx}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.3, delay: 0.1 + idx * 0.03 }}
+                            className="rules-unified-item"
+                          >
+                            <span className="rules-item-index">{String(idx + 1).padStart(2, '0')}.</span>
+                            <span className="rules-item-text">{rule}</span>
+                          </motion.li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="rules-empty-text">Standard event guidelines apply. Contact event coordinators for details.</p>
+                    )}
+                  </motion.div>
+
+                  {/* Round Structure (if provided) */}
+                  {rounds.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.2 }}
+                      className="rules-card-glass rules-rounds-card"
+                    >
+                      <div className="rules-card-header">
+                        <h2 className="rules-card-title">
+                          <FaLayerGroup className="rules-card-icon" /> Round Structure
+                        </h2>
+                        <span className="rules-count-badge">{rounds.length} Rounds</span>
+                      </div>
+                      <div className="rules-rounds-grid">
+                        {rounds.map((rnd, i) => (
+                          <div key={i} className="rules-round-card">
+                            <div className="rules-round-header">
+                              <span className="rules-round-num">ROUND {i + 1}</span>
+                              {rnd.time && <span className="rules-round-time">{rnd.time}</span>}
+                            </div>
+                            <h4 className="rules-round-title">{rnd.name}</h4>
+                            {rnd.desc && <p className="rules-round-desc">{rnd.desc}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Card 2: Event Coordinators & Contact (Separate Card) */}
+                  {coordsList.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: 0.25 }}
+                      className="rules-card-glass rules-coords-card"
+                    >
+                      <div className="rules-card-header">
+                        <h2 className="rules-card-title">
+                          <FaHeadset className="rules-card-icon" /> Event Coordinators & Contact
+                        </h2>
+                        <span className="rules-count-badge">
+                          {coordsList.length} Lead Coordinator{coordsList.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div className="rules-coords-grid">
+                        {coordsList.map((coord, idx) => (
+                          <div key={idx} className="rules-embedded-coord-chip">
+                            <div className="coord-chip-info">
+                              <span className="coord-chip-badge">{coord.role || 'Lead Coordinator'}</span>
+                              <h4 className="coord-chip-name">{coord.name}</h4>
+                            </div>
+                            <a
+                              href={`tel:${coord.phone}`}
+                              className="coord-chip-call-btn"
+                              title={`Call ${coord.name}`}
+                            >
+                              <FaPhoneAlt size={11} style={{ marginRight: '6px' }} />
+                              <span>{coord.displayPhone || coord.phone}</span>
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+
+              {/* Bottom Primary Register CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.25 }}
+                className="rules-bottom-cta-section"
+              >
+                <div className="overview-card-cta-wrap">
                   <button
                     type="button"
-                    className="esports-action-btn esports-btn-freefire"
-                    onClick={() => handleRegisterGame('FREE FIRE')}
-                    id="btn-register-freefire"
+                    className="btn btn-primary btn-full-width btn-rules-main-register esports-selected-register-btn"
+                    onClick={isRegClosed ? undefined : () => (isEsports ? handleRegisterGame(selectedEsportsGame) : handleRegister())}
+                    disabled={isRegClosed}
+                    id={isEsports ? `btn-register-${selectedEsportsGame === 'BGMI' ? 'bgmi' : 'freefire'}` : 'btn-register-event'}
+                    style={isRegClosed ? {
+                      background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
+                      borderColor: '#ef4444',
+                      color: '#fca5a5',
+                      cursor: 'not-allowed',
+                      boxShadow: 'none',
+                      transform: 'none',
+                      opacity: 0.95
+                    } : {}}
                   >
-                    <span>FREE FIRE</span>
-                    <FaArrowRight className="esports-btn-arrow" />
-                  </button>
-                  <button
-                    type="button"
-                    className="esports-action-btn esports-btn-bgmi"
-                    onClick={() => handleRegisterGame('BGMI')}
-                    id="btn-register-bgmi"
-                  >
-                    <span>BGMI</span>
-                    <FaArrowRight className="esports-btn-arrow" />
+                    {isRegClosed ? (
+                      <>
+                        <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
+                      </>
+                    ) : (
+                      <>
+                        {isEsports && selectedEsportsGame
+                          ? `REGISTER FOR ${selectedEsportsGame}`
+                          : 'REGISTER FOR THIS EVENT'}{' '}
+                        <FaArrowRight style={{ marginLeft: '0.45rem' }} />
+                      </>
+                    )}
                   </button>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="overview-card-cta-wrap">
-              <button
-                type="button"
-                className="btn btn-primary btn-full-width btn-rules-main-register"
-                onClick={isRegClosed ? undefined : handleRegister}
-                disabled={isRegClosed}
-                style={isRegClosed ? {
-                  background: 'linear-gradient(135deg, #7f1d1d, #451a1a)',
-                  borderColor: '#ef4444',
-                  color: '#fca5a5',
-                  cursor: 'not-allowed',
-                  boxShadow: 'none',
-                  transform: 'none',
-                  opacity: 0.95
-                } : {}}
-              >
-                {isRegClosed ? (
-                  <>
-                    <FaLock style={{ marginRight: '0.4rem' }} /> REGISTRATIONS CLOSED
-                  </>
-                ) : (
-                  <>
-                    REGISTER FOR THIS EVENT <FaArrowRight style={{ marginLeft: '0.45rem' }} />
-                  </>
-                )}
-              </button>
-            </div>
+              </motion.div>
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Mobile Sticky Action Bar - Appears when scrolling down */}
@@ -657,7 +906,8 @@ export default function EventRulesPage({ eventId, from, categoryFilter, onNaviga
         >
           {isRegClosed ? 'Closed' : (
             <>
-              Register Now <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
+              {isEsports && selectedEsportsGame ? `Register ${selectedEsportsGame}` : 'Register Now'}{' '}
+              <FaArrowRight style={{ marginLeft: '0.45rem', verticalAlign: '-1px' }} />
             </>
           )}
         </button>

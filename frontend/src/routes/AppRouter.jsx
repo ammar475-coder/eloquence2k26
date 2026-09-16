@@ -49,7 +49,7 @@ function parseHash(hash) {
       sectionId: null,
       from,
       categoryFilter,
-      game: null
+      game: gameParam || null
     };
   }
   if (pathPart === '#/events' || pathPart === '#events') {
@@ -197,6 +197,7 @@ export default function AppRouter() {
             eventId={route.eventId}
             from={route.from}
             categoryFilter={route.categoryFilter}
+            initialGame={route.game}
             onNavigate={navigateTo}
           />
         ) : route.page === 'register' ? (
