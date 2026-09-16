@@ -308,7 +308,7 @@ function SponsorRow({ tier, label, items, direction }) {
       <div className="sponsor-marquee">
         <div className="sponsor-marquee-fade sponsor-marquee-fade-left" />
         <div className="sponsor-marquee-fade sponsor-marquee-fade-right" />
-        <ScrollableMarquee speed={46} direction={direction} baseCount={baseItems.length}>
+        <ScrollableMarquee speed={62} direction={direction} baseCount={baseItems.length}>
           <div
             className={`sponsor-track ${direction === 'right' ? 'sponsor-track-reverse' : ''}`}
           >

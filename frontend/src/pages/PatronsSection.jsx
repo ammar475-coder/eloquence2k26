@@ -147,7 +147,7 @@ export default function PatronsSection() {
       <div className="patrons-marquee">
         <div className="patrons-marquee-fade patrons-marquee-fade-left" />
         <div className="patrons-marquee-fade patrons-marquee-fade-right" />
-        <ScrollableMarquee speed={36} direction="left" baseCount={patrons.length}>
+        <ScrollableMarquee speed={58} direction="left" baseCount={patrons.length}>
           <div className="patrons-track">
             {loopPatrons.map((patron, i) => (
               <PatronSlideCard

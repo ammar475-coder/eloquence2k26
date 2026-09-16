@@ -270,7 +270,7 @@ export default function StudentCoordinatorsSection() {
       <div className="student-coordinators-marquee">
         <div className="student-coordinators-marquee-fade marquee-fade-left" />
         <div className="student-coordinators-marquee-fade marquee-fade-right" />
-        <ScrollableMarquee speed={36} direction="left" baseCount={baseList.length}>
+        <ScrollableMarquee speed={58} direction="left" baseCount={baseList.length}>
           <div className="student-coordinators-track">
             {loopItems.map((item, i) => (
               <CoordinatorSlideCard
