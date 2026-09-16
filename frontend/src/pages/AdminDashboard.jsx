@@ -74,6 +74,7 @@ import rulesData from '../data/rules.js';
 import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
+import RegistrationVerification from '../components/RegistrationVerification.jsx';
 import {
   fetchAdminHomepageCoordinators,
   createHomepageCoordinatorTeam,
@@ -188,6 +189,20 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isRegDetailsModalOpen, setIsRegDetailsModalOpen] = useState(false);
   const [isOnSiteRegisterModalOpen, setIsOnSiteRegisterModalOpen] = useState(false);
   const [isDeletingRegId, setIsDeletingRegId] = useState(null);
+
+  // UTR & Verification metrics for badge
+  const utrRegistrationsList = registrationsList.filter(r => {
+    const utr = r.upiUtr || r.upi_utr || r.transactionId || r.transaction_id || r.razorpayPaymentId || r.razorpay_payment_id;
+    const isOnline = (r.paymentMethod || r.payment_method || '').toUpperCase().includes('UPI') ||
+      (r.paymentMethod || r.payment_method || '').toUpperCase().includes('ONLINE');
+    return Boolean(utr) || isOnline;
+  });
+
+  const pendingUtrCount = utrRegistrationsList.filter(r => 
+    !r.is_verified && !r.isVerified && !r.is_flagged && !r.isFlagged && 
+    r.verificationStatus !== 'verified' && r.verification_status !== 'verified' && 
+    r.attendance_status !== 'verified'
+  ).length;
 
   // Registration Analytics & Event Helpers
   const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
@@ -2737,6 +2752,29 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
+          {/* Registration Verification (UTR Audit) Tab */}
+          <button 
+            type="button"
+            id="admin-nav-registration-verification-btn"
+            style={activeTab === 'registration-verification' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+            onClick={(e) => { e.preventDefault(); setActiveTab('registration-verification'); setMobileSidebarOpen(false); }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaUserCheck style={S.navIcon} />
+                <span>Registration Verification</span>
+              </div>
+              <span style={{
+                ...S.badgeCount,
+                background: pendingUtrCount > 0 ? (isDark ? '#78350f' : '#fef3c7') : (isDark ? '#1e293b' : '#f1f5f9'),
+                color: pendingUtrCount > 0 ? (isDark ? '#fde68a' : '#b45309') : (isDark ? '#9ca3af' : '#64748b'),
+                border: pendingUtrCount > 0 ? (isDark ? '1px solid #92400e' : '1px solid #fde68a') : 'none'
+              }}>
+                {pendingUtrCount > 0 ? `${pendingUtrCount} PENDING` : `${utrRegistrationsList.length}`}
+              </span>
+            </div>
+          </button>
+
           {/* Search & Verify Participant Tab */}
           <button 
             type="button"
@@ -2824,6 +2862,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'allocate-events' && 'Event Coordinator Allocation'}
               {activeTab === 'homepage-coordinators' && 'Homepage Student-Coordinator Team'}
               {activeTab === 'registrations' && 'Participant Registrations & Verification'}
+              {activeTab === 'registration-verification' && 'Registration Verification'}
               {activeTab === 'search-participant' && 'Search & Verify Participant (QR Check-in)'}
               {activeTab === 'participant-list' && 'Event-Wise Participant & Team List'}
               {activeTab === 'close-rg' && 'Close RG — Registration Access Control'}
@@ -2838,6 +2877,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {activeTab === 'allocate-events' && 'Allocate specific events to coordinator accounts. Coordinators can only see and manage their allocated event(s).'}
               {activeTab === 'homepage-coordinators' && (isLeadCoordinator ? 'View student coordinator teams displayed on the symposium homepage marquee.' : 'Manage student coordinator teams (Main Coordinator Team, Website Coordinator Team, etc.) displayed dynamically on the homepage marquee.')}
               {activeTab === 'registrations' && (isLeadCoordinator ? 'View all registered participants, verify ticket codes, and audit payment status.' : 'View and manage live online portal and offline on-site desk participant registrations with payment and ticket audit.')}
+              {activeTab === 'registration-verification' && 'Audit UPI UTR payment references, verify transactions, flag disputes, or delete entries.'}
               {activeTab === 'search-participant' && 'Search by ticket code, name, phone, email, college or scan participant ticket QR code for live on-site verification & admission.'}
               {activeTab === 'participant-list' && (isLeadCoordinator ? 'Filter participants by event, view team names, inspect members, and export PDF sheets.' : 'Filter participants by event, view team names, export PDF sheets, and dispatch lists to Event Coordinators.')}
               {activeTab === 'close-rg' && 'Symposium-wide registration toggle. Instantly lock or open registrations across all events.'}
@@ -5782,6 +5822,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* REGISTRATION VERIFICATION (UTR AUDIT & CONTROLS)         */}
+          {/* ======================================================== */}
+          {activeTab === 'registration-verification' && (
+            <RegistrationVerification
+              registrationsList={registrationsList}
+              token={token}
+              user={user}
+              isDark={isDark}
+              onRefresh={() => {
+                fetchRegistrations();
+                fetchDashboardData();
+              }}
+              eventsList={eventsList}
+            />
           )}
 
           {/* ======================================================== */}

@@ -2245,27 +2245,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                   )}
                 </button>
               </div>
-
-              {feeInfo.total > 0 && (
-                <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={handleRazorpayCheckout}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'rgba(255, 255, 255, 0.45)',
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      padding: '4px 8px'
-                    }}
-                    title="Pay with Razorpay Gateway"
-                  >
-                    Need standard Razorpay gateway? Click here to pay via Razorpay
-                  </button>
-                </div>
-              )}
+              {/* Razorpay standard gateway fallback removed for now - will be re-added later */}
             </div>
           </div>
         )}
