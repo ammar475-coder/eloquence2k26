@@ -61,6 +61,17 @@ function initSupabaseRealtime() {
           }
         }
       )
+      // 3. Listen for real-time changes on registration_members table
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'registration_members' },
+        (payload) => {
+          console.log('[Supabase Realtime] Registration members table event:', payload.eventType);
+          if (payload.new) {
+            broadcastRegistrationUpdate('MEMBER_UPDATE', payload.new);
+          }
+        }
+      )
       .subscribe((status, err) => {
         if (err) {
           console.warn('[Supabase Realtime] Subscription status error:', err.message);

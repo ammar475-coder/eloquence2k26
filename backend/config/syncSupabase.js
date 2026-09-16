@@ -158,14 +158,15 @@ async function syncTableData() {
     console.warn('[Supabase Sync] Sponsors sync note:', err.message);
   }
 
-  // 6. Sync Registrations
+  // 6. Sync Registrations & Registration Members
   try {
     const regFile = path.join(DATA_DIR, 'registrations.json');
     if (fs.existsSync(regFile)) {
       const regs = JSON.parse(fs.readFileSync(regFile, 'utf-8') || '[]');
       for (const r of regs) {
+        const ticketCode = r.ticketCode || r.ticket_code || r.registrationId || r.id;
         const payload = {
-          ticket_code: r.ticketCode || r.ticket_code || r.registrationId || r.id,
+          ticket_code: ticketCode,
           event_id: r.eventId || r.event_id || 'general',
           full_name: r.fullName || r.full_name || 'Anonymous',
           email: r.email || '',
@@ -189,7 +190,37 @@ async function syncTableData() {
           verified_at: r.verifiedAt || r.verified_at || null,
           verified_by: r.verifiedBy || r.verified_by || null
         };
-        await supabase.from('registrations').upsert(payload, { onConflict: 'ticket_code' });
+        const { data: upsertedReg } = await supabase.from('registrations').upsert(payload, { onConflict: 'ticket_code' }).select('id');
+
+        // Sync team members to registration_members table
+        const membersList = r.teamMembers || r.teamMembersList || [];
+        if (Array.isArray(membersList) && membersList.length > 0) {
+          const regDbId = (upsertedReg && upsertedReg[0]) ? upsertedReg[0].id : null;
+          for (let i = 0; i < membersList.length; i++) {
+            const m = membersList[i];
+            const mName = (typeof m === 'string' ? m : (m?.fullName || m?.name || '')).trim();
+            const mEmail = (typeof m === 'object' ? (m?.email || '') : '').trim();
+            const mPhone = (typeof m === 'object' ? (m?.phone || '') : '').trim();
+            const mCollege = (typeof m === 'object' ? (m?.college || '') : '').trim();
+            const mDept = (typeof m === 'object' ? (m?.department || '') : '').trim();
+            const mYear = (typeof m === 'object' ? (m?.year || '') : '').trim();
+
+            if (mName) {
+              const memPayload = {
+                ticket_code: ticketCode,
+                member_number: i + 2,
+                member_name: mName,
+                email: mEmail,
+                phone: mPhone,
+                college: mCollege,
+                department: mDept,
+                year: mYear
+              };
+              if (regDbId) memPayload.registration_id = regDbId;
+              await supabase.from('registration_members').insert(memPayload);
+            }
+          }
+        }
       }
     }
   } catch (err) {
