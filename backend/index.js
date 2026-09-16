@@ -82,6 +82,13 @@ server.listen(PORT, HOST, () => {
   } catch (err) {
     console.warn('Sync table data warning:', err.message);
   }
+
+  try {
+    const { initSupabaseRealtime } = require('./config/realtimeSupabase');
+    initSupabaseRealtime();
+  } catch (rtErr) {
+    console.warn('Supabase realtime init warning:', rtErr.message);
+  }
 });
 
 module.exports = server;
