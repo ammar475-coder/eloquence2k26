@@ -443,12 +443,14 @@ export function setCachedEvents(events) {
   }
 }
 
-export async function fetchEventsData() {
-  if (pendingEventsPromise) return pendingEventsPromise;
+export async function fetchEventsData(force = false) {
+  if (pendingEventsPromise && !force) return pendingEventsPromise;
 
   pendingEventsPromise = (async () => {
     try {
-      const res = await fetch(getApiUrl('/api/events'));
+      const res = await fetch(getApiUrl('/api/events'), {
+        cache: 'no-store'
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
       if (result.success && Array.isArray(result.data) && result.data.length > 0) {
