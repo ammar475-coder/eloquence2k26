@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
 import cahcetLogo from '../assets/cahcet.png';
 import { getApiUrl, getWsUrl } from '../config/api';
+import { FaCalendarAlt } from 'react-icons/fa';
 
 const EVENT_START = new Date('2026-09-26T00:00:00+05:30').getTime();
 
@@ -764,30 +765,41 @@ export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
         <p className="hero-motto">THINK &bull; BUILD &bull; BEYOND</p>
         <p className="hero-tagline">9TH NATIONAL LEVEL TECHNICAL SYMPOSIUM</p>
 
-        {/* Unified Countdown Timer */}
+        {/* Unified Countdown Timer - Each unit binds number + label together for flawless responsive alignment */}
         <div
           className="countdown countdown-days"
           aria-label={`Countdown: ${timeRemaining.days} days, ${timeRemaining.hours} hours, ${timeRemaining.minutes} minutes, ${timeRemaining.seconds} seconds`}
         >
-          <div className="countdown-value">
-            <span>{timeRemaining.days}</span>
-            <b className="colon">:</b>
-            <span>{timeRemaining.hours}</span>
-            <b className="colon">:</b>
-            <span>{timeRemaining.minutes}</span>
-            <b className="colon">:</b>
-            <span>{timeRemaining.seconds}</span>
-          </div>
-          <div className="countdown-labels">
-            <span>DAYS</span>
-            <span>HOURS</span>
-            <span>MINUTES</span>
-            <span>SECONDS</span>
+          <div className="countdown-grid">
+            <div className="countdown-unit">
+              <span className="countdown-num">{timeRemaining.days}</span>
+              <span className="countdown-lbl">DAYS</span>
+            </div>
+            <span className="colon" aria-hidden="true">:</span>
+            <div className="countdown-unit">
+              <span className="countdown-num">{timeRemaining.hours}</span>
+              <span className="countdown-lbl">HOURS</span>
+            </div>
+            <span className="colon" aria-hidden="true">:</span>
+            <div className="countdown-unit">
+              <span className="countdown-num">{timeRemaining.minutes}</span>
+              <span className="countdown-lbl">MINUTES</span>
+            </div>
+            <span className="colon" aria-hidden="true">:</span>
+            <div className="countdown-unit">
+              <span className="countdown-num">{timeRemaining.seconds}</span>
+              <span className="countdown-lbl">SECONDS</span>
+            </div>
           </div>
         </div>
 
-        {/* Event Date */}
-        <p className="hero-date">&#128197; SEPTEMBER 26, 2026</p>
+        {/* Event Date & Day Badge */}
+        <div className="hero-date-badge" aria-label="Event Date: Saturday, September 26, 2026">
+          <FaCalendarAlt className="hero-date-icon" />
+          <span className="hero-date-day">SATURDAY</span>
+          <span className="hero-date-dot" aria-hidden="true">&bull;</span>
+          <span className="hero-date-text">SEPTEMBER 26, 2026</span>
+        </div>
 
         {/* Dynamic Registration Status Banner: Red Marquee Capsule Pill when CLOSED */}
         {isRegClosed ? (

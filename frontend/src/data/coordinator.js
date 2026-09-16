@@ -300,8 +300,8 @@ const coordinatorsData = {
 
   'nontech-07': {
     eventId: 'nontech-07',
-    eventName: 'AUCTION',
-    alias: 'Auction',
+    eventName: 'BATTLEWORLD BIDDING',
+    alias: 'Battleworld Bidding',
     category: 'non-technical',
     coordinators: [
       {

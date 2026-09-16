@@ -300,7 +300,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
     if (selectedOnSiteEvent.isTeam) {
       const minMembers = Number(selectedOnSiteEvent.minMembers) || 2;
       const maxMembers = Number(selectedOnSiteEvent.maxMembers) || 4;
-      const isSquad = selectedOnSiteEvent.feeType === 'per_squad' && maxMembers > 1;
+      const isSquad = (selectedOnSiteEvent.feeType === 'per_squad' || selectedOnSiteEvent.feeType === 'per_team' || (minMembers > 1 && minMembers === maxMembers)) && maxMembers > 1;
       const targetCount = isSquad ? (maxMembers - 1) : Math.max(1, minMembers - 1);
 
       setOnSiteFields(prev => {
@@ -333,7 +333,10 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
 
   const calculateOnSiteFee = () => {
     if (!selectedOnSiteEvent) return 0;
-    if (selectedOnSiteEvent.feeType === 'per_squad' || selectedOnSiteEvent.feeType === 'fixed') {
+    if (selectedOnSiteEvent.id === 'nontech-07' || selectedOnSiteEvent.feeType === 'per_team') {
+      return 250;
+    }
+    if (selectedOnSiteEvent.id === 'nontech-05' || selectedOnSiteEvent.feeType === 'per_squad' || selectedOnSiteEvent.feeType === 'fixed') {
       return Number(selectedOnSiteEvent.feePerHead) || 200;
     }
     const perHead = Number(selectedOnSiteEvent.feePerHead) || 50;
