@@ -82,7 +82,8 @@ import {
   deleteHomepageCoordinatorTeam,
   updateRegistrationStatus,
   fetchEventAllocations,
-  updateEventAllocation
+  updateEventAllocation,
+  fetchEventsData
 } from '../services/api.js';
 
 const EXISTING_POSTER_PRESETS = [
@@ -618,28 +619,30 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [selectedCoordUsername, setSelectedCoordUsername] = useState('');
 
   const handleOpenSendModal = (evt) => {
+    if (!evt) return;
     setSendTargetEvent(evt);
+    const targetEvtId = String(evt?.id || '').toLowerCase();
     // 1. First check if a login account is allocated for this event
-    const allocatedUser = users.find(u => {
-      const uEvents = u.assignedEvents || (u.eventId ? [u.eventId] : []);
-      return Array.isArray(uEvents) && uEvents.some(e => String(e).toLowerCase() === evt.id.toLowerCase());
+    const allocatedUser = (users || []).find(u => {
+      const uEvents = u?.assignedEvents || (u?.eventId ? [u.eventId] : []);
+      return Array.isArray(uEvents) && uEvents.some(e => String(e || '').toLowerCase() === targetEvtId);
     });
 
     // 2. Also check coordinators list
-    const assignedCoord = coordinators.find(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(evt.id.toLowerCase()));
+    const assignedCoord = (coordinators || []).find(c => Array.isArray(c?.assignedEvents) && c.assignedEvents.some(e => String(e || '').toLowerCase() === targetEvtId));
 
     if (allocatedUser) {
-      setSelectedCoordUsername(allocatedUser.username);
-      setSelectedCoordName(assignedCoord?.name || allocatedUser.username);
+      setSelectedCoordUsername(allocatedUser.username || '');
+      setSelectedCoordName(assignedCoord?.name || allocatedUser.username || '');
     } else if (assignedCoord) {
-      setSelectedCoordUsername(assignedCoord.name);
-      setSelectedCoordName(assignedCoord.name);
-    } else if (users.length > 0) {
-      setSelectedCoordUsername(users[0].username);
-      setSelectedCoordName(users[0].username);
-    } else if (coordinators.length > 0) {
-      setSelectedCoordUsername(coordinators[0].name);
-      setSelectedCoordName(coordinators[0].name);
+      setSelectedCoordUsername(assignedCoord.name || '');
+      setSelectedCoordName(assignedCoord.name || '');
+    } else if (users && users.length > 0) {
+      setSelectedCoordUsername(users[0]?.username || '');
+      setSelectedCoordName(users[0]?.username || '');
+    } else if (coordinators && coordinators.length > 0) {
+      setSelectedCoordUsername(coordinators[0]?.name || '');
+      setSelectedCoordName(coordinators[0]?.name || '');
     } else {
       setSelectedCoordUsername('');
       setSelectedCoordName('');
@@ -1744,6 +1747,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
           toast.success(editingEvent ? 'Event updated! Changes live in database & events page.' : 'Event created successfully in database!', { id: loadingToast });
           resetEventEditModal();
           fetchEvents();
+          fetchEventsData(true);
         } else {
           toast.error(result.message || 'Failed to save event', { id: loadingToast });
         }
@@ -1765,6 +1769,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
         if (result.success) {
           toast.success('Event deleted successfully from live database', { id: loadingToast });
           fetchEvents();
+          fetchEventsData(true);
         } else {
           toast.error(result.message || 'Failed to delete event', { id: loadingToast });
         }
@@ -2330,59 +2335,73 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   // Helper for counting users in a role
   const getUserCountForRole = (rName) => {
-    return users.filter(u => u.role?.toLowerCase() === rName.toLowerCase()).length;
+    return (users || []).filter(u => String(u?.role || '').toLowerCase() === String(rName || '').toLowerCase()).length;
   };
 
   // Filtered lists
-  const filteredUsers = users.filter(u => 
-    u.username.toLowerCase().includes(userSearch.toLowerCase()) || 
-    u.role.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  const filteredUsers = (users || []).filter(u => {
+    if (!u) return false;
+    const q = (userSearch || '').toLowerCase().trim();
+    if (!q) return true;
+    const uName = (u.username || '').toLowerCase();
+    const uRole = (u.role || '').toLowerCase();
+    return uName.includes(q) || uRole.includes(q);
+  });
 
-  const filteredEventsList = eventsList.filter(evt => {
+  const filteredEventsList = (eventsList || []).filter(evt => {
+    if (!evt) return false;
     const matchesCategory = eventFilter === 'all' || evt.category === eventFilter;
-    const q = eventSearch.toLowerCase().trim();
+    const q = (eventSearch || '').toLowerCase().trim();
     const matchesSearch = !q || 
-      evt.name.toLowerCase().includes(q) ||
-      (evt.venue && evt.venue.toLowerCase().includes(q)) ||
-      (evt.timing && evt.timing.toLowerCase().includes(q)) ||
-      (evt.fee && evt.fee.toLowerCase().includes(q)) ||
-      (evt.id && evt.id.toLowerCase().includes(q));
+      (evt.name && String(evt.name).toLowerCase().includes(q)) ||
+      (evt.alias && String(evt.alias).toLowerCase().includes(q)) ||
+      (evt.venue && String(evt.venue).toLowerCase().includes(q)) ||
+      (evt.timing && String(evt.timing).toLowerCase().includes(q)) ||
+      (evt.fee && String(evt.fee).toLowerCase().includes(q)) ||
+      (evt.id && String(evt.id).toLowerCase().includes(q));
     return matchesCategory && matchesSearch;
   });
 
-  const filteredSponsors = sponsors.filter(s => {
-    const matchesSearch = 
-      s.name.toLowerCase().includes(sponsorSearch.toLowerCase()) ||
-      (s.companyName && s.companyName.toLowerCase().includes(sponsorSearch.toLowerCase())) ||
-      (s.contactName && s.contactName.toLowerCase().includes(sponsorSearch.toLowerCase())) ||
-      (s.category && s.category.toLowerCase().includes(sponsorSearch.toLowerCase()));
+  const filteredSponsors = (sponsors || []).filter(s => {
+    if (!s) return false;
+    const q = (sponsorSearch || '').toLowerCase().trim();
+    const matchesSearch = !q || 
+      (s.name && String(s.name).toLowerCase().includes(q)) ||
+      (s.companyName && String(s.companyName).toLowerCase().includes(q)) ||
+      (s.contactName && String(s.contactName).toLowerCase().includes(q)) ||
+      (s.category && String(s.category).toLowerCase().includes(q));
     const matchesCategory = sponsorCategoryFilter === 'all' || s.category === sponsorCategoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const filteredCoordinators = coordinators.filter(c => {
-    const matchesSearch = 
-      c.name.toLowerCase().includes(coordSearch.toLowerCase()) ||
-      c.phone.includes(coordSearch) ||
-      (c.email && c.email.toLowerCase().includes(coordSearch.toLowerCase())) ||
-      (c.department && c.department.toLowerCase().includes(coordSearch.toLowerCase())) ||
-      (c.role && c.role.toLowerCase().includes(coordSearch.toLowerCase()));
+  const filteredCoordinators = (coordinators || []).filter(c => {
+    if (!c) return false;
+    const q = (coordSearch || '').toLowerCase().trim();
+    const matchesSearch = !q || 
+      (c.name && String(c.name).toLowerCase().includes(q)) ||
+      (c.phone && String(c.phone).toLowerCase().includes(q)) ||
+      (c.email && String(c.email).toLowerCase().includes(q)) ||
+      (c.department && String(c.department).toLowerCase().includes(q)) ||
+      (c.role && String(c.role).toLowerCase().includes(q));
     
     const matchesEvent = coordEventFilter === 'all' || 
-      (Array.isArray(c.assignedEvents) && c.assignedEvents.includes(coordEventFilter));
+      (Array.isArray(c.assignedEvents) && c.assignedEvents.some(e => String(e).toLowerCase() === String(coordEventFilter).toLowerCase()));
 
     return matchesSearch && matchesEvent;
   });
 
-  const filteredHpTeams = homepageTeams.filter(team => {
-    const q = hpTeamSearch.toLowerCase().trim();
+  const filteredHpTeams = (homepageTeams || []).filter(team => {
+    if (!team) return false;
+    const q = (hpTeamSearch || '').toLowerCase().trim();
     return !q || 
-      (team.role && team.role.toLowerCase().includes(q)) ||
-      (team.tag && team.tag.toLowerCase().includes(q)) ||
-      (team.desc && team.desc.toLowerCase().includes(q)) ||
-      (Array.isArray(team.members) && team.members.some(m => (typeof m === 'string' ? m : m.name)?.toLowerCase().includes(q))) ||
-      (Array.isArray(team.names) && team.names.some(n => n.toLowerCase().includes(q)));
+      (team.role && String(team.role).toLowerCase().includes(q)) ||
+      (team.tag && String(team.tag).toLowerCase().includes(q)) ||
+      (team.desc && String(team.desc).toLowerCase().includes(q)) ||
+      (Array.isArray(team.members) && team.members.some(m => {
+        const mName = typeof m === 'string' ? m : (m && m.name);
+        return mName && String(mName).toLowerCase().includes(q);
+      })) ||
+      (Array.isArray(team.names) && team.names.some(n => n && String(n).toLowerCase().includes(q)));
   });
 
   const displayAllocUsers = (allocUsersList && allocUsersList.length > 0)
@@ -2395,7 +2414,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
       })) : []);
 
   const filteredAllocUsers = displayAllocUsers.filter(u => {
-    const q = allocUserSearch.toLowerCase().trim();
+    if (!u) return false;
+    const q = (allocUserSearch || '').toLowerCase().trim();
     if (!q) return true;
     const uName = (u.username || '').toLowerCase();
     const uRole = (u.role || '').toLowerCase();
@@ -3417,8 +3437,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         <tr key={user.id} style={S.tr}>
                           <td style={S.td}>
                             <div style={S.userCell}>
-                              <div style={S.userAvatarSm}>{user.username.charAt(0).toUpperCase()}</div>
-                              <span style={S.strongText}>{user.username}</span>
+                              <div style={S.userAvatarSm}>{String(user?.username || 'U').charAt(0).toUpperCase()}</div>
+                              <span style={S.strongText}>{user?.username}</span>
                             </div>
                           </td>
                           <td style={S.td}>
@@ -3915,24 +3935,24 @@ export default function AdminDashboard({ token, user, onLogout }) {
               {memberViewTab === 'events' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '1.5rem' }}>
                   {eventsList
-                    .filter(ev => coordEventFilter === 'all' || ev.id === coordEventFilter)
+                    .filter(ev => coordEventFilter === 'all' || ev?.id === coordEventFilter)
                     .filter(ev => {
                       if (!coordSearch.trim()) return true;
-                      const q = coordSearch.toLowerCase();
-                      const matchEvent = ev.name.toLowerCase().includes(q) || ev.id.toLowerCase().includes(q);
-                      const matchMember = coordinators.some(c => 
-                        Array.isArray(c.assignedEvents) && 
-                        c.assignedEvents.includes(ev.id) && 
-                        (c.name.toLowerCase().includes(q) || c.phone.includes(q) || (c.role && c.role.toLowerCase().includes(q)))
+                      const q = (coordSearch || '').toLowerCase().trim();
+                      const matchEvent = String(ev?.name || '').toLowerCase().includes(q) || String(ev?.id || '').toLowerCase().includes(q);
+                      const matchMember = (coordinators || []).some(c => 
+                        Array.isArray(c?.assignedEvents) && 
+                        c.assignedEvents.some(e => String(e || '').toLowerCase() === String(ev?.id || '').toLowerCase()) && 
+                        (String(c?.name || '').toLowerCase().includes(q) || String(c?.phone || '').includes(q) || String(c?.role || '').toLowerCase().includes(q))
                       );
                       return matchEvent || matchMember;
                     })
                     .map(ev => {
-                      const eventMembers = coordinators.filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.includes(ev.id));
-                      const isTech = ev.category === 'technical';
-                      const leads = eventMembers.filter(c => (c.role || '').toLowerCase().includes('lead'));
-                      const coords = eventMembers.filter(c => !((c.role || '').toLowerCase().includes('lead')) && !((c.role || '').toLowerCase().includes('sub')));
-                      const subs = eventMembers.filter(c => (c.role || '').toLowerCase().includes('sub'));
+                      const eventMembers = (coordinators || []).filter(c => Array.isArray(c?.assignedEvents) && c.assignedEvents.some(e => String(e || '').toLowerCase() === String(ev?.id || '').toLowerCase()));
+                      const isTech = ev?.category === 'technical';
+                      const leads = eventMembers.filter(c => String(c?.role || '').toLowerCase().includes('lead'));
+                      const coords = eventMembers.filter(c => !String(c?.role || '').toLowerCase().includes('lead') && !String(c?.role || '').toLowerCase().includes('sub'));
+                      const subs = eventMembers.filter(c => String(c?.role || '').toLowerCase().includes('sub'));
 
                       return (
                         <div 
@@ -4038,7 +4058,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                         fontSize: '0.85rem',
                                         flexShrink: 0
                                       }}>
-                                        {coord.name.charAt(0).toUpperCase()}
+                                        {String(coord?.name || 'C').charAt(0).toUpperCase()}
                                       </div>
 
                                       <div style={{ minWidth: 0 }}>
@@ -4219,12 +4239,12 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               <td style={S.td}>
                                 <div style={S.userCell}>
                                   <div style={{ ...S.userAvatarSm, background: roleBg, color: roleColor }}>
-                                    {coord.name.charAt(0).toUpperCase()}
+                                    {String(coord?.name || 'C').charAt(0).toUpperCase()}
                                   </div>
                                   <div>
-                                    <span style={S.strongText}>{coord.name}</span>
+                                    <span style={S.strongText}>{coord?.name}</span>
                                     <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>
-                                      {coord.department || 'CSE'} • {coord.year || '3rd Year'}
+                                      {coord?.department || 'CSE'} • {coord?.year || '3rd Year'}
                                     </div>
                                   </div>
                                 </div>
@@ -4233,19 +4253,19 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 <div style={{ fontSize: '0.85rem' }}>
                                   <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <FaPhoneAlt size={11} color="#2563eb" />
-                                    <a href={`tel:${coord.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                                      {coord.phone}
+                                    <a href={`tel:${coord?.phone || ''}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                      {coord?.phone || 'N/A'}
                                     </a>
                                   </div>
-                                  {coord.whatsapp && (
+                                  {coord?.whatsapp && (
                                     <div style={{ color: '#10b981', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', fontWeight: '600' }}>
                                       <FaWhatsapp size={11} />
-                                      <a href={`https://wa.me/${coord.whatsapp.replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                      <a href={`https://wa.me/${String(coord.whatsapp).replace(/[^0-9]/g, '')}`} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
                                         WhatsApp: {coord.whatsapp}
                                       </a>
                                     </div>
                                   )}
-                                  {coord.email && (
+                                  {coord?.email && (
                                     <div style={{ color: isDark ? '#9ca3af' : '#64748b', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
                                       <FaEnvelope size={10} /> {coord.email}
                                     </div>
@@ -4268,13 +4288,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                   {isLead && <FaCrown size={10} />}
                                   {isSub && <FaShieldAlt size={10} />}
                                   {!isLead && !isSub && <FaBolt size={10} />}
-                                  {coord.role || 'Coordinator'}
+                                  {coord?.role || 'Coordinator'}
                                 </span>
                               </td>
                               <td style={S.td}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '300px' }}>
                                   {Array.isArray(coord.assignedEvents) && coord.assignedEvents.map(eventId => {
-                                    const ev = eventsList.find(e => e.id.toLowerCase() === eventId.toLowerCase());
+                                    const ev = (eventsList || []).find(e => String(e?.id || '').toLowerCase() === String(eventId || '').toLowerCase());
                                     return (
                                       <span key={eventId} style={{
                                         background: ev?.category === 'technical' ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#831843' : '#fdf2f8'),
@@ -6624,19 +6644,19 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   style={S.select}
                 >
                   <optgroup label="Allocated Coordinator Logins (Direct Dashboard Delivery)">
-                    {users
+                    {(users || [])
                       .filter(u => {
-                        const uEvents = u.assignedEvents || (u.eventId ? [u.eventId] : []);
-                        return Array.isArray(uEvents) && uEvents.some(e => String(e).toLowerCase() === sendTargetEvent.id.toLowerCase());
+                        const uEvents = u?.assignedEvents || (u?.eventId ? [u.eventId] : []);
+                        return Array.isArray(uEvents) && uEvents.some(e => String(e || '').toLowerCase() === String(sendTargetEvent?.id || '').toLowerCase());
                       })
                       .map(u => (
                         <option key={`alloc-u-${u.id}`} value={u.username}>
                           @{u.username} ({u.role || 'Coordinator Login'}) — Allocated to this Event
                         </option>
                       ))}
-                    {users.length > 0 && users.filter(u => {
-                      const uEvents = u.assignedEvents || (u.eventId ? [u.eventId] : []);
-                      return !Array.isArray(uEvents) || !uEvents.some(e => String(e).toLowerCase() === sendTargetEvent.id.toLowerCase());
+                    {users && users.length > 0 && users.filter(u => {
+                      const uEvents = u?.assignedEvents || (u?.eventId ? [u.eventId] : []);
+                      return !Array.isArray(uEvents) || !uEvents.some(e => String(e || '').toLowerCase() === String(sendTargetEvent?.id || '').toLowerCase());
                     }).map(u => (
                       <option key={`other-u-${u.id}`} value={u.username}>
                         @{u.username} ({u.role})
@@ -6645,15 +6665,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </optgroup>
 
                   <optgroup label="Assigned Event Coordinators Team">
-                    {coordinators
-                      .filter(c => Array.isArray(c.assignedEvents) && c.assignedEvents.map(e => e.toLowerCase()).includes(sendTargetEvent.id.toLowerCase()))
+                    {(coordinators || [])
+                      .filter(c => Array.isArray(c?.assignedEvents) && c.assignedEvents.some(e => String(e || '').toLowerCase() === String(sendTargetEvent?.id || '').toLowerCase()))
                       .map(c => (
                         <option key={`alloc-c-${c.id}`} value={c.name}>
                           [Assigned] {c.name} ({c.role || 'Lead Coordinator'})
                         </option>
                       ))}
-                    {coordinators
-                      .filter(c => !Array.isArray(c.assignedEvents) || !c.assignedEvents.map(e => e.toLowerCase()).includes(sendTargetEvent.id.toLowerCase()))
+                    {(coordinators || [])
+                      .filter(c => !Array.isArray(c?.assignedEvents) || !c.assignedEvents.some(e => String(e || '').toLowerCase() === String(sendTargetEvent?.id || '').toLowerCase()))
                       .map(c => (
                         <option key={`other-c-${c.id}`} value={c.name}>
                           {c.name} {c.assignedEvents?.length ? `(${c.assignedEvents.join(', ')})` : ''}
