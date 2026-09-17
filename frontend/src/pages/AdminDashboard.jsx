@@ -67,7 +67,8 @@ import {
   FaCamera,
   FaCrown,
   FaWhatsapp,
-  FaPhoneAlt
+  FaPhoneAlt,
+  FaBell
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
@@ -198,7 +199,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isOnSiteRegisterModalOpen, setIsOnSiteRegisterModalOpen] = useState(false);
   const [isDeletingRegId, setIsDeletingRegId] = useState(null);
 
-  // UTR & Verification metrics for badge
+  // UTR & Verification metrics for badge & notification queue
   const utrRegistrationsList = registrationsList.filter(r => {
     const utr = r.upiUtr || r.upi_utr || r.transactionId || r.transaction_id || r.razorpayPaymentId || r.razorpay_payment_id;
     const isOnline = (r.paymentMethod || r.payment_method || '').toUpperCase().includes('UPI') ||
@@ -206,11 +207,67 @@ export default function AdminDashboard({ token, user, onLogout }) {
     return Boolean(utr) || isOnline;
   });
 
-  const pendingUtrCount = utrRegistrationsList.filter(r => 
-    !r.is_verified && !r.isVerified && !r.is_flagged && !r.isFlagged && 
-    r.verificationStatus !== 'verified' && r.verification_status !== 'verified' && 
-    r.attendance_status !== 'verified'
-  ).length;
+  const unverifiedRegistrations = registrationsList.filter(r => {
+    const isVerified = r.is_verified === true || r.isVerified === true ||
+      r.verification_status === 'verified' || r.verificationStatus === 'verified' ||
+      r.attendance_status === 'verified';
+    return !isVerified;
+  });
+
+  const pendingUtrCount = unverifiedRegistrations.length;
+
+  const [isQuickVerifyingId, setIsQuickVerifyingId] = useState(null);
+
+  const handleQuickVerifyRegistration = (reg) => {
+    const regId = reg.id || reg.ticket_code || reg.registrationId;
+    if (!regId) return;
+    setIsQuickVerifyingId(regId);
+    const toastId = toast.loading(`Verifying participant #${reg.ticket_code || regId}...`);
+
+    fetch(getApiUrl(`/api/admin/registrations/${regId}/verify`), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        status: 'verified',
+        isVerified: true,
+        action: 'verify'
+      })
+    })
+      .then(res => res.json())
+      .then(resData => {
+        if (resData.success) {
+          toast.success(`Participant #${reg.ticket_code || regId} verified successfully!`, { id: toastId });
+          setRegistrationsList(prev => prev.map(item => {
+            const matchId = item.id === reg.id || item.ticket_code === reg.ticket_code || item.registrationId === reg.registrationId;
+            if (matchId) {
+              return {
+                ...item,
+                is_verified: true,
+                isVerified: true,
+                verification_status: 'verified',
+                verificationStatus: 'verified',
+                attendance_status: 'verified'
+              };
+            }
+            return item;
+          }));
+          fetchRegistrations();
+          fetchDashboardData();
+        } else {
+          toast.error(resData.message || 'Failed to verify registration', { id: toastId });
+        }
+      })
+      .catch(err => {
+        console.error('Quick verify error:', err);
+        toast.error('Network error while verifying', { id: toastId });
+      })
+      .finally(() => {
+        setIsQuickVerifyingId(null);
+      });
+  };
 
   // Registration Analytics & Event Helpers
   const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
@@ -296,18 +353,32 @@ export default function AdminDashboard({ token, user, onLogout }) {
     return id.startsWith('tech') ? 'technical' : 'non-technical';
   };
 
+  const isVerifiedRecord = (r) => {
+    return Boolean(
+      r.is_verified === true ||
+      r.isVerified === true ||
+      r.verification_status === 'verified' ||
+      r.verificationStatus === 'verified' ||
+      r.attendance_status === 'verified'
+    );
+  };
+
   const getFee = (r) => Number(r.total_fee || r.totalAmount || r.total_amount || 0);
 
+  const verifiedRegistrations = registrationsList.filter(isVerifiedRecord);
   const onlineRegs = registrationsList.filter(isOnlineRecord);
   const offlineRegs = registrationsList.filter(r => !isOnlineRecord(r));
+  const verifiedOnlineRegs = onlineRegs.filter(isVerifiedRecord);
+  const verifiedOfflineRegs = offlineRegs.filter(isVerifiedRecord);
   const techRegs = registrationsList.filter(r => getEventCategory(r) === 'technical');
   const nonTechRegs = registrationsList.filter(r => getEventCategory(r) === 'non-technical');
 
-  const totalRevenue = registrationsList.reduce((sum, r) => sum + getFee(r), 0);
-  const onlineRevenue = onlineRegs.reduce((sum, r) => sum + getFee(r), 0);
-  const offlineRevenue = offlineRegs.reduce((sum, r) => sum + getFee(r), 0);
-  const techRevenue = techRegs.reduce((sum, r) => sum + getFee(r), 0);
-  const nonTechRevenue = nonTechRegs.reduce((sum, r) => sum + getFee(r), 0);
+  // Revenue is calculated ONLY from verified / accepted payments
+  const totalRevenue = verifiedRegistrations.reduce((sum, r) => sum + getFee(r), 0);
+  const onlineRevenue = verifiedOnlineRegs.reduce((sum, r) => sum + getFee(r), 0);
+  const offlineRevenue = verifiedOfflineRegs.reduce((sum, r) => sum + getFee(r), 0);
+  const techRevenue = techRegs.filter(isVerifiedRecord).reduce((sum, r) => sum + getFee(r), 0);
+  const nonTechRevenue = nonTechRegs.filter(isVerifiedRecord).reduce((sum, r) => sum + getFee(r), 0);
 
   // Filtered registrations for the dedicated Registrations tab
   const filteredRegistrations = registrationsList.filter(r => {
@@ -2667,7 +2738,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
             style={activeTab === 'dashboard' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
             onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
           >
-            <FaChartBar style={S.navIcon} /> Dashboard
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <FaChartBar style={S.navIcon} />
+                <span>Dashboard</span>
+              </div>
+              {unverifiedRegistrations.length > 0 && (
+                <span style={{
+                  ...S.badgeCount,
+                  background: isDark ? '#78350f' : '#fef3c7',
+                  color: isDark ? '#fde68a' : '#b45309',
+                  border: isDark ? '1px solid #92400e' : '1px solid #fde68a',
+                  fontWeight: '800'
+                }}>
+                  {unverifiedRegistrations.length} NEW
+                </span>
+              )}
+            </div>
           </button>
 
           {/* Registration Verification (UTR Audit) Tab */}
@@ -3114,6 +3201,323 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     Assigned Across Events
                   </div>
                 </div>
+              </div>
+
+              {/* ======================================================== */}
+              {/* NEW REGISTRATION NOTIFICATIONS (PENDING VERIFICATION)     */}
+              {/* ======================================================== */}
+              <div style={{
+                ...S.card,
+                border: unverifiedRegistrations.length > 0
+                  ? (isDark ? '1.5px solid #f59e0b80' : '1.5px solid #fde68a')
+                  : S.card.border,
+                boxShadow: unverifiedRegistrations.length > 0
+                  ? (isDark ? '0 8px 30px rgba(245, 158, 11, 0.09)' : '0 6px 24px rgba(245, 158, 11, 0.12)')
+                  : S.card.boxShadow,
+                marginBottom: '0.5rem'
+              }}>
+                <div style={{
+                  ...S.cardHeaderFlex,
+                  padding: '1.25rem 1.75rem',
+                  background: unverifiedRegistrations.length > 0
+                    ? (isDark ? 'linear-gradient(90deg, #1e2538 0%, #171b26 100%)' : 'linear-gradient(90deg, #fffbeb 0%, #fef3c7 100%)')
+                    : S.cardHeaderFlex.background
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: unverifiedRegistrations.length > 0
+                        ? (isDark ? '#78350f' : '#fef3c7')
+                        : (isDark ? '#064e3b' : '#ecfdf5'),
+                      color: unverifiedRegistrations.length > 0 ? '#f59e0b' : '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.15rem',
+                      boxShadow: unverifiedRegistrations.length > 0 ? '0 0 14px rgba(245, 158, 11, 0.4)' : 'none'
+                    }}>
+                      {unverifiedRegistrations.length > 0 ? <FaBell /> : <FaCheckCircle />}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <h3 style={{ ...S.cardTitle, margin: 0, fontSize: '1.1rem' }}>New Registration Notifications</h3>
+                        <span style={{
+                          padding: '0.2rem 0.65rem',
+                          borderRadius: '999px',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.04em',
+                          background: unverifiedRegistrations.length > 0
+                            ? (isDark ? '#78350f' : '#fef3c7')
+                            : (isDark ? '#064e3b' : '#ecfdf5'),
+                          color: unverifiedRegistrations.length > 0
+                            ? (isDark ? '#fde68a' : '#b45309')
+                            : (isDark ? '#6ee7b7' : '#047857'),
+                          border: unverifiedRegistrations.length > 0
+                            ? (isDark ? '1px solid #92400e' : '1px solid #fde68a')
+                            : (isDark ? '1px solid #059669' : '1px solid #a7f3d0')
+                        }}>
+                          {unverifiedRegistrations.length > 0
+                            ? `${unverifiedRegistrations.length} PENDING UNVERIFIED`
+                            : 'ALL VERIFIED'}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b', marginTop: '2px', display: 'block' }}>
+                        {unverifiedRegistrations.length > 0
+                          ? 'Unchecked new registrations awaiting payment verification. Once verified, records automatically clear from this notification list.'
+                          : 'Notification queue is clear. New incoming registrations will appear here in real-time.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('registration-verification')}
+                      style={{
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '8px',
+                        fontWeight: '700',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 6px rgba(37,99,235,0.25)'
+                      }}
+                    >
+                      <FaUserCheck size={13} />
+                      <span>Open Full Verification ({unverifiedRegistrations.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { fetchRegistrations(); fetchDashboardData(); }}
+                      style={{
+                        background: isDark ? '#1f2937' : '#ffffff',
+                        border: isDark ? '1px solid #374151' : '1px solid #cbd5e1',
+                        color: isDark ? '#cbd5e1' : '#475569',
+                        padding: '0.5rem 0.8rem',
+                        borderRadius: '8px',
+                        fontWeight: '600',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                      title="Refresh Registration Queue"
+                    >
+                      <FaSyncAlt size={11} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Unverified List or Empty State */}
+                {unverifiedRegistrations.length > 0 ? (
+                  <div style={S.tableResponsive}>
+                    <table style={S.table}>
+                      <thead>
+                        <tr>
+                          <th style={S.th}>Ticket Code</th>
+                          <th style={S.th}>Participant & College</th>
+                          <th style={S.th}>Event Enrolled</th>
+                          <th style={S.th}>Payment & UTR / Mode</th>
+                          <th style={S.th}>Amount</th>
+                          <th style={S.th}>Registration Time</th>
+                          <th style={{ ...S.th, textAlign: 'center' }}>Quick Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {unverifiedRegistrations.slice(0, 8).map((reg) => {
+                          const isOnline = isOnlineRecord(reg);
+                          const ticketId = reg.ticket_code || reg.registrationId || reg.id;
+                          const pName = reg.full_name || reg.fullName || reg.name || 'Anonymous';
+                          const evtName = getEventName(reg) || reg.event || 'General';
+                          const feeAmt = getFee(reg) || reg.fee || 0;
+                          const utr = reg.upi_utr || reg.upiUtr || reg.transaction_id || reg.transactionId || reg.razorpay_payment_id || reg.razorpayPaymentId || '';
+                          const dateText = reg.created_at ? new Date(reg.created_at).toLocaleDateString('en-IN') : (reg.createdAtFormatted || reg.date || 'Recent');
+                          const timeText = reg.created_at ? new Date(reg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+                          const isVerifying = isQuickVerifyingId === (reg.id || reg.ticket_code || reg.registrationId);
+
+                          return (
+                            <tr key={ticketId} style={{ ...S.tr, background: isDark ? 'rgba(245, 158, 11, 0.03)' : 'rgba(254, 243, 199, 0.2)' }}>
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span
+                                    style={{ ...S.idBadge, fontFamily: 'monospace', fontWeight: '800', cursor: 'pointer', color: '#2563eb' }}
+                                    title="Click to copy Ticket Code"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(ticketId);
+                                      toast.success(`Copied #${ticketId}`);
+                                    }}
+                                  >
+                                    #{ticketId}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={S.strongText}>{pName}</span>
+                                  <span style={S.tableSubText}>{reg.college || 'College not specified'}</span>
+                                  <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                                    {reg.phone || reg.email || ''}
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                  <span style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a' }}>{evtName}</span>
+                                  <span style={isOnline ? S.badgeOnline : S.badgeOffline}>
+                                    {isOnline ? <FaGlobe size={9} /> : <FaCashRegister size={9} />}
+                                    <span>{isOnline ? 'Online' : 'Offline Desk'}</span>
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
+                                  {utr ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <span style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.76rem',
+                                        fontWeight: '800',
+                                        background: isDark ? '#78350f' : '#fef3c7',
+                                        color: isDark ? '#fde68a' : '#92400e',
+                                        padding: '0.15rem 0.45rem',
+                                        borderRadius: '4px',
+                                        border: isDark ? '1px solid #92400e' : '1px solid #fde68a'
+                                      }}>
+                                        UTR: {utr}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: '0.75rem', color: isDark ? '#9ca3af' : '#64748b', fontStyle: 'italic' }}>
+                                      {reg.payment_method || reg.paymentMethod || 'Cash / Desk'}
+                                    </span>
+                                  )}
+                                  <span style={{
+                                    fontSize: '0.68rem',
+                                    fontWeight: '800',
+                                    padding: '0.1rem 0.4rem',
+                                    borderRadius: '4px',
+                                    background: isDark ? '#78350f' : '#fef3c7',
+                                    color: isDark ? '#fde68a' : '#b45309'
+                                  }}>
+                                    UNVERIFIED
+                                  </span>
+                                </div>
+                              </td>
+
+                              <td style={S.td}>
+                                <span style={{ fontWeight: '800', color: '#10b981', fontSize: '1rem' }}>₹{feeAmt}</span>
+                              </td>
+
+                              <td style={S.td}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '0.82rem', fontWeight: '600', color: isDark ? '#e2e8f0' : '#334155' }}>{dateText}</span>
+                                  {timeText && (
+                                    <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                      <FaClock size={9} /> {timeText}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td style={{ ...S.td, textAlign: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                  <button
+                                    type="button"
+                                    disabled={isVerifying}
+                                    onClick={() => handleQuickVerifyRegistration(reg)}
+                                    style={{
+                                      background: '#059669',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '8px',
+                                      padding: '0.45rem 0.85rem',
+                                      fontSize: '0.82rem',
+                                      fontWeight: '700',
+                                      cursor: isVerifying ? 'not-allowed' : 'pointer',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      boxShadow: '0 2px 6px rgba(5,150,105,0.3)',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    title="Click to Verify & Confirm this registration immediately"
+                                  >
+                                    <FaCheckCircle size={12} />
+                                    <span>{isVerifying ? 'Verifying...' : 'Verify Now'}</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedRegDetails(reg);
+                                      setIsRegDetailsModalOpen(true);
+                                    }}
+                                    style={S.actionBtnView}
+                                    title="Inspect participant details"
+                                  >
+                                    <FaInfoCircle size={11} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {unverifiedRegistrations.length > 8 && (
+                      <div style={{ padding: '0.85rem 1.75rem', textAlign: 'center', borderTop: isDark ? '1px solid #1f2937' : '1px solid #f1f5f9' }}>
+                        <button
+                          onClick={() => setActiveTab('registration-verification')}
+                          style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.86rem', cursor: 'pointer' }}
+                        >
+                          View all {unverifiedRegistrations.length} unverified notifications in Registration Verification →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '2.5rem 2rem',
+                    textAlign: 'center',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.65rem'
+                  }}>
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      background: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
+                      color: '#10b981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 0 20px rgba(16, 185, 129, 0.25)'
+                    }}>
+                      <FaCheckCircle size={30} />
+                    </div>
+                    <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: isDark ? '#f9fafb' : '#0f172a' }}>
+                      All Registrations Verified!
+                    </h4>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: isDark ? '#9ca3af' : '#64748b', maxWidth: '480px' }}>
+                      There are currently no pending or unverified registrations. When a participant registers, their record will immediately show here for quick verification.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div style={S.card}>

@@ -602,13 +602,23 @@ exports.getDashboardData = async (req, res) => {
       console.warn('Dashboard live metrics query error fallback:', dbErr.message);
     }
 
+    const isVerifiedRecord = (r) => Boolean(
+      r.is_verified === true ||
+      r.isVerified === true ||
+      r.verification_status === 'verified' ||
+      r.verificationStatus === 'verified' ||
+      r.attendance_status === 'verified'
+    );
     const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod || '').toUpperCase() !== 'ON_SITE_DESK';
     const onlineRegs = registrations.filter(isOnlineRecord);
     const offlineRegs = registrations.filter(r => !isOnlineRecord(r));
+    const verifiedRegistrations = registrations.filter(isVerifiedRecord);
+    const verifiedOnlineRegs = onlineRegs.filter(isVerifiedRecord);
+    const verifiedOfflineRegs = offlineRegs.filter(isVerifiedRecord);
 
-    const totalRevenue = registrations.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
-    const onlineRevenue = onlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
-    const offlineRevenue = offlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
+    const totalRevenue = verifiedRegistrations.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
+    const onlineRevenue = verifiedOnlineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
+    const offlineRevenue = verifiedOfflineRegs.reduce((sum, r) => sum + (Number(r.total_fee || r.totalAmount || r.total_amount) || 0), 0);
     const activeSponsors = sponsors.filter(s => s.isActive !== false);
     const activeCoordinators = coordinators.filter(c => c.isActive !== false);
     const activeHomepageTeams = homepageTeams.filter(t => t.isActive !== false);
