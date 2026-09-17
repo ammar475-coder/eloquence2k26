@@ -22,7 +22,8 @@ import {
   FaBolt,
   FaGamepad,
   FaEye,
-  FaBan
+  FaBan,
+  FaFilePdf
 } from 'react-icons/fa';
 import { getApiUrl } from '../config/api';
 
@@ -449,6 +450,193 @@ export default function RegistrationVerification({
     toast.success('UTR Verification CSV downloaded successfully!');
   };
 
+  // Export PDF Helper
+  const handleExportPDF = () => {
+    if (filteredRegistrations.length === 0) {
+      toast.error('No registration records to export');
+      return;
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) return toast.error('Please allow popups to export PDF');
+
+    const totalFee = filteredRegistrations.reduce((sum, r) => sum + Number(r.totalAmount || r.totalFee || r.total_fee || 0), 0);
+    const verifiedCount = filteredRegistrations.filter(r => getVerificationStatus(r) === 'verified').length;
+    const pendingCount = filteredRegistrations.filter(r => getVerificationStatus(r) === 'pending').length;
+    const flaggedCount = filteredRegistrations.filter(r => getVerificationStatus(r) === 'flagged').length;
+
+    const rowsHtml = filteredRegistrations.map((r, idx) => {
+      const ticketId = r.ticketCode || r.ticket_code || r.id || '-';
+      const utr = getRegUtr(r);
+      const status = getVerificationStatus(r);
+      const pName = r.fullName || r.full_name || 'Anonymous';
+      const fee = Number(r.totalAmount || r.totalFee || r.total_fee || 0);
+      const paymentMethod = r.paymentMethod || r.payment_method || 'Online';
+      const eventName = r.eventName || '-';
+      const category = r.category || r.eventCategory || '';
+      const flagReason = r.flagReason || r.flag_reason || '';
+      const verifiedBy = r.verifiedBy || r.verified_by || '';
+      const submittedAt = r.timestamp || r.createdAt || 'N/A';
+
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
+          <td>
+            <div style="font-weight: 800; color: #1e3a8a; font-family: monospace; font-size: 11px;">#${ticketId}</div>
+            ${utr ? `<div style="font-size: 9.5px; color: #0284c7; font-weight: 700;">UTR: ${utr}</div>` : '<div style="font-size: 9px; color: #94a3b8;">No UTR</div>'}
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${pName}</div>
+            <div style="font-size: 10px; color: #475569;">${r.college || 'CAHCET'}</div>
+            ${r.department ? `<div style="font-size: 9px; color: #64748b;">${r.department} ${r.year ? `(${r.year})` : ''}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-size: 10.5px; color: #0f172a; font-weight: 600;">${r.phone || '-'}</div>
+            <div style="font-size: 9.5px; color: #475569;">${r.email || '-'}</div>
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${eventName}</div>
+            ${category ? `<span class="badge badge-tech">${category.toUpperCase()}</span>` : ''}
+          </td>
+          <td>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">₹${fee}</div>
+            <div style="font-size: 9px; color: #64748b;">${paymentMethod}</div>
+          </td>
+          <td>
+            <span class="badge ${status === 'verified' ? 'badge-verified' : status === 'flagged' ? 'badge-flagged' : 'badge-pending'}">
+              ${status.toUpperCase()}
+            </span>
+            ${verifiedBy ? `<div style="font-size: 9px; color: #15803d; margin-top: 2px;">By: ${verifiedBy}</div>` : ''}
+            ${flagReason ? `<div style="font-size: 8.5px; color: #dc2626; margin-top: 2px;">Note: ${flagReason}</div>` : ''}
+          </td>
+          <td style="font-size: 9.5px; color: #475569; white-space: nowrap;">${submittedAt}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Eloquence 2026 - UTR Verification Report</title>
+        <style>
+          @page { size: landscape; margin: 8mm; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #0f172a; background: #ffffff; padding: 16px; font-size: 11px; line-height: 1.35; }
+          .no-print-bar { display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: #ffffff; padding: 10px 18px; border-radius: 8px; margin-bottom: 16px; }
+          .action-btn { background: #2563eb; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+          .action-btn.btn-close { background: #475569; margin-left: 8px; }
+          @media print { .no-print { display: none !important; } body { padding: 0; } }
+          .doc-header { border-bottom: 2.5px solid #2563eb; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .title-area h1 { font-size: 19px; font-weight: 800; color: #1e3a8a; }
+          .title-area h2 { font-size: 11.5px; color: #475569; font-weight: 600; margin-top: 1px; }
+          .meta-box { text-align: right; font-size: 10px; color: #475569; line-height: 1.5; }
+          .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+          .kpi-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 10px; border-radius: 6px; }
+          .kpi-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+          .kpi-val { font-size: 13.5px; font-weight: 800; color: #0f172a; margin-top: 2px; }
+          table { width: 100%; border-collapse: collapse; font-size: 10px; }
+          thead { display: table-header-group; }
+          tr { page-break-inside: avoid; }
+          th { background: #0f172a; color: #ffffff; padding: 7px 8px; font-size: 9.5px; text-transform: uppercase; text-align: left; border: 1px solid #334155; }
+          td { padding: 6px 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+          tr:nth-child(even) { background: #f8fafc; }
+          .badge { display: inline-block; font-size: 8px; font-weight: 700; padding: 1.5px 5px; border-radius: 4px; text-transform: uppercase; }
+          .badge-tech { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+          .badge-verified { background: #dcfce7; color: #15803d; }
+          .badge-pending { background: #fef9c3; color: #a16207; }
+          .badge-flagged { background: #fee2e2; color: #dc2626; }
+          .doc-footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #64748b; }
+        </style>
+      </head>
+      <body>
+        <div class="no-print no-print-bar">
+          <div>
+            <h3>UTR Verification Audit Report &bull; ${filteredRegistrations.length} Records</h3>
+            <span style="font-size: 11px; opacity: 0.85;">Ready to print or save as PDF. Click below or press Ctrl+P.</span>
+          </div>
+          <div>
+            <button class="action-btn" onclick="window.print()">&#128438; Print / Save as PDF</button>
+            <button class="action-btn btn-close" onclick="window.close()">Close</button>
+          </div>
+        </div>
+
+        <div class="doc-header">
+          <div class="title-area">
+            <h1>ELOQUENCE 2026 &mdash; PAYMENT &amp; UTR VERIFICATION REPORT</h1>
+            <h2>DEPARTMENT OF CSE &bull; C. ABDUL HAKEEM COLLEGE OF ENGG &amp; TECH</h2>
+            <p>Verification Desk Audit Log</p>
+          </div>
+          <div class="meta-box">
+            <div>Generated: <strong>${new Date().toLocaleString('en-IN')}</strong></div>
+            <div>Status Filter: <strong>${statusFilter.toUpperCase()}</strong></div>
+            <div>Event Filter: <strong>${eventFilter}</strong></div>
+          </div>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-label">Filtered Records</div>
+            <div class="kpi-val">${filteredRegistrations.length} / ${registrationsList.length}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Verified (Approved)</div>
+            <div class="kpi-val" style="color: #15803d;">${verifiedCount}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Pending Verification</div>
+            <div class="kpi-val" style="color: #d97706;">${pendingCount}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Flagged / Issues</div>
+            <div class="kpi-val" style="color: #dc2626;">${flaggedCount}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Fee Collection</div>
+            <div class="kpi-val" style="color: #1e40af;">&#8377;${totalFee}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 24px; text-align: center;">#</th>
+              <th style="width: 120px;">Ticket / UTR</th>
+              <th>Participant &amp; College</th>
+              <th style="width: 140px;">Contact</th>
+              <th style="width: 140px;">Event</th>
+              <th style="width: 80px;">Fee</th>
+              <th style="width: 110px;">Verification</th>
+              <th style="width: 100px;">Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="doc-footer">
+          <div>Eloquence 2026 Admin Portal &bull; Verification Registry Audit</div>
+          <div>Authorized Signature: ____________________________________</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    win.document.write(htmlContent);
+    win.document.close();
+    toast.success(`Generated PDF for ${filteredRegistrations.length} verification records`);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* ── KPI METRIC CARDS ───────────────────────────────────────────── */}
@@ -677,6 +865,28 @@ export default function RegistrationVerification({
             >
               <FaDownload size={11} />
               <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              style={{
+                padding: '0.55rem 1rem',
+                borderRadius: '8px',
+                border: isDark ? '1px solid #991b1b' : '1px solid #fca5a5',
+                background: isDark ? '#1e293b' : '#fef2f2',
+                color: isDark ? '#f87171' : '#dc2626',
+                fontSize: '0.85rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Download PDF report of UTR verification list"
+            >
+              <FaFilePdf size={11} />
+              <span>Export PDF</span>
             </button>
 
             <button

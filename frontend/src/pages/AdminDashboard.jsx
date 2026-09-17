@@ -476,6 +476,392 @@ export default function AdminDashboard({ token, user, onLogout }) {
     toast.success(`Exported ${filteredRegistrations.length} registrations to CSV`);
   };
 
+  // PDF Export Handler for Filtered Registrations
+  const handleExportRegistrationsPDF = () => {
+    if (filteredRegistrations.length === 0) {
+      return toast.error('No registrations found to export');
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) return toast.error('Please allow popups to export PDF');
+
+    const activeEventObj = eventsList.find(e => (e.id || e._id) === regEventFilter);
+    const eventFilterLabel = regEventFilter === 'all' 
+      ? `All Symposium Events (${eventsList.length})` 
+      : (activeEventObj ? `[${(activeEventObj.category || '').toUpperCase()}] ${activeEventObj.name}` : regEventFilter);
+    
+    const modeLabel = regModeFilter === 'online' 
+      ? 'Online Portal Only' 
+      : regModeFilter === 'offline' 
+        ? 'Offline Desk Only' 
+        : 'All Modes (Online & Offline)';
+
+    const categoryLabel = regCategoryFilter === 'technical'
+      ? 'Technical Events Only'
+      : regCategoryFilter === 'non-technical'
+        ? 'Non-Technical Events Only'
+        : 'All Categories';
+
+    const totalFeeSum = filteredRegistrations.reduce((sum, r) => sum + getFee(r), 0);
+    const verifiedCount = filteredRegistrations.filter(isVerifiedRecord).length;
+    const generatedDateStr = new Date().toLocaleString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const rowsHtml = filteredRegistrations.map((reg, idx) => {
+      const isOnline = isOnlineRecord(reg);
+      const isVerified = isVerifiedRecord(reg);
+      const ticketId = reg.ticket_code || reg.registrationId || reg.id || '-';
+      const pName = reg.full_name || reg.fullName || 'Anonymous';
+      const evtName = getEventName(reg);
+      const category = getEventCategory(reg);
+      const isTech = category === 'technical';
+      const feeAmt = getFee(reg);
+      const members = getTeamMembers(reg);
+      const isTeam = Boolean(members.length > 0 || reg.team_name || reg.teamName);
+      const teamName = reg.team_name || reg.teamName || '';
+
+      const rawTimestamp = reg.created_at || reg.createdAt;
+      let dateStr = '';
+      if (rawTimestamp) {
+        try {
+          const d = new Date(rawTimestamp);
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + '<br/><span style="color:#64748b;font-size:9px;">' +
+                      d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + '</span>';
+          }
+        } catch (e) {}
+      }
+      if (!dateStr && (reg.timestamp || reg.createdAtFormatted)) {
+        dateStr = reg.timestamp || reg.createdAtFormatted;
+      }
+      if (!dateStr) dateStr = 'N/A';
+
+      const paymentMethod = reg.payment_method || reg.paymentMethod || (isOnline ? 'Online' : 'Cash');
+      const utrNo = reg.utr_number || reg.utrNumber || reg.utr || '';
+
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
+          <td>
+            <div style="font-weight: 800; color: #1e3a8a; font-family: monospace; font-size: 11px;">#${ticketId}</div>
+            ${utrNo ? `<div style="font-size: 9px; color: #0284c7; font-weight: 600;">UTR: ${utrNo}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${pName}</div>
+            <div style="font-size: 10px; color: #475569;">${reg.college || 'CAHCET'}</div>
+            ${reg.department ? `<div style="font-size: 9px; color: #64748b;">${reg.department} ${reg.year ? `(${reg.year})` : ''}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-size: 10.5px; color: #0f172a; font-weight: 600;">${reg.phone || '-'}</div>
+            <div style="font-size: 9.5px; color: #475569;">${reg.email || '-'}</div>
+            ${reg.whatsapp && reg.whatsapp !== reg.phone ? `<div style="font-size: 9px; color: #059669; font-weight: 600;">WA: ${reg.whatsapp}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${evtName}</div>
+            <span class="badge ${isTech ? 'badge-tech' : 'badge-nontech'}">${category ? category.toUpperCase() : 'EVENT'}</span>
+          </td>
+          <td>
+            <div><span class="badge ${isOnline ? 'badge-online' : 'badge-offline'}">${isOnline ? 'ONLINE' : 'OFFLINE DESK'}</span></div>
+            ${isTeam ? `
+              <div style="margin-top: 3px; font-size: 9.5px; color: #334155;">
+                <span class="badge-team">Team: ${teamName || 'Yes'}</span>
+                ${members.length > 0 ? `<div style="color: #64748b; font-size: 9px; margin-top: 2px;">+${members.length} members: ${members.join(', ')}</div>` : ''}
+              </div>
+            ` : '<div style="font-size: 9.5px; color: #64748b; margin-top: 2px;">Individual</div>'}
+          </td>
+          <td>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">₹${feeAmt}</div>
+            <div style="font-size: 9px; color: #64748b;">${paymentMethod}</div>
+            <span class="badge ${isVerified ? 'badge-verified' : 'badge-pending'}">${isVerified ? 'VERIFIED' : 'CONFIRMED'}</span>
+          </td>
+          <td style="font-size: 10px; color: #334155; white-space: nowrap;">
+            ${dateStr}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Eloquence 2026 - Participant Registrations Report</title>
+        <style>
+          @page {
+            size: landscape;
+            margin: 8mm;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            padding: 16px;
+            font-size: 11px;
+            line-height: 1.35;
+          }
+          .no-print-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+          }
+          .no-print-bar h3 {
+            font-size: 13.5px;
+            font-weight: 700;
+          }
+          .action-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .action-btn:hover {
+            background: #1d4ed8;
+          }
+          .action-btn.btn-close {
+            background: #475569;
+            margin-left: 8px;
+          }
+          .action-btn.btn-close:hover {
+            background: #334155;
+          }
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+            body {
+              padding: 0;
+            }
+          }
+          .doc-header {
+            border-bottom: 2.5px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+          .title-area h1 {
+            font-size: 19px;
+            font-weight: 800;
+            color: #1e3a8a;
+            letter-spacing: -0.3px;
+          }
+          .title-area h2 {
+            font-size: 11.5px;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 1px;
+          }
+          .title-area p {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 2px;
+          }
+          .meta-box {
+            text-align: right;
+            font-size: 10px;
+            color: #475569;
+            line-height: 1.5;
+          }
+          .meta-box strong {
+            color: #0f172a;
+          }
+          .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+          }
+          .kpi-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 7px 10px;
+            border-radius: 6px;
+          }
+          .kpi-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .kpi-val {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+          }
+          thead {
+            display: table-header-group;
+          }
+          tr {
+            page-break-inside: avoid;
+          }
+          th {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 7px 8px;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: left;
+            border: 1px solid #334155;
+          }
+          td {
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+          }
+          tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          .badge {
+            display: inline-block;
+            font-size: 8px;
+            font-weight: 700;
+            padding: 1.5px 5px;
+            border-radius: 4px;
+            text-transform: uppercase;
+          }
+          .badge-tech { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+          .badge-nontech { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+          .badge-online { background: #eff6ff; color: #1d4ed8; }
+          .badge-offline { background: #ecfdf5; color: #047857; }
+          .badge-verified { background: #dcfce7; color: #15803d; }
+          .badge-pending { background: #fef9c3; color: #a16207; }
+          .badge-team { background: #f1f5f9; color: #334155; font-size: 8.5px; padding: 1px 4px; border-radius: 3px; font-weight: 600; display: inline-block; }
+          .doc-footer {
+            margin-top: 18px;
+            padding-top: 8px;
+            border-top: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9.5px;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print no-print-bar">
+          <div>
+            <h3>Participant Registrations Master Sheet &bull; ${filteredRegistrations.length} Records</h3>
+            <span style="font-size: 11px; opacity: 0.85;">Ready to print or save as PDF. Click below or press Ctrl+P.</span>
+          </div>
+          <div>
+            <button class="action-btn" onclick="window.print()">
+              <span>&#128438; Print / Save as PDF</span>
+            </button>
+            <button class="action-btn btn-close" onclick="window.close()">Close</button>
+          </div>
+        </div>
+
+        <div class="doc-header">
+          <div class="title-area">
+            <h1>ELOQUENCE 2026 &mdash; PARTICIPANT REGISTRATION AUDIT SHEET</h1>
+            <h2>DEPARTMENT OF COMPUTER SCIENCE &amp; ENGINEERING &bull; C. ABDUL HAKEEM COLLEGE OF ENGG &amp; TECH</h2>
+            <p>National Level Technical Symposium &bull; Melvisharam, Ranipet &bull; Official Registry Record</p>
+          </div>
+          <div class="meta-box">
+            <div>Generated: <strong>${generatedDateStr}</strong></div>
+            <div>Mode: <strong>${modeLabel}</strong></div>
+            <div>Category: <strong>${categoryLabel}</strong></div>
+            <div>Event: <strong>${eventFilterLabel}</strong></div>
+          </div>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-label">Filtered Records</div>
+            <div class="kpi-val">${filteredRegistrations.length} / ${registrationsList.length}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Verified / Admitted</div>
+            <div class="kpi-val" style="color: #15803d;">${verifiedCount}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Fee Collection</div>
+            <div class="kpi-val" style="color: #1e40af;">&#8377;${totalFeeSum}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Event Scope</div>
+            <div class="kpi-val" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${eventFilterLabel}">${eventFilterLabel}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Portal Scope</div>
+            <div class="kpi-val" style="font-size: 11px;">${regModeFilter.toUpperCase()}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 24px; text-align: center;">#</th>
+              <th style="width: 105px;">Ticket / ID</th>
+              <th>Participant &amp; College</th>
+              <th style="width: 135px;">Contact Info</th>
+              <th style="width: 135px;">Event &amp; Category</th>
+              <th style="width: 115px;">Mode &amp; Team</th>
+              <th style="width: 95px;">Fee &amp; Status</th>
+              <th style="width: 100px;">Date &amp; Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="doc-footer">
+          <div>Eloquence 2026 Admin Portal &bull; Generated dynamically for Administrative Audit &bull; Page 1</div>
+          <div>Authorized Signature: ____________________________________</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    win.document.write(htmlContent);
+    win.document.close();
+    toast.success(`Generated PDF sheet for ${filteredRegistrations.length} registrations`);
+  };
+
   // Print Registration Ticket / Receipt
   const handlePrintTicket = (reg) => {
     if (!reg) return;
@@ -5992,6 +6378,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     >
                       <FaDownload size={11} />
                       <span>Export CSV</span>
+                    </button>
+
+                    <button
+                      onClick={handleExportRegistrationsPDF}
+                      style={{ ...S.filterBtn, background: isDark ? '#1e293b' : '#fef2f2', color: isDark ? '#f87171' : '#dc2626', borderColor: isDark ? '#991b1b' : '#fca5a5' }}
+                      title="Export filtered registrations to PDF document"
+                    >
+                      <FaFilePdf size={11} />
+                      <span>Export PDF</span>
                     </button>
 
                     {!isLeadCoordinator && (
