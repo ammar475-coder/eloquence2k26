@@ -23,7 +23,6 @@ function getRazorpayClient() {
 
 // Persistent Data Storage Path
 const DATA_DIR = path.join(__dirname, '../data');
-const DB_FILE = path.join(DATA_DIR, 'registrations.json');
 const SPONSORS_FILE = path.join(DATA_DIR, 'sponsors.json');
 const COORDINATORS_FILE = path.join(DATA_DIR, 'coordinators.json');
 const HOMEPAGE_COORDINATORS_FILE = path.join(DATA_DIR, 'homepage_coordinators.json');
@@ -32,9 +31,6 @@ const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 // Ensure data directory and file exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!fs.existsSync(DB_FILE)) {
-  fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2), 'utf-8');
 }
 if (!fs.existsSync(SETTINGS_FILE)) {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
@@ -74,26 +70,6 @@ function writeSettings(data) {
     return true;
   } catch (err) {
     console.error('Error writing settings file:', err);
-    return false;
-  }
-}
-
-function readRegistrations() {
-  try {
-    const raw = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(raw || '[]');
-  } catch (err) {
-    console.error('Error reading registrations file:', err);
-    return [];
-  }
-}
-
-function writeRegistrations(data) {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
-    return true;
-  } catch (err) {
-    console.error('Error writing registrations file:', err);
     return false;
   }
 }
@@ -612,18 +588,6 @@ exports.verifyPaymentAndRegister = async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    // Save backup to local JSON
-    try {
-      const localRegs = readRegistrations();
-      localRegs.push({
-        ...ticketData,
-        id: registrationId || ticketCode
-      });
-      writeRegistrations(localRegs);
-    } catch (localErr) {
-      console.warn('Local backup registration write error:', localErr);
-    }
-
     // Broadcast real-time event via WebSocket
     try {
       const { broadcastRegistrationUpdate } = require('../config/websocket');
@@ -666,30 +630,8 @@ exports.registerEvent = async (req, res) => {
   const rawUtr = (fields && (fields.upiUtr || fields.transactionId || fields.utr)) || req.body.upiUtr || req.body.transactionId || '';
   const cleanUtr = typeof rawUtr === 'string' ? rawUtr.trim() : '';
 
-  // Enforce single-use UTR constraint: Each UTR number can only be used once
+  // Enforce single-use UTR constraint: Each UTR number can only be used once (checked live in Supabase)
   if (cleanUtr) {
-    const cleanUtrNorm = cleanUtr.toUpperCase();
-    const localRegs = readRegistrations();
-    const isDuplicateLocal = localRegs.some(r => {
-      const rUtr = (r.upiUtr || r.upi_utr || r.transactionId || r.transaction_id || '').toString().trim().toUpperCase();
-      let snapUtr = '';
-      if (r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
-        try {
-          const parsed = JSON.parse(r.venue_snapshot);
-          snapUtr = (parsed.upi_utr || parsed.upiUtr || parsed.transaction_id || parsed.transactionId || '').toString().trim().toUpperCase();
-        } catch (e) {}
-      }
-      return (rUtr && rUtr === cleanUtrNorm) || (snapUtr && snapUtr === cleanUtrNorm);
-    });
-
-    if (isDuplicateLocal) {
-      return res.status(400).json({
-        success: false,
-        message: `This UPI UTR / Transaction Reference number "${cleanUtr}" has already been used for another registration. Each UTR number can only be used once.`
-      });
-    }
-
-    // Also check Supabase for duplicate UTR
     try {
       const { data: supaMatches } = await supabase
         .from('registrations')
@@ -796,16 +738,7 @@ exports.registerEvent = async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  // 1. Save immediately to local persistent storage
-  try {
-    const localRegs = readRegistrations();
-    localRegs.push(ticketData);
-    writeRegistrations(localRegs);
-  } catch (localErr) {
-    console.warn('[Register] Local JSON write note:', localErr.message);
-  }
-
-  // 2. Persist to Supabase Database (with auto-fallback on error)
+  // 1. Persist directly to Supabase Database live tables
   try {
     // Ensure event exists in DB before registration foreign key constraint
     const { data: existingEv } = await supabase.from('events').select('id').eq('id', currentEvent.id).maybeSingle();
@@ -1074,53 +1007,22 @@ exports.getRegistrations = async (req, res) => {
   try {
     const { eventId, category, status } = req.query;
 
-    let dbRegistrations = null;
-    // Query Supabase live database directly
-    try {
-      let query = supabase
-        .from('registrations')
-        .select('*, registration_members(*)')
-        .order('created_at', { ascending: false });
+    let query = supabase
+      .from('registrations')
+      .select('*, registration_members(*)')
+      .order('created_at', { ascending: false });
 
-      if (eventId) {
-        query = query.eq('event_id', eventId);
-      }
-
-      const { data: dbData, error: dbError } = await query;
-      if (!dbError && Array.isArray(dbData)) {
-        dbRegistrations = dbData.map(enrichRegistrationRecord);
-      } else if (dbError) {
-        console.warn('Supabase getRegistrations query note:', dbError.message);
-      }
-    } catch (dbErr) {
-      console.warn('Supabase getRegistrations connection fallback:', dbErr.message);
+    if (eventId) {
+      query = query.eq('event_id', eventId);
     }
 
-    let allRegistrations = [];
-
-    if (dbRegistrations !== null) {
-      // Live database query succeeded -> Use live DB as ONLY source of truth
-      allRegistrations = dbRegistrations;
-      // Sync local file with live DB if full unfiltered list
-      if (!eventId && !category && !status) {
-        try {
-          writeRegistrations(dbRegistrations);
-        } catch (_) {}
-      }
-    } else {
-      // Supabase is completely unreachable -> Fallback to local file
-      allRegistrations = readRegistrations().map(enrichRegistrationRecord);
-      if (eventId) {
-        allRegistrations = allRegistrations.filter(r => (r.event_id === eventId || r.eventId === eventId));
-      }
+    const { data: dbData, error: dbError } = await query;
+    if (dbError) {
+      console.error('Supabase getRegistrations error:', dbError.message);
+      return res.status(500).json({ success: false, error: 'Database error: ' + dbError.message });
     }
 
-    // Sort descending by creation date
-    allRegistrations.sort((a, b) => {
-      const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
-      const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
-      return dateB - dateA;
-    });
+    let allRegistrations = (dbData || []).map(enrichRegistrationRecord);
 
     // Apply optional category and status query filters
     if (category) {
@@ -1151,35 +1053,24 @@ exports.getRegistrationById = async (req, res) => {
   try {
     const id = req.params.id;
     const normId = String(id || '').trim();
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
 
-    // Query Supabase live first
-    try {
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
-      const query = isUUID
-        ? supabase.from('registrations').select('*, registration_members(*)').eq('id', normId).maybeSingle()
-        : supabase.from('registrations').select('*, registration_members(*)').ilike('ticket_code', normId).maybeSingle();
+    const query = isUUID
+      ? supabase.from('registrations').select('*, registration_members(*)').eq('id', normId).maybeSingle()
+      : supabase.from('registrations').select('*, registration_members(*)').ilike('ticket_code', normId).maybeSingle();
 
-      const { data, error } = await query;
+    const { data, error } = await query;
 
-      if (!error && data) {
-        return res.json(enrichRegistrationRecord(data));
-      }
-    } catch (e) {
-      console.warn('Supabase getRegistrationById fallback:', e.message);
+    if (error) {
+      console.error('Supabase getRegistrationById error:', error.message);
+      return res.status(500).json({ success: false, error: 'Database error: ' + error.message });
     }
 
-    // Fallback to local
-    const registrations = readRegistrations();
-    const record = registrations.find(
-      (r) => (r.registrationId && r.registrationId.toUpperCase() === normId.toUpperCase()) ||
-             (r.ticketCode && r.ticketCode.toUpperCase() === normId.toUpperCase()) ||
-             (r.ticket_code && r.ticket_code.toUpperCase() === normId.toUpperCase()) ||
-             (r.id && r.id.toUpperCase() === normId.toUpperCase())
-    );
-    if (!record) {
+    if (!data) {
       return res.status(404).json({ success: false, error: 'Registration record not found' });
     }
-    res.json(enrichRegistrationRecord(record));
+
+    return res.json(enrichRegistrationRecord(data));
   } catch (err) {
     console.error('Error fetching registration:', err);
     res.status(500).json({ success: false, error: 'Failed to retrieve registration' });
