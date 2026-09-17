@@ -344,7 +344,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
         venue: venueHallName.trim() || currentEvent.venue || 'Designated Campus Venue'
       };
 
-      const result = await updateEventCoordinatorDetails(currentEvent.id, payload);
+      const result = await updateEventCoordinatorDetails(currentEvent.id, payload, token);
       if (result.success) {
         setEventsList(prev => prev.map(ev => {
           if (ev.id === currentEvent.id) {
@@ -358,6 +358,9 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           return ev;
         }));
         toast.success(`Venue photo for ${currentEvent.name} updated successfully!`);
+        try {
+          await fetchEventsData(true);
+        } catch (_) {}
       } else {
         toast.error(result.message || 'Failed to update venue photo');
       }
@@ -380,7 +383,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
         venue_image: '',
         venue: venueHallName.trim() || currentEvent.venue || ''
       };
-      const result = await updateEventCoordinatorDetails(currentEvent.id, payload);
+      const result = await updateEventCoordinatorDetails(currentEvent.id, payload, token);
       if (result.success) {
         setVenuePhotoInput('');
         setVenuePhotoPreview('');
@@ -396,6 +399,9 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           return ev;
         }));
         toast.success(`Venue photo removed for ${currentEvent.name}`);
+        try {
+          await fetchEventsData(true);
+        } catch (_) {}
       } else {
         toast.error(result.message || 'Failed to remove venue photo');
       }
@@ -516,10 +522,11 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
       const res = await updateEventCoordinatorDetails(selectedEventId, {
         venue: editVenue,
         time: editTime,
+        timing: editTime,
         rounds: roundsArray,
         rules: rulesArray,
         conductorNotes: editConductorNotes
-      });
+      }, token);
 
       if (res.success) {
         toast.success('Event details & rounds updated successfully!', { id: toastId });
@@ -529,6 +536,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
               ...evt,
               venue: editVenue,
               time: editTime,
+              timing: editTime,
               rounds: roundsArray,
               rules: rulesArray,
               conductorNotes: editConductorNotes
@@ -537,6 +545,11 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           return evt;
         }));
         setIsEditEventModalOpen(false);
+
+        // Force-refresh global events cache so public website reflects changes immediately
+        try {
+          await fetchEventsData(true);
+        } catch (_) {}
       } else {
         toast.error(res.message || 'Failed to update event', { id: toastId });
       }
