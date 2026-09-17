@@ -986,10 +986,13 @@ const enrichRegistrationRecord = (r) => {
   copy.is_flagged = isFlagged;
   copy.isFlagged = isFlagged;
   copy.flagReason = copy.flag_reason || copy.flagReason || null;
+  copy.flag_reason = copy.flagReason;
   copy.flaggedAt = copy.flagged_at || copy.flaggedAt || null;
   copy.flaggedBy = copy.flagged_by || copy.flaggedBy || null;
 
   if (isFlagged) {
+    copy.is_verified = false;
+    copy.isVerified = false;
     copy.verificationStatus = 'flagged';
     copy.verification_status = 'flagged';
   } else if (copy.is_verified) {
