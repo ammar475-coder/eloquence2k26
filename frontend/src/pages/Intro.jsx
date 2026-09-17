@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaMapMarkerAlt, FaExternalLinkAlt } from 'react-icons/fa';
-const campusPhoto = '/cahcet_campus.jpg';
+const campusPhoto = '/cahcet_about.jpeg';
 
 export default function Intro() {
   const sectionRef = useRef(null);
@@ -44,7 +44,7 @@ export default function Intro() {
                 className="intro-image" 
                 loading="lazy" 
                 decoding="async" 
-                onError={(e) => { e.currentTarget.src = '/cahcet_campus.jpg'; }}
+                onError={(e) => { e.currentTarget.src = '/cahcet.jpg'; }}
               />
               <div className="intro-venue-pill">
                 <FaMapMarkerAlt className="intro-venue-pill-icon" />

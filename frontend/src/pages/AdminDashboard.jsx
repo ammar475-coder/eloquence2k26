@@ -76,6 +76,7 @@ import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 import RegistrationVerification from '../components/RegistrationVerification.jsx';
+import EventRegistrationCharts from '../components/EventRegistrationCharts.jsx';
 import {
   fetchAdminHomepageCoordinators,
   createHomepageCoordinatorTeam,
@@ -3588,6 +3589,24 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </div>
                 </div>
               </div>
+
+              {/* ======================================================== */}
+              {/* EVENT REGISTRATION PIE CHARTS (TECHNICAL & NON-TECHNICAL) */}
+              {/* ======================================================== */}
+              <EventRegistrationCharts
+                registrationsList={registrationsList}
+                eventsList={eventsList}
+                isDark={isDark}
+                onSelectEvent={(eventId, category) => {
+                  if (isVerificationRole) {
+                    setActiveTab('registration-verification');
+                  } else {
+                    setRegEventFilter(eventId);
+                    if (category) setRegCategoryFilter(category);
+                    setActiveTab('registrations');
+                  }
+                }}
+              />
 
               {/* ======================================================== */}
               {/* NEW REGISTRATION NOTIFICATIONS (PENDING VERIFICATION)     */}
