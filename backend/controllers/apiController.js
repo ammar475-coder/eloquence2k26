@@ -1688,7 +1688,8 @@ exports.submitEventWinners = async (req, res) => {
 exports.updateEventCoordinatorDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rounds, rules, venue, time, conductorNotes, venueImage, venue_image } = req.body;
+    const { rounds, rules, venue, time, timing, conductorNotes, venueImage, venue_image, description, subtitle } = req.body;
+    const finalTiming = (timing !== undefined && timing !== '') ? timing : time;
     const rawVenueImage = venueImage !== undefined ? venueImage : venue_image;
     const finalVenueImage = rawVenueImage !== undefined ? saveBase64ImageIfPresent(rawVenueImage, 'venue') : undefined;
 
@@ -1698,13 +1699,18 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8') || '[]');
     }
 
-    const idx = events.findIndex(e => e.id === id);
+    const idx = events.findIndex(e => String(e.id || '').toLowerCase() === String(id || '').toLowerCase());
     if (idx !== -1) {
-      if (rounds) events[idx].rounds = rounds;
-      if (rules) events[idx].rules = rules;
-      if (venue) events[idx].venue = venue;
-      if (time) events[idx].time = time;
+      if (Array.isArray(rounds)) events[idx].rounds = rounds;
+      if (Array.isArray(rules)) events[idx].rules = rules;
+      if (venue !== undefined) events[idx].venue = venue.trim();
+      if (finalTiming !== undefined) {
+        events[idx].timing = typeof finalTiming === 'string' ? finalTiming.trim() : finalTiming;
+        events[idx].time = events[idx].timing;
+      }
       if (conductorNotes !== undefined) events[idx].conductorNotes = conductorNotes;
+      if (description !== undefined) events[idx].description = description.trim();
+      if (subtitle !== undefined) events[idx].subtitle = subtitle.trim();
       if (finalVenueImage !== undefined) {
         events[idx].venueImage = finalVenueImage ? finalVenueImage.trim() : '';
         events[idx].venue_image = finalVenueImage ? finalVenueImage.trim() : '';
@@ -1713,26 +1719,60 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf-8');
     }
 
-    try {
-      const updateData = {};
-      if (rounds) updateData.rounds = rounds;
-      if (rules) updateData.rules = rules;
-      if (venue) updateData.venue = venue;
-      if (time) updateData.time = time;
-      if (finalVenueImage !== undefined) {
-        updateData.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+    // 1. Immediately invalidate & update in-memory cache
+    exports.invalidateEventsCache();
+    if (idx !== -1 && Array.isArray(inMemoryEvents)) {
+      const memIdx = inMemoryEvents.findIndex(e => String(e.id || '').toLowerCase() === String(id || '').toLowerCase());
+      if (memIdx !== -1) {
+        inMemoryEvents[memIdx] = { ...inMemoryEvents[memIdx], ...events[idx] };
       }
-      if (Object.keys(updateData).length > 0) {
-        await supabase.from('events').update(updateData).eq('id', id);
+    }
+
+    // 2. Persist to Supabase events table with correct schema columns ('timing', NOT 'time')
+    try {
+      const { data: existingDbEvent } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
+      const currentEv = idx !== -1 ? events[idx] : {};
+      const dbPayload = {
+        id,
+        number: (existingDbEvent && existingDbEvent.number) ? existingDbEvent.number : (currentEv.number || '01'),
+        ...(existingDbEvent || {}),
+        updated_at: new Date().toISOString()
+      };
+      if (Array.isArray(rounds)) dbPayload.rounds = rounds;
+      if (Array.isArray(rules)) dbPayload.rules = rules;
+      if (venue !== undefined) dbPayload.venue = venue.trim();
+      if (finalTiming !== undefined) dbPayload.timing = typeof finalTiming === 'string' ? finalTiming.trim() : finalTiming;
+      if (description !== undefined) dbPayload.description = description.trim();
+      if (subtitle !== undefined) dbPayload.subtitle = subtitle.trim();
+      if (finalVenueImage !== undefined) dbPayload.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+
+      let { error: dbErr } = await supabase.from('events').upsert(dbPayload, { onConflict: 'id' });
+      if (dbErr && dbErr.code === 'PGRST204') {
+        delete dbPayload.venue_image;
+        const retryRes = await supabase.from('events').upsert(dbPayload, { onConflict: 'id' });
+        dbErr = retryRes.error;
+      }
+      if (dbErr) {
+        console.warn('Supabase updateEventCoordinatorDetails upsert error:', dbErr.message);
+      } else {
+        console.log(`[Supabase] Event ${id} rules & details successfully synced by coordinator`);
       }
     } catch (dbErr) {
-      console.warn('Supabase update event coordinator details fallback:', dbErr.message);
+      console.warn('Supabase update event coordinator details exception:', dbErr.message);
     }
+
+    // 3. Broadcast real-time WebSocket event to all connected dashboards and public pages
+    try {
+      const { broadcastRegistrationUpdate } = require('../config/websocket');
+      if (broadcastRegistrationUpdate) {
+        broadcastRegistrationUpdate('EVENT_UPDATED', idx !== -1 ? events[idx] : { id, rounds, rules, venue, timing: finalTiming });
+      }
+    } catch (_) {}
 
     res.json({
       success: true,
-      message: 'Event venue and coordinator details updated successfully',
-      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time, venueImage: finalVenueImage }
+      message: 'Event venue, rounds, and rules updated successfully!',
+      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, timing: finalTiming, venueImage: finalVenueImage }
     });
   } catch (err) {
     console.error('Error updating event coordinator details:', err);
