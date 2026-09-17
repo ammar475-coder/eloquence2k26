@@ -104,20 +104,26 @@ const EXISTING_POSTER_PRESETS = [
 
 export default function AdminDashboard({ token, user, onLogout }) {
   const loggedRole = String(user?.role || 'admin').toLowerCase();
-  const isAdminOrSuper = loggedRole === 'admin' || loggedRole === 'superadmin';
-  const isRegCoordinator = loggedRole.includes('registration') || loggedRole.includes('reg_coord') || loggedRole === 'registration coordinator';
-  const isLeadCoordinator = loggedRole.includes('lead') || loggedRole === 'lead coordinator' || loggedRole === 'lead_coordinator';
+  const isVerificationRole = loggedRole === 'verification' || loggedRole.includes('verify') || loggedRole.includes('verification');
+  const isAdminOrSuper = !isVerificationRole && (loggedRole === 'admin' || loggedRole === 'superadmin');
+  const isRegCoordinator = !isVerificationRole && (loggedRole.includes('registration') || loggedRole.includes('reg_coord') || loggedRole === 'registration coordinator');
+  const isLeadCoordinator = !isVerificationRole && (loggedRole.includes('lead') || loggedRole === 'lead coordinator' || loggedRole === 'lead_coordinator');
 
   const [activeTab, setActiveTab] = useState(() => {
     try {
       const saved = localStorage.getItem('admin_active_tab');
       if (saved) {
+        if (isVerificationRole) {
+          if (saved === 'dashboard' || saved === 'registration-verification') return saved;
+          return 'dashboard';
+        }
         if (!isAdminOrSuper && (saved === 'manage-users' || saved === 'manage-roles' || saved === 'close-rg')) {
           return isRegCoordinator ? 'registration' : 'dashboard';
         }
         return saved;
       }
     } catch (e) {}
+    if (isVerificationRole) return 'dashboard';
     if (isRegCoordinator) return 'registration';
     return 'dashboard';
   });
@@ -137,12 +143,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
     localStorage.setItem('admin_theme', next);
   };
 
-  // Redirect if non-admin user accesses restricted tabs
+  // Redirect if verification or non-admin user accesses restricted tabs
   useEffect(() => {
-    if (!isAdminOrSuper && (activeTab === 'manage-users' || activeTab === 'manage-roles' || activeTab === 'close-rg')) {
+    if (isVerificationRole && activeTab !== 'dashboard' && activeTab !== 'registration-verification') {
+      setActiveTab('dashboard');
+    } else if (!isAdminOrSuper && !isVerificationRole && (activeTab === 'manage-users' || activeTab === 'manage-roles' || activeTab === 'close-rg')) {
       setActiveTab(isRegCoordinator ? 'registration' : 'dashboard');
     }
-  }, [activeTab, isAdminOrSuper, isRegCoordinator]);
+  }, [activeTab, isAdminOrSuper, isRegCoordinator, isVerificationRole]);
 
   // ==================== EVENTS STATE ====================
   const [eventsList, setEventsList] = useState(defaultEvents);
@@ -2638,8 +2646,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
               <FaUserShield size={22} />
             </div>
             <div>
-              <h2 style={S.sidebarTitle}>{isLeadCoordinator ? 'Coordinator Panel' : 'Admin Panel'}</h2>
-              <span style={S.sidebarSubtitle}>{isLeadCoordinator ? 'Eloquence 2026 (View Only)' : 'Eloquence 2026'}</span>
+              <h2 style={S.sidebarTitle}>{isVerificationRole ? 'Verification Panel' : isLeadCoordinator ? 'Coordinator Panel' : 'Admin Panel'}</h2>
+              <span style={S.sidebarSubtitle}>{isVerificationRole ? 'Eloquence 2026' : isLeadCoordinator ? 'Eloquence 2026 (View Only)' : 'Eloquence 2026'}</span>
             </div>
           </div>
           <button
@@ -2660,141 +2668,6 @@ export default function AdminDashboard({ token, user, onLogout }) {
             onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
           >
             <FaChartBar style={S.navIcon} /> Dashboard
-          </button>
-
-          {/* Events Tab */}
-          <button 
-            type="button"
-            id="admin-nav-events-btn"
-            style={activeTab === 'events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('events'); setMobileSidebarOpen(false); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaCalendarAlt style={S.navIcon} />
-                <span>Events</span>
-              </div>
-              <span style={S.badgeCount}>{eventsList.length}</span>
-            </div>
-          </button>
-
-          {/* User Management Dropdown Group (Superadmin & Admin only) */}
-          {isAdminOrSuper && (
-            <div style={S.dropdownGroup}>
-              <button 
-                style={isUserManagementActive ? { ...S.dropdownToggle, ...S.dropdownToggleActive } : S.dropdownToggle}
-                onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-              >
-                <div style={S.dropdownToggleLeft}>
-                  <FaUsers style={S.navIcon} />
-                  <span>User Management</span>
-                </div>
-                <span style={S.dropdownChevron}>
-                  {isUserDropdownOpen ? <FaChevronDown size={12} /> : <FaChevronRight size={12} />}
-                </span>
-              </button>
-
-              {/* Dropdown Submenu */}
-              {isUserDropdownOpen && (
-                <div style={S.submenu}>
-                  <button 
-                    style={activeTab === 'manage-users' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                    onClick={() => { setActiveTab('manage-users'); setMobileSidebarOpen(false); }}
-                  >
-                    <FaUserCheck style={S.subnavIcon} />
-                    <span>Manage Users</span>
-                    <span style={S.badgeCount}>{users.length}</span>
-                  </button>
-
-                  <button 
-                    style={activeTab === 'manage-roles' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
-                    onClick={() => { setActiveTab('manage-roles'); setMobileSidebarOpen(false); }}
-                  >
-                    <FaShieldAlt style={S.subnavIcon} />
-                    <span>Manage Roles</span>
-                    <span style={S.badgeCount}>{roles.length}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Sponsors Tab */}
-          <button 
-            type="button"
-            style={activeTab === 'manage-sponsors' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('manage-sponsors'); setMobileSidebarOpen(false); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaHandshake style={S.navIcon} />
-                <span>Sponsors</span>
-              </div>
-              <span style={S.badgeCount}>{sponsors.length}</span>
-            </div>
-          </button>
-
-          {/* Members (Event Team & Coordinators) Tab */}
-          <button 
-            type="button"
-            style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('manage-coordinators'); setMobileSidebarOpen(false); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaUsers style={S.navIcon} />
-                <span>Members</span>
-              </div>
-              <span style={S.badgeCount}>{coordinators.length}</span>
-            </div>
-          </button>
-
-          {/* Event Allocate Tab (Admin / Superadmin) */}
-          {isAdminOrSuper && (
-            <button 
-              type="button"
-              style={activeTab === 'allocate-events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-              onClick={(e) => { e.preventDefault(); setActiveTab('allocate-events'); setMobileSidebarOpen(false); }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <FaCalendarAlt style={S.navIcon} />
-                  <span>Event Allocate</span>
-                </div>
-                <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', fontWeight: '800' }}>
-                  ALLOC
-                </span>
-              </div>
-            </button>
-          )}
-
-          {/* Homepage Student-Coordinator Team Tab */}
-          <button 
-            type="button"
-            style={activeTab === 'homepage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('homepage-coordinators'); setMobileSidebarOpen(false); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaUsers style={S.navIcon} />
-                <span>Homepage Student-Coordinator Team</span>
-              </div>
-              <span style={S.badgeCount}>{homepageTeams.length}</span>
-            </div>
-          </button>
-
-          {/* Registrations Tab */}
-          <button 
-            style={activeTab === 'registrations' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={() => setActiveTab('registrations')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaIdCard style={S.navIcon} />
-                <span>Registrations</span>
-              </div>
-              <span style={S.badgeCount}>{registrationsList.length}</span>
-            </div>
           </button>
 
           {/* Registration Verification (UTR Audit) Tab */}
@@ -2820,67 +2693,206 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
           </button>
 
-          {/* Search & Verify Participant Tab */}
-          <button 
-            type="button"
-            style={activeTab === 'search-participant' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('search-participant'); setMobileSidebarOpen(false); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaQrcode style={S.navIcon} />
-                <span>Search & Verify</span>
-              </div>
-              <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857' }}>
-                QR
-              </span>
-            </div>
-          </button>
-
-          {/* Participant List Tab */}
-          <button 
-            type="button"
-            style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-            onClick={(e) => { e.preventDefault(); setActiveTab('participant-list'); setMobileSidebarOpen(false); }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <FaUsers style={S.navIcon} />
-                <span>Participant List</span>
-              </div>
-              <span style={S.badgeCount}>{registrationsList.length}</span>
-            </div>
-          </button>
-
-          {/* Close RG Tab (Superadmin & Admin only) */}
-          {isAdminOrSuper && (
-            <button 
-              type="button"
-              style={activeTab === 'close-rg' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
-              onClick={(e) => { e.preventDefault(); setActiveTab('close-rg'); setMobileSidebarOpen(false); }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <FaLock style={{ ...S.navIcon, color: registrationSettings.isRegistrationClosed ? '#ef4444' : '#10b981' }} />
-                  <span style={{ fontWeight: '600' }}>Close RG</span>
+          {!isVerificationRole && (
+            <>
+              {/* Events Tab */}
+              <button 
+                type="button"
+                id="admin-nav-events-btn"
+                style={activeTab === 'events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={(e) => { e.preventDefault(); setActiveTab('events'); setMobileSidebarOpen(false); }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaCalendarAlt style={S.navIcon} />
+                    <span>Events</span>
+                  </div>
+                  <span style={S.badgeCount}>{eventsList.length}</span>
                 </div>
-                <span style={{
-                  ...S.badgeCount,
-                  background: registrationSettings.isRegistrationClosed 
-                    ? (isDark ? '#451a1a' : '#fef2f2') 
-                    : (isDark ? '#064e3b' : '#ecfdf5'),
-                  color: registrationSettings.isRegistrationClosed ? '#ef4444' : '#10b981',
-                  border: registrationSettings.isRegistrationClosed 
-                    ? (isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2') 
-                    : (isDark ? '1px solid #05966940' : '1px solid #bbf7d0'),
-                  fontSize: '0.68rem',
-                  fontWeight: '800',
-                  letterSpacing: '0.04em'
-                }}>
-                  {registrationSettings.isRegistrationClosed ? 'CLOSED' : 'OPEN'}
-                </span>
-              </div>
-            </button>
+              </button>
+
+              {/* User Management Dropdown Group (Superadmin & Admin only) */}
+              {isAdminOrSuper && (
+                <div style={S.dropdownGroup}>
+                  <button 
+                    style={isUserManagementActive ? { ...S.dropdownToggle, ...S.dropdownToggleActive } : S.dropdownToggle}
+                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  >
+                    <div style={S.dropdownToggleLeft}>
+                      <FaUsers style={S.navIcon} />
+                      <span>User Management</span>
+                    </div>
+                    <span style={S.dropdownChevron}>
+                      {isUserDropdownOpen ? <FaChevronDown size={12} /> : <FaChevronRight size={12} />}
+                    </span>
+                  </button>
+
+                  {/* Dropdown Submenu */}
+                  {isUserDropdownOpen && (
+                    <div style={S.submenu}>
+                      <button 
+                        style={activeTab === 'manage-users' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
+                        onClick={() => { setActiveTab('manage-users'); setMobileSidebarOpen(false); }}
+                      >
+                        <FaUserCheck style={S.subnavIcon} />
+                        <span>Manage Users</span>
+                        <span style={S.badgeCount}>{users.length}</span>
+                      </button>
+
+                      <button 
+                        style={activeTab === 'manage-roles' ? { ...S.subnavItem, ...S.subnavItemActive } : S.subnavItem}
+                        onClick={() => { setActiveTab('manage-roles'); setMobileSidebarOpen(false); }}
+                      >
+                        <FaShieldAlt style={S.subnavIcon} />
+                        <span>Manage Roles</span>
+                        <span style={S.badgeCount}>{roles.length}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sponsors Tab */}
+              <button 
+                type="button"
+                style={activeTab === 'manage-sponsors' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={(e) => { e.preventDefault(); setActiveTab('manage-sponsors'); setMobileSidebarOpen(false); }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaHandshake style={S.navIcon} />
+                    <span>Sponsors</span>
+                  </div>
+                  <span style={S.badgeCount}>{sponsors.length}</span>
+                </div>
+              </button>
+
+              {/* Members (Event Team & Coordinators) Tab */}
+              <button 
+                type="button"
+                style={activeTab === 'manage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={(e) => { e.preventDefault(); setActiveTab('manage-coordinators'); setMobileSidebarOpen(false); }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaUsers style={S.navIcon} />
+                    <span>Members</span>
+                  </div>
+                  <span style={S.badgeCount}>{coordinators.length}</span>
+                </div>
+              </button>
+
+              {/* Event Allocate Tab (Admin / Superadmin) */}
+              {isAdminOrSuper && (
+                <button 
+                  type="button"
+                  style={activeTab === 'allocate-events' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                  onClick={(e) => { e.preventDefault(); setActiveTab('allocate-events'); setMobileSidebarOpen(false); }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <FaCalendarAlt style={S.navIcon} />
+                      <span>Event Allocate</span>
+                    </div>
+                    <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', fontWeight: '800' }}>
+                      ALLOC
+                    </span>
+                  </div>
+                </button>
+              )}
+
+              {/* Homepage Student-Coordinator Team Tab */}
+              <button 
+                type="button"
+                style={activeTab === 'homepage-coordinators' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={(e) => { e.preventDefault(); setActiveTab('homepage-coordinators'); setMobileSidebarOpen(false); }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaUsers style={S.navIcon} />
+                    <span>Homepage Student-Coordinator Team</span>
+                  </div>
+                  <span style={S.badgeCount}>{homepageTeams.length}</span>
+                </div>
+              </button>
+
+              {/* Registrations Tab */}
+              <button 
+                style={activeTab === 'registrations' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={() => setActiveTab('registrations')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaIdCard style={S.navIcon} />
+                    <span>Registrations</span>
+                  </div>
+                  <span style={S.badgeCount}>{registrationsList.length}</span>
+                </div>
+              </button>
+
+              {/* Search & Verify Participant Tab */}
+              <button 
+                type="button"
+                style={activeTab === 'search-participant' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={(e) => { e.preventDefault(); setActiveTab('search-participant'); setMobileSidebarOpen(false); }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaQrcode style={S.navIcon} />
+                    <span>Search & Verify</span>
+                  </div>
+                  <span style={{ ...S.badgeCount, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857' }}>
+                    QR
+                  </span>
+                </div>
+              </button>
+
+              {/* Participant List Tab */}
+              <button 
+                type="button"
+                style={activeTab === 'participant-list' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                onClick={(e) => { e.preventDefault(); setActiveTab('participant-list'); setMobileSidebarOpen(false); }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <FaUsers style={S.navIcon} />
+                    <span>Participant List</span>
+                  </div>
+                  <span style={S.badgeCount}>{registrationsList.length}</span>
+                </div>
+              </button>
+
+              {/* Close RG Tab (Superadmin & Admin only) */}
+              {isAdminOrSuper && (
+                <button 
+                  type="button"
+                  style={activeTab === 'close-rg' ? { ...S.navItem, ...S.navItemActive } : S.navItem} 
+                  onClick={(e) => { e.preventDefault(); setActiveTab('close-rg'); setMobileSidebarOpen(false); }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <FaLock style={{ ...S.navIcon, color: registrationSettings.isRegistrationClosed ? '#ef4444' : '#10b981' }} />
+                      <span style={{ fontWeight: '600' }}>Close RG</span>
+                    </div>
+                    <span style={{
+                      ...S.badgeCount,
+                      background: registrationSettings.isRegistrationClosed 
+                        ? (isDark ? '#451a1a' : '#fef2f2') 
+                        : (isDark ? '#064e3b' : '#ecfdf5'),
+                      color: registrationSettings.isRegistrationClosed ? '#ef4444' : '#10b981',
+                      border: registrationSettings.isRegistrationClosed 
+                        ? (isDark ? '1px solid #7f1d1d' : '1px solid #fee2e2') 
+                        : (isDark ? '1px solid #05966940' : '1px solid #bbf7d0'),
+                      fontSize: '0.68rem',
+                      fontWeight: '800',
+                      letterSpacing: '0.04em'
+                    }}>
+                      {registrationSettings.isRegistrationClosed ? 'CLOSED' : 'OPEN'}
+                    </span>
+                  </div>
+                </button>
+              )}
+            </>
           )}
         </nav>
 
@@ -2999,8 +3011,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {/* Total Registrations Card */}
                 <div 
                   style={{ ...S.statCard, cursor: 'pointer', transition: 'all 0.2s ease' }}
-                  onClick={() => { setRegModeFilter('all'); setActiveTab('registrations'); }}
-                  title="Click to view all registrations"
+                  onClick={() => {
+                    if (isVerificationRole) {
+                      setActiveTab('registration-verification');
+                    } else {
+                      setRegModeFilter('all');
+                      setActiveTab('registrations');
+                    }
+                  }}
+                  title="Click to view registrations"
                 >
                   <div style={S.statLabel}>Total Registrations</div>
                   <div style={S.statValue}>{registrationsList.length || data?.stats?.totalRegistrations || 0}</div>
@@ -3012,7 +3031,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {/* Online Registrations Card */}
                 <div 
                   style={{ ...S.statCard, cursor: 'pointer', borderLeft: isDark ? '4px solid #3b82f6' : '4px solid #2563eb', transition: 'all 0.2s ease' }}
-                  onClick={() => { setRegModeFilter('online'); setActiveTab('registrations'); }}
+                  onClick={() => {
+                    if (isVerificationRole) {
+                      setActiveTab('registration-verification');
+                    } else {
+                      setRegModeFilter('online');
+                      setActiveTab('registrations');
+                    }
+                  }}
                   title="Click to view online registrations"
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3030,7 +3056,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 {/* Offline On-Site Desk Registrations Card */}
                 <div 
                   style={{ ...S.statCard, cursor: 'pointer', borderLeft: isDark ? '4px solid #10b981' : '4px solid #059669', transition: 'all 0.2s ease' }}
-                  onClick={() => { setRegModeFilter('offline'); setActiveTab('registrations'); }}
+                  onClick={() => {
+                    if (isVerificationRole) {
+                      setActiveTab('registration-verification');
+                    } else {
+                      setRegModeFilter('offline');
+                      setActiveTab('registrations');
+                    }
+                  }}
                   title="Click to view offline desk registrations"
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -3087,7 +3120,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 <div style={{ ...S.cardHeaderFlex, padding: '1.25rem 1.75rem' }}>
                   <h3 style={S.cardTitle}>Recent Registrations</h3>
                   <button 
-                    onClick={() => { setRegModeFilter('all'); setActiveTab('registrations'); }}
+                    onClick={() => {
+                      if (isVerificationRole) {
+                        setActiveTab('registration-verification');
+                      } else {
+                        setRegModeFilter('all');
+                        setActiveTab('registrations');
+                      }
+                    }}
                     style={{ 
                       background: isDark ? '#1e293b' : '#eff6ff', 
                       border: isDark ? '1px solid #374151' : '1px solid #bfdbfe', 
@@ -3103,7 +3143,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       transition: 'all 0.15s ease'
                     }}
                   >
-                    <span>View All Registrations ({registrationsList.length})</span>
+                    <span>{isVerificationRole ? 'Open Registration Verification' : `View All Registrations (${registrationsList.length})`}</span>
                     <FaArrowRight size={11} />
                   </button>
                 </div>
