@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const supabase = require('../config/supabase');
+const { saveBase64ImageIfPresent } = require('../utils/imageStorage');
 
 let razorpayClient = null;
 function getRazorpayClient() {
@@ -1761,7 +1762,8 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
   try {
     const { id } = req.params;
     const { rounds, rules, venue, time, conductorNotes, venueImage, venue_image } = req.body;
-    const finalVenueImage = venueImage !== undefined ? venueImage : venue_image;
+    const rawVenueImage = venueImage !== undefined ? venueImage : venue_image;
+    const finalVenueImage = rawVenueImage !== undefined ? saveBase64ImageIfPresent(rawVenueImage, 'venue') : undefined;
 
     const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
     let events = [];

@@ -50,7 +50,7 @@ const infoItems = [
   {
     key: 'day',
     label: 'DAY',
-    value: 'Tuesday',
+    value: 'Saturday',
     icon: (
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#39FF88" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="location-icon-svg">
         <path d="M8 2v4" />

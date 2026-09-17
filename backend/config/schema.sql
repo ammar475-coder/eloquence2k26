@@ -107,10 +107,24 @@ ALTER TABLE public.registrations ADD COLUMN IF NOT EXISTS flagged_by TEXT;
 CREATE TABLE IF NOT EXISTS public.registration_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_id UUID REFERENCES public.registrations(id) ON DELETE CASCADE,
+    ticket_code TEXT,
     member_number INT DEFAULT 2,
     member_name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    college TEXT,
+    department TEXT,
+    year TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.registration_members ADD COLUMN IF NOT EXISTS ticket_code TEXT;
+ALTER TABLE public.registration_members ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.registration_members ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.registration_members ADD COLUMN IF NOT EXISTS college TEXT;
+ALTER TABLE public.registration_members ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE public.registration_members ADD COLUMN IF NOT EXISTS year TEXT;
+ALTER TABLE public.registration_members DISABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------------------------
 -- 4. COORDINATORS TABLE

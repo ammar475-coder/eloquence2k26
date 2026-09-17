@@ -71,28 +71,33 @@ export default function EventsPage({ onNavigate }) {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
 
-  // Ambient canvas animation
+  // Ambient canvas animation (viewport-sized for 60fps performance)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let animationId;
+    if (!ctx) return;
+
+    let animationId = null;
+    let isRunning = false;
     const particles = [];
+    const isMobile = window.innerWidth < 768;
+    const particleCount = isMobile ? 18 : 36;
 
     const resize = () => {
-      canvas.width = canvas.parentElement.offsetWidth;
-      canvas.height = canvas.parentElement.offsetHeight;
+      canvas.width = Math.min(window.innerWidth, 1920);
+      canvas.height = window.innerHeight;
     };
 
     class Particle {
       constructor() { this.reset(); }
       reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 2 + 0.5;
-        this.speedX = (Math.random() - 0.5) * 0.4;
-        this.speedY = (Math.random() - 0.5) * 0.4;
-        this.opacity = Math.random() * 0.4 + 0.1;
+        this.x = Math.random() * (canvas.width || 300);
+        this.y = Math.random() * (canvas.height || 300);
+        this.size = Math.random() * 1.8 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.35;
+        this.speedY = (Math.random() - 0.5) * 0.35;
+        this.opacity = Math.random() * 0.35 + 0.08;
         this.color = Math.random() > 0.5 ? '#39FF88' : '#00A83B';
       }
       update() {
@@ -113,18 +118,42 @@ export default function EventsPage({ onNavigate }) {
     }
 
     resize();
-    for (let i = 0; i < 60; i++) particles.push(new Particle());
+    for (let i = 0; i < particleCount; i++) particles.push(new Particle());
 
     const animate = () => {
+      if (!isRunning) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((p) => { p.update(); p.draw(); });
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+      }
       animationId = requestAnimationFrame(animate);
     };
-    animate();
+
+    const start = () => {
+      if (isRunning) return;
+      isRunning = true;
+      animationId = requestAnimationFrame(animate);
+    };
+
+    const stop = () => {
+      if (!isRunning) return;
+      isRunning = false;
+      if (animationId) cancelAnimationFrame(animationId);
+    };
+
+    start();
+
+    const handleVisibility = () => {
+      if (document.hidden) stop();
+      else start();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('resize', resize, { passive: true });
 
     return () => {
-      cancelAnimationFrame(animationId);
+      stop();
+      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('resize', resize);
     };
   }, []);

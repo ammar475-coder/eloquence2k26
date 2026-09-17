@@ -30,19 +30,5 @@
     "displayOrder": 1,
     "isActive": true,
     "updatedAt": "2026-09-08T06:34:55.387Z"
-  },
-  {
-    "id": "sponsor-standard-06",
-    "name": "HORIZON BOOKS",
-    "companyName": "Horizon Campus Bookstore",
-    "logo": "",
-    "description": "Campus bookstore sponsoring the quiz and literary events.",
-    "website": "https://example.com/horizon-books",
-    "contactName": "Geetha Rao",
-    "contactEmail": "help@horizonbooks.com",
-    "contactPhone": "9876543224",
-    "category": "Standard",
-    "displayOrder": 15,
-    "isActive": true
   }
 ]

@@ -49,7 +49,7 @@ function parseHash(hash) {
       sectionId: null,
       from,
       categoryFilter,
-      game: null
+      game: gameParam || null
     };
   }
   if (pathPart === '#/events' || pathPart === '#events') {
@@ -122,8 +122,7 @@ export default function AppRouter() {
       try {
         window.history.pushState({ from, categoryFilter }, '', `#/events/${finalEventId}${queryStr}`);
       } catch (e) {}
-      window.location.hash = `/events/${finalEventId}${queryStr}`;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     } else if (page === 'register') {
       const finalEventId = eventId || null;
       if (!finalEventId) {
@@ -131,8 +130,7 @@ export default function AppRouter() {
         try {
           window.history.pushState({ from: null }, '', '#/events');
         } catch (e) {}
-        window.location.hash = '/events';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'instant' });
         return;
       }
       setRoute({ page: 'register', eventId: finalEventId, sectionId: null, from, categoryFilter, game });
@@ -146,28 +144,25 @@ export default function AppRouter() {
       try {
         window.history.pushState({ from: null, categoryFilter, game }, '', `#${targetHash}`);
       } catch (e) {}
-      window.location.hash = targetHash;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     } else if (page === 'events') {
       setRoute({ page: 'events', eventId: null, sectionId: null, from: null, categoryFilter: null, game: null });
       try {
         window.history.pushState({ from: null }, '', '#/events');
       } catch (e) {}
-      window.location.hash = '/events';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     } else {
       const sectionId = typeof extra === 'string' ? extra : null;
       setRoute({ page: 'home', eventId: null, sectionId, from: null, categoryFilter: null, game: null });
       try {
         window.history.pushState({}, '', sectionId ? `/#${sectionId}` : '#/');
       } catch (e) {}
-      window.location.hash = sectionId ? `#${sectionId}` : '/';
       if (sectionId) {
         setTimeout(() => {
           document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        }, 60);
       } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'instant' });
       }
     }
   };
@@ -190,6 +185,7 @@ export default function AppRouter() {
             eventId={route.eventId}
             from={route.from}
             categoryFilter={route.categoryFilter}
+            initialGame={route.game}
             onNavigate={navigateTo}
           />
         ) : route.page === 'register' ? (

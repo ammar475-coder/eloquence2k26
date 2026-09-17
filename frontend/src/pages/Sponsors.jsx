@@ -7,8 +7,6 @@ import ScrollableMarquee from '../components/ScrollableMarquee.jsx';
 function SponsorCard({ sponsor, tier }) {
   const [flipped, setFlipped] = useState(false);
   const cardRef = useRef(null);
-  const touchStartPos = useRef({ x: 0, y: 0 });
-  const lastTouchTime = useRef(0);
 
   // Auto flip back to front when user clicks anywhere outside this card
   useEffect(() => {
@@ -22,46 +20,16 @@ function SponsorCard({ sponsor, tier }) {
 
     const timer = setTimeout(() => {
       document.addEventListener('click', handleClickOutside);
-      document.addEventListener('touchend', handleClickOutside);
-    }, 100);
+    }, 50);
 
     return () => {
       clearTimeout(timer);
       document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('touchend', handleClickOutside);
     };
   }, [flipped]);
 
-  const handleTouchStart = (e) => {
-    if (e.touches && e.touches.length === 1) {
-      touchStartPos.current = {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      };
-    }
-  };
-
-  const handleTouchEnd = (e) => {
-    if (!e.changedTouches || e.changedTouches.length !== 1) return;
-    const dx = Math.abs(e.changedTouches[0].clientX - touchStartPos.current.x);
-    const dy = Math.abs(e.changedTouches[0].clientY - touchStartPos.current.y);
-
-    // If moved less than 12px, this is a clean tap
-    if (dx < 12 && dy < 12) {
-      if (e.target.closest('a') || e.target.closest('button.sponsor-action-pill-btn')) {
-        return;
-      }
-      lastTouchTime.current = Date.now();
-      setFlipped((f) => !f);
-    }
-  };
-
   const handleCardClick = (e) => {
-    // If touched recently (within 500ms), ignore synthesized click to prevent double-toggling
-    if (Date.now() - lastTouchTime.current < 500) {
-      return;
-    }
-    // If the click is inside an interactive action button, don't toggle flip
+    // If the click is inside an interactive action button or link, don't toggle flip
     if (e.target.closest('a') || e.target.closest('button.sponsor-action-pill-btn')) {
       return;
     }
@@ -85,7 +53,7 @@ function SponsorCard({ sponsor, tier }) {
   const resolveLogo = (logo) => {
     if (!logo || typeof logo !== 'string' || !logo.trim()) return null;
     const trimmed = logo.trim();
-    if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/sponsors/')) {
+    if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/sponsors/') || trimmed.startsWith('/events/') || trimmed.startsWith('/assets/')) {
       return trimmed;
     }
     if (trimmed.startsWith('/uploads/')) {
@@ -103,8 +71,6 @@ function SponsorCard({ sponsor, tier }) {
       ref={cardRef}
       className={`sponsor-card sponsor-card-${tier} ${flipped ? 'card-is-flipped' : ''}`}
       onClick={handleCardClick}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
       role="button"
       tabIndex={0}
       aria-label={`${sponsor.name} — click or tap to view contact details`}
@@ -308,7 +274,7 @@ function SponsorRow({ tier, label, items, direction }) {
       <div className="sponsor-marquee">
         <div className="sponsor-marquee-fade sponsor-marquee-fade-left" />
         <div className="sponsor-marquee-fade sponsor-marquee-fade-right" />
-        <ScrollableMarquee speed={46} direction={direction} baseCount={baseItems.length}>
+        <ScrollableMarquee speed={62} direction={direction} baseCount={baseItems.length}>
           <div
             className={`sponsor-track ${direction === 'right' ? 'sponsor-track-reverse' : ''}`}
           >
@@ -373,7 +339,7 @@ export default function Sponsors() {
     >
       <h2 className="section-heading">SPONSORS</h2>
       <p className="section-sub">
-        The powerhouses fueling ELOQUENCE26 — hover over any card to know them better.
+        The powerhouses fueling ELOQUENCE26 — click or tap any card to view details.
       </p>
 
       {loading && !hasSponsors ? (

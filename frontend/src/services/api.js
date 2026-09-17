@@ -256,7 +256,7 @@ export async function uploadSponsorLogo(imageBase64, fileName, token) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({ imageBase64, fileName })
+    body: JSON.stringify({ imageBase64, fileName, type: 'sponsor' })
   });
   return res.json();
 }

@@ -32,7 +32,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Static assets
 app.use('/events', express.static(path.join(__dirname, '../frontend/public/events')));
+app.use('/sponsors', express.static(path.join(__dirname, '../frontend/public/sponsors')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/assets', express.static(path.join(__dirname, '../frontend/src/assets')));
 
 // API Routes
 const apiRoutes = require('./routes/api');
