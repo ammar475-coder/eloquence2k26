@@ -1865,7 +1865,8 @@ exports.deleteCoordinator = async (req, res) => {
 
 // ==================== REGISTRATION MANAGEMENT ====================
 exports.deleteRegistration = async (req, res) => {
-  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
+  const userRole = String(req.user?.role || '').toLowerCase();
+  if (userRole !== 'superadmin' && userRole !== 'admin' && !userRole.includes('verif')) {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   const { id } = req.params;
