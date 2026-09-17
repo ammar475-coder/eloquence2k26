@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const supabase = require('../config/supabase');
 const { broadcastRegistrationUpdate } = require('../config/websocket');
+const { saveBase64ImageIfPresent } = require('../utils/imageStorage');
 const JWT_SECRET = process.env.JWT_SECRET || 'eloquence2k26_default_secure_jwt_secret_key';
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
@@ -1125,41 +1126,6 @@ exports.getEvents = async (req, res) => {
   res.json({ success: true, data: localEvents });
 };
 
-const saveBase64ImageIfPresent = (imageStr, prefix = 'event') => {
-  if (!imageStr || typeof imageStr !== 'string') return imageStr || '';
-  const trimmed = imageStr.trim();
-  if (!trimmed.startsWith('data:image/')) return trimmed;
-
-  try {
-    const matches = trimmed.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) return trimmed;
-    const mimeType = matches[1].toLowerCase();
-    const ext = mimeType.includes('jpeg') || mimeType.includes('jpg') ? 'jpg' : (mimeType.includes('webp') ? 'webp' : (mimeType.includes('svg') ? 'svg' : 'png'));
-    const safeName = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}.${ext}`;
-    const imageBuffer = Buffer.from(matches[2], 'base64');
-
-    const frontendPublicEventsDir = path.join(__dirname, '../../frontend/public/events');
-    const localUploadsDir = path.join(__dirname, '../uploads');
-
-    if (!fs.existsSync(frontendPublicEventsDir)) {
-      try { fs.mkdirSync(frontendPublicEventsDir, { recursive: true }); } catch (e) {}
-    }
-    if (fs.existsSync(frontendPublicEventsDir)) {
-      fs.writeFileSync(path.join(frontendPublicEventsDir, safeName), imageBuffer);
-    }
-    if (!fs.existsSync(localUploadsDir)) {
-      try { fs.mkdirSync(localUploadsDir, { recursive: true }); } catch (e) {}
-    }
-    if (fs.existsSync(localUploadsDir)) {
-      fs.writeFileSync(path.join(localUploadsDir, safeName), imageBuffer);
-    }
-    return `/events/${safeName}`;
-  } catch (e) {
-    console.error('Error saving base64 image:', e);
-    return trimmed;
-  }
-};
-
 exports.createEvent = async (req, res) => {
   if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
@@ -1526,11 +1492,12 @@ exports.createSponsor = async (req, res) => {
 
   const sponsors = getSponsorsData();
   const now = new Date().toISOString();
+  const cleanLogo = logo ? saveBase64ImageIfPresent(logo.trim(), 'sponsor') : '';
   const newSponsor = {
     id: `sponsor-${Date.now()}`,
     name: name.trim(),
     companyName: companyName ? companyName.trim() : '',
-    logo: logo ? logo.trim() : '',
+    logo: cleanLogo,
     description: description ? description.trim() : '',
     website: website ? website.trim() : '',
     locationUrl: locationUrl ? locationUrl.trim() : '',
@@ -1586,11 +1553,13 @@ exports.updateSponsor = async (req, res) => {
   const sponsors = getSponsorsData();
   const index = sponsors.findIndex(s => s.id === id);
 
+  const cleanLogo = logo !== undefined ? saveBase64ImageIfPresent(logo.trim(), 'sponsor') : undefined;
+
   const updatedSponsor = {
     id,
     name: name.trim(),
     companyName: companyName !== undefined ? companyName.trim() : (sponsors[index]?.companyName || ''),
-    logo: logo !== undefined ? logo.trim() : (sponsors[index]?.logo || ''),
+    logo: cleanLogo !== undefined ? cleanLogo : (sponsors[index]?.logo || ''),
     description: description !== undefined ? description.trim() : (sponsors[index]?.description || ''),
     website: website !== undefined ? website.trim() : (sponsors[index]?.website || ''),
     locationUrl: locationUrl !== undefined ? locationUrl.trim() : (sponsors[index]?.locationUrl || ''),
@@ -1691,16 +1660,16 @@ exports.uploadLogo = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No image data provided' });
     }
 
-    if (imageBase64.startsWith('http://') || imageBase64.startsWith('https://') || imageBase64.startsWith('/events/')) {
+    if (imageBase64.startsWith('http://') || imageBase64.startsWith('https://') || imageBase64.startsWith('/events/') || imageBase64.startsWith('/sponsors/') || imageBase64.startsWith('/assets/') || imageBase64.startsWith('/uploads/')) {
       return res.json({ success: true, url: imageBase64, fileName: fileName || 'external-image' });
     }
 
-    const prefix = type === 'venue' ? 'venue' : (type === 'sponsor' ? 'sponsor' : 'img');
+    const prefix = type === 'venue' ? 'venue' : (type === 'sponsor' ? 'sponsor' : 'event');
     const cleanUrl = saveBase64ImageIfPresent(imageBase64, prefix);
 
     return res.json({
       success: true,
-      message: 'Image uploaded and processed successfully',
+      message: 'Image uploaded and stored in assets successfully',
       url: cleanUrl,
       fileName: fileName || cleanUrl.split('/').pop()
     });

@@ -1868,7 +1868,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
         },
         body: JSON.stringify({
           imageBase64: base64,
-          fileName: file.name
+          fileName: file.name,
+          type: 'sponsor'
         })
       })
         .then(res => res.json())

@@ -85,7 +85,7 @@ function SponsorCard({ sponsor, tier }) {
   const resolveLogo = (logo) => {
     if (!logo || typeof logo !== 'string' || !logo.trim()) return null;
     const trimmed = logo.trim();
-    if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/sponsors/')) {
+    if (trimmed.startsWith('data:') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/sponsors/') || trimmed.startsWith('/events/') || trimmed.startsWith('/assets/')) {
       return trimmed;
     }
     if (trimmed.startsWith('/uploads/')) {
