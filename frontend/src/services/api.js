@@ -443,32 +443,39 @@ export async function updateRegistrationStatus(token, payload) {
 }
 
 // ==================== EVENTS CACHING & FETCHING ====================
-let inMemoryEventsCache = defaultEvents;
+function getStoredEventsCache() {
+  if (typeof window === 'undefined') return defaultEvents;
+  try {
+    const raw = localStorage.getItem('eloquence_db_events_v3') || sessionStorage.getItem('eloquence_db_events_v3');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return defaultEvents;
+}
+
+let inMemoryEventsCache = getStoredEventsCache();
 let pendingEventsPromise = null;
 
 export function getCachedEvents() {
   if (inMemoryEventsCache && Array.isArray(inMemoryEventsCache) && inMemoryEventsCache.length > 0) {
     return inMemoryEventsCache;
   }
-  try {
-    const raw = sessionStorage.getItem('eloquence_db_events');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        inMemoryEventsCache = parsed;
-        return parsed;
-      }
-    }
-  } catch (_) {}
-  inMemoryEventsCache = defaultEvents;
-  return defaultEvents;
+  inMemoryEventsCache = getStoredEventsCache();
+  return inMemoryEventsCache;
 }
 
 export function setCachedEvents(events) {
   if (Array.isArray(events) && events.length > 0) {
     inMemoryEventsCache = events;
     try {
-      sessionStorage.setItem('eloquence_db_events', JSON.stringify(events));
+      localStorage.setItem('eloquence_db_events_v3', JSON.stringify(events));
+      sessionStorage.setItem('eloquence_db_events_v3', JSON.stringify(events));
+      localStorage.removeItem('eloquence_db_events');
+      sessionStorage.removeItem('eloquence_db_events');
     } catch (_) {}
   }
 }

@@ -14,50 +14,59 @@ import cardAuctionImg from '../assets/card_auction.jpg';
 import cardBotathonImg from '../assets/card_botathon.png';
 
 export const defaultEventImages = {
-  'tech-01': '/events/img-1788936483698-9262.jpg',
-  'tech-02': '/events/img-1788936494979-9577.png',
-  'tech-03': '/events/img-1788936509546-563.png',
-  'tech-04': '/events/img-1788936520321-7906.jpg',
+  'tech-01': cardPptImg,
+  'tech-02': cardCodingImg,
+  'tech-03': cardQuizImg,
+  'tech-04': cardWebImg,
   'tech-05': cardPosterImg,
-  'tech-06': '/events/img-1788936536890-4163.jpg',
+  'tech-06': cardUiUxImg,
   'tech-07': cardBotathonImg,
-  'nontech-01': '/events/img-1788936705846-6346.png',
-  'nontech-02': '/events/img-1788936728593-6703.png',
-  'nontech-03': '/events/img-1788936739166-7206.png',
-  'nontech-04': '/events/img-1788936748696-6930.png',
-  'nontech-05': '/events/img-1788936367834-6940.png',
-  'nontech-06': '/events/img-1788936382590-1827.png',
-  'nontech-07': '/events/nontech-07-1788936459595-9726.png',
+  'nontech-01': cardSnapImg,
+  'nontech-02': cardLinkUpImg,
+  'nontech-03': cardHuntZoneImg,
+  'nontech-04': cardHennaImg,
+  'nontech-05': cardBattleImg,
+  'nontech-06': cardChessImg,
+  'nontech-07': cardAuctionImg,
 };
 
 /**
  * Returns the resolved event banner picture URL or imported asset.
  * Priority:
- * 1. Custom uploaded DB image / base64 image (event.image, event.img, event.poster)
- * 2. Exact event ID match in defaultEventImages
+ * 1. Custom admin-uploaded image (event.image, event.img, event.poster)
+ * 2. Exact event ID match in defaultEventImages (high-res bundled card)
  * 3. Smart keyword matching on name/alias/subtitle/tag
  * 4. Categorical fallback banner
  */
 export function getEventBanner(eventOrId) {
   if (!eventOrId) return cardPptImg;
 
-  // 1. Valid custom data URI, public path, or external full URL
-  const rawImage = typeof eventOrId === 'object'
-    ? (eventOrId.image || eventOrId.img || eventOrId.poster || '')
-    : (typeof eventOrId === 'string' && (eventOrId.startsWith('data:') || eventOrId.startsWith('http') || eventOrId.startsWith('/')) ? eventOrId : null);
-  
-  if (rawImage && typeof rawImage === 'string') {
-    const trimmed = rawImage.trim();
-    if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/')) {
-      return trimmed;
+  let rawImage = '';
+  let eventId = '';
+
+  if (typeof eventOrId === 'object') {
+    rawImage = (eventOrId.image || eventOrId.img || eventOrId.poster || '').trim();
+    eventId = (eventOrId.id || '').toLowerCase().trim();
+  } else if (typeof eventOrId === 'string') {
+    const trimmed = eventOrId.trim();
+    if (trimmed.startsWith('data:') || trimmed.startsWith('http') || trimmed.startsWith('/')) {
+      rawImage = trimmed;
+    } else {
+      eventId = trimmed.toLowerCase();
+    }
+  }
+
+  // 1. Custom admin-uploaded image (filter out empty or known bad placeholders)
+  const isBadPlaceholder = !rawImage || rawImage.includes('event-1789617736258-2581.png') || rawImage.includes('img-1788936483698-9262.jpg');
+  if (!isBadPlaceholder) {
+    if (rawImage.startsWith('data:image/') || rawImage.startsWith('http://') || rawImage.startsWith('https://') || rawImage.startsWith('/')) {
+      return rawImage;
     }
   }
 
   // 2. Exact ID match from high-resolution bundled poster assets
-  const id = typeof eventOrId === 'object' ? eventOrId.id : eventOrId;
-  const normalizedId = String(id || '').toLowerCase().trim();
-  if (defaultEventImages[normalizedId]) {
-    return defaultEventImages[normalizedId];
+  if (eventId && defaultEventImages[eventId]) {
+    return defaultEventImages[eventId];
   }
 
   // 3. Smart Keyword matching
