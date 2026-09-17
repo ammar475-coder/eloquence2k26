@@ -22,7 +22,7 @@ function getTimeRemaining() {
   };
 }
 
-export default function Hero({ onExplore, onRegister, hasPlayedIntro = true }) {
+export default function Hero({ onExplore, onRegister }) {
   const heroRef = useRef(null);
   const canvasRef = useRef(null);
   const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining);
