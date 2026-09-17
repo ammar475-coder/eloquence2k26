@@ -64,13 +64,6 @@ function parseHash(hash) {
 
 export default function AppRouter() {
   const [route, setRoute] = useState(() => parseHash(window.location.hash));
-  const [hasPlayedIntro, setHasPlayedIntro] = useState(() => {
-    try {
-      return sessionStorage.getItem('eloquence_intro_played') === 'true';
-    } catch (_) {
-      return false;
-    }
-  });
   const checkIsAdminOrCoordinator = () => {
     const path = window.location.pathname;
     return path.startsWith('/admin') || path.startsWith('/coordinators');
@@ -205,16 +198,7 @@ export default function AppRouter() {
         ) : route.page === 'events' ? (
           <EventsPage onNavigate={navigateTo} />
         ) : (
-          <Home
-            onNavigate={navigateTo}
-            hasPlayedIntro={hasPlayedIntro}
-            onIntroComplete={() => {
-              try {
-                sessionStorage.setItem('eloquence_intro_played', 'true');
-              } catch (_) {}
-              setHasPlayedIntro(true);
-            }}
-          />
+          <Home onNavigate={navigateTo} />
         )}
       </main>
       <Footer onNavigate={navigateTo} />
