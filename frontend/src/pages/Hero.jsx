@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaCalendarAlt } from 'react-icons/fa';
 import logoImg from '../assets/logo.png';
-import cahcetLogo from '../assets/cahcet.png';
 import { getWsUrl } from '../config/api';
 import { fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api';
-import { FaCalendarAlt } from 'react-icons/fa';
+
+const cahcetLogo = '/cahcet.jpg';
 
 const EVENT_START = new Date('2026-09-26T00:00:00+05:30').getTime();
 

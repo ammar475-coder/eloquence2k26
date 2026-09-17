@@ -2,18 +2,18 @@
   {
     "id": "sponsor-elite-01",
     "name": "RIDHI CHATS",
-    "companyName": "",
-    "logo": "/sponsors/sponsor-elite-01.png",
+    "companyName": "RIDHI CHATS",
+    "logo": "/sponsors/sponsor-1789625252690-2603.jpg",
     "description": "CHATS FOOD SHOP",
     "website": "",
+    "locationUrl": "https://maps.google.com/?q=Ridhi+Chats",
     "contactName": "SIYA",
     "contactEmail": "",
     "contactPhone": "8667329339",
     "category": "Elite",
     "displayOrder": 1,
     "isActive": true,
-    "updatedAt": "2026-09-08T05:37:33.799Z",
-    "locationUrl": "https://maps.google.com/?q=Ridhi+Chats"
+    "updatedAt": "2026-09-17T06:07:33.818Z"
   },
   {
     "id": "sponsor-premium-02",

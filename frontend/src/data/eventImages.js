@@ -1,34 +1,19 @@
-import cardPptImg from '../assets/card_ppt_presentation.png';
-import cardCodingImg from '../assets/card_coding_debugging.png';
-import cardQuizImg from '../assets/card_tech_quiz.png';
-import cardWebImg from '../assets/card_web_prompt.png';
-import cardPosterImg from '../assets/card_poster_design.png';
-import cardUiUxImg from '../assets/card_ui_ux.png';
-import cardSnapImg from '../assets/card_snap_reel.png';
-import cardLinkUpImg from '../assets/card_link_up.png';
-import cardHuntZoneImg from '../assets/card_hunt_zone.png';
-import cardHennaImg from '../assets/card_henna_heist.png';
-import cardBattleImg from '../assets/card_battle_of_champions.png';
-import cardChessImg from '../assets/card_chess.png';
-import cardAuctionImg from '../assets/card_auction.jpg';
-import cardBotathonImg from '../assets/card_botathon.png';
-
 export const defaultEventImages = {
-  'tech-01': cardPptImg,
-  'tech-02': cardCodingImg,
-  'tech-03': cardQuizImg,
-  'tech-04': cardWebImg,
-  'tech-05': cardPosterImg,
-  'tech-06': cardUiUxImg,
-  'tech-07': cardBotathonImg,
-  'nontech-01': cardSnapImg,
-  'nontech-02': cardLinkUpImg,
-  'nontech-03': cardHuntZoneImg,
-  'nontech-04': cardHennaImg,
-  'nontech-05': cardBattleImg,
-  'nontech-06': cardChessImg,
-  'nontech-07': cardAuctionImg,
+  'tech-01': '/events/card_ppt_presentation-BHzUng4c.png',
+  'tech-02': '/events/event-1789617913099-6240.png',
+  'tech-03': '/events/event-1789617928386-8030.png',
+  'tech-04': '/events/event-1789617939462-850.png',
+  'tech-06': '/events/event-tech-06-1789621679528-2221.png',
+  'nontech-01': '/events/event-1789617780279-2457.png',
+  'nontech-02': '/events/event-1789617806355-7221.png',
+  'nontech-03': '/events/event-1789617826039-8458.png',
+  'nontech-04': '/events/event-1789617843336-809.png',
+  'nontech-05': '/events/event-nontech-05-1789621679544-5090.png',
+  'nontech-06': '/events/event-1789617856983-8484.png',
+  'nontech-07': '/events/event-1789617873087-3103.png',
 };
+
+const DEFAULT_BANNER = '/events/card_ppt_presentation-BHzUng4c.png';
 
 /**
  * Returns the resolved event banner picture URL or imported asset.
@@ -39,7 +24,7 @@ export const defaultEventImages = {
  * 4. Categorical fallback banner
  */
 export function getEventBanner(eventOrId) {
-  if (!eventOrId) return cardPptImg;
+  if (!eventOrId) return DEFAULT_BANNER;
 
   let rawImage = '';
   let eventId = '';
@@ -80,27 +65,27 @@ export function getEventBanner(eventOrId) {
       eventOrId.id || ''
     ].join(' ').toLowerCase();
 
-    if (textPool.includes('auction') || textPool.includes('bid')) return cardAuctionImg;
-    if (textPool.includes('botathon') || textPool.includes('roborange') || textPool.includes('robot') || textPool.includes('line-follower')) return cardBotathonImg;
-    if (textPool.includes('chess') || textPool.includes('64 square')) return cardChessImg;
-    if (textPool.includes('battle of champion') || textPool.includes('esport') || textPool.includes('e-sport') || textPool.includes('bgmi') || textPool.includes('free fire') || textPool.includes('gaming')) return cardBattleImg;
-    if (textPool.includes('henna') || textPool.includes('mehandi')) return cardHennaImg;
-    if (textPool.includes('hunt') || textPool.includes('treasure')) return cardHuntZoneImg;
-    if (textPool.includes('link') || textPool.includes('connection')) return cardLinkUpImg;
-    if (textPool.includes('snap') || textPool.includes('reel') || textPool.includes('cinematic') || textPool.includes('photography')) return cardSnapImg;
-    if (textPool.includes('ui') || textPool.includes('ux') || textPool.includes('figma') || textPool.includes('prototype')) return cardUiUxImg;
-    if (textPool.includes('chart') || textPool.includes('poster') || textPool.includes('canvas')) return cardPosterImg;
-    if (textPool.includes('web') || textPool.includes('prompt')) return cardWebImg;
-    if (textPool.includes('quiz') || textPool.includes('tech battle') || textPool.includes('trivia')) return cardQuizImg;
-    if (textPool.includes('crack') || textPool.includes('code') || textPool.includes('debugging')) return cardCodingImg;
-    if (textPool.includes('ppt') || textPool.includes('slide') || textPool.includes('pitch')) return cardPptImg;
+    if (textPool.includes('auction') || textPool.includes('bid')) return defaultEventImages['nontech-07'];
+    if (textPool.includes('botathon') || textPool.includes('roborange') || textPool.includes('robot') || textPool.includes('line-follower')) return defaultEventImages['tech-07'];
+    if (textPool.includes('chess') || textPool.includes('64 square')) return defaultEventImages['nontech-06'];
+    if (textPool.includes('battle of champion') || textPool.includes('esport') || textPool.includes('e-sport') || textPool.includes('bgmi') || textPool.includes('free fire') || textPool.includes('gaming')) return defaultEventImages['nontech-05'];
+    if (textPool.includes('henna') || textPool.includes('mehandi')) return defaultEventImages['nontech-04'];
+    if (textPool.includes('hunt') || textPool.includes('treasure')) return defaultEventImages['nontech-03'];
+    if (textPool.includes('link') || textPool.includes('connection')) return defaultEventImages['nontech-02'];
+    if (textPool.includes('snap') || textPool.includes('reel') || textPool.includes('cinematic') || textPool.includes('photography')) return defaultEventImages['nontech-01'];
+    if (textPool.includes('ui') || textPool.includes('ux') || textPool.includes('figma') || textPool.includes('prototype')) return defaultEventImages['tech-06'];
+    if (textPool.includes('chart') || textPool.includes('poster') || textPool.includes('canvas')) return defaultEventImages['tech-05'];
+    if (textPool.includes('web') || textPool.includes('prompt')) return defaultEventImages['tech-04'];
+    if (textPool.includes('quiz') || textPool.includes('tech battle') || textPool.includes('trivia')) return defaultEventImages['tech-03'];
+    if (textPool.includes('crack') || textPool.includes('code') || textPool.includes('debugging')) return defaultEventImages['tech-02'];
+    if (textPool.includes('ppt') || textPool.includes('slide') || textPool.includes('pitch')) return defaultEventImages['tech-01'];
 
     // 4. Categorical fallback
     if (eventOrId.category === 'non-technical') {
-      return cardSnapImg;
+      return defaultEventImages['nontech-01'];
     }
-    return cardCodingImg;
+    return defaultEventImages['tech-02'];
   }
 
-  return cardPptImg;
+  return DEFAULT_BANNER;
 }

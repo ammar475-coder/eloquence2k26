@@ -26,7 +26,7 @@ const events = [
     guidelines: rulesData['tech-01'].guidelines,
     coordinators: coordinatorsData['tech-01'].coordinators,
     highlights: ['5 mins presentation', '2 mins Q&A', '< 7 slides limit', '₹100/head'],
-    image: '',
+    image: '/events/card_ppt_presentation-BHzUng4c.png',
     venueImage: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80'
   },
   {
