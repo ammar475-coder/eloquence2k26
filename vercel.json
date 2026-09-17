@@ -16,7 +16,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://eloquence2k26.onrender.com/api/:path*"
+      "destination": "https://eloquence2k26-3npu.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
