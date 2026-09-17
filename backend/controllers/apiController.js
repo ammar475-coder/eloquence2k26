@@ -892,6 +892,41 @@ const enrichRegistrationRecord = (r) => {
   copy.ticketCode = copy.ticket_code || copy.ticketCode || copy.registrationId || copy.id;
   copy.registrationId = copy.ticketCode;
   copy.eventId = copy.event_id || copy.eventId;
+  copy.event_id = copy.eventId;
+
+  // If Supabase joined events relation is present
+  if (copy.events && typeof copy.events === 'object') {
+    copy.eventName = copy.events.name || copy.events.alias || copy.eventName;
+    copy.event_name = copy.eventName;
+    copy.category = copy.events.category || copy.category;
+    copy.eventCategory = copy.category;
+  }
+
+  // Resolve event metadata from catalog if not present
+  const evId = String(copy.eventId || '').trim().toLowerCase();
+  let evList = inMemoryEvents || [];
+  if (evList.length === 0) {
+    try {
+      const eventsFile = path.join(DATA_DIR, 'events.json');
+      if (fs.existsSync(eventsFile)) {
+        evList = JSON.parse(fs.readFileSync(eventsFile, 'utf-8') || '[]');
+        inMemoryEvents = evList;
+      }
+    } catch (e) {}
+  }
+  const foundEvt = evList.find(e => {
+    const eId = String(e.id || '').trim().toLowerCase();
+    const eNum = String(e.number || '').trim().toLowerCase();
+    const eName = String(e.name || '').trim().toLowerCase();
+    const eAlias = String(e.alias || '').trim().toLowerCase();
+    return evId && (eId === evId || eNum === evId || eName === evId || eAlias === evId);
+  });
+
+  copy.eventName = copy.eventName || copy.event_name || foundEvt?.name || foundEvt?.alias || (evId ? `Event (${evId})` : 'Symposium Event');
+  copy.event_name = copy.eventName;
+  copy.category = copy.category || copy.eventCategory || foundEvt?.category || (String(copy.ticketCode || '').includes('TCH') ? 'technical' : (String(copy.ticketCode || '').includes('NTC') ? 'non-technical' : 'technical'));
+  copy.eventCategory = copy.category;
+
   copy.teamName = copy.team_name || copy.teamName;
   copy.totalAmount = Number(copy.total_fee || copy.totalAmount || copy.total_fee || 0);
   copy.totalFee = copy.totalAmount;
@@ -911,6 +946,18 @@ const enrichRegistrationRecord = (r) => {
   if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(copy.venue_snapshot);
+      if (parsed.eventName || parsed.event_name) {
+        copy.eventName = copy.eventName || parsed.eventName || parsed.event_name;
+        copy.event_name = copy.eventName;
+      }
+      if (parsed.eventId || parsed.event_id) {
+        copy.eventId = copy.eventId || parsed.eventId || parsed.event_id;
+        copy.event_id = copy.eventId;
+      }
+      if (parsed.category || parsed.eventCategory) {
+        copy.category = copy.category || parsed.category || parsed.eventCategory;
+        copy.eventCategory = copy.category;
+      }
       if (parsed.payment_method) {
         copy.payment_method = parsed.payment_method;
         copy.paymentMethod = parsed.payment_method;
@@ -1012,7 +1059,7 @@ exports.getRegistrations = async (req, res) => {
 
     let query = supabase
       .from('registrations')
-      .select('*, registration_members(*)')
+      .select('*, events(*), registration_members(*)')
       .order('created_at', { ascending: false });
 
     if (eventId) {
@@ -1059,8 +1106,8 @@ exports.getRegistrationById = async (req, res) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
 
     const query = isUUID
-      ? supabase.from('registrations').select('*, registration_members(*)').eq('id', normId).maybeSingle()
-      : supabase.from('registrations').select('*, registration_members(*)').ilike('ticket_code', normId).maybeSingle();
+      ? supabase.from('registrations').select('*, events(*), registration_members(*)').eq('id', normId).maybeSingle()
+      : supabase.from('registrations').select('*, events(*), registration_members(*)').ilike('ticket_code', normId).maybeSingle();
 
     const { data, error } = await query;
 
