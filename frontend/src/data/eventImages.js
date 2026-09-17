@@ -1,21 +1,19 @@
 export const defaultEventImages = {
-  'tech-01': '/events/event-1789617780279-2457.png',
-  'tech-02': '/events/event-1789617792884-7957.png',
-  'tech-03': '/events/event-1789617806355-7221.png',
-  'tech-04': '/events/event-1789617826039-8458.png',
-  'tech-05': '/events/event-1789617843336-809.png',
+  'tech-01': '/events/card_ppt_presentation-BHzUng4c.png',
+  'tech-02': '/events/event-1789617913099-6240.png',
+  'tech-03': '/events/event-1789617928386-8030.png',
+  'tech-04': '/events/event-1789617939462-850.png',
   'tech-06': '/events/event-tech-06-1789621679528-2221.png',
-  'tech-07': '/events/roborange.png',
-  'nontech-01': '/events/event-1789617856983-8484.png',
-  'nontech-02': '/events/event-1789617873087-3103.png',
-  'nontech-03': '/events/event-1789617913099-6240.png',
-  'nontech-04': '/events/event-1789617928386-8030.png',
+  'nontech-01': '/events/event-1789617780279-2457.png',
+  'nontech-02': '/events/event-1789617806355-7221.png',
+  'nontech-03': '/events/event-1789617826039-8458.png',
+  'nontech-04': '/events/event-1789617843336-809.png',
   'nontech-05': '/events/event-nontech-05-1789621679544-5090.png',
-  'nontech-06': '/events/event-1789617939462-850.png',
-  'nontech-07': '/events/auction.png',
+  'nontech-06': '/events/event-1789617856983-8484.png',
+  'nontech-07': '/events/event-1789617873087-3103.png',
 };
 
-const DEFAULT_BANNER = '/events/event-1789617780279-2457.png';
+const DEFAULT_BANNER = '/events/card_ppt_presentation-BHzUng4c.png';
 
 /**
  * Returns the resolved event banner picture URL or imported asset.
