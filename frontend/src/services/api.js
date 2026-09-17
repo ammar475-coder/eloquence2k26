@@ -533,10 +533,12 @@ export async function submitEventWinners(winnerPayload) {
   return res.json();
 }
 
-export async function updateEventCoordinatorDetails(eventId, detailsPayload) {
+export async function updateEventCoordinatorDetails(eventId, detailsPayload, token = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(getApiUrl(`/api/events/${encodeURIComponent(eventId)}/coordinator-update`), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(detailsPayload)
   });
   return res.json();

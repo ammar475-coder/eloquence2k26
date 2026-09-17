@@ -1232,8 +1232,15 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.updateEvent = async (req, res) => {
-  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const isAdmin = userRole === 'superadmin' || userRole === 'admin';
+  const assigned = req.user?.assignedEvents || (req.user?.eventId ? [req.user.eventId] : []);
+  const isAssigned = Array.isArray(assigned) && assigned.some(
+    e => String(e || '').toLowerCase() === String(req.params.id || '').toLowerCase()
+  );
+
+  if (!isAdmin && !isAssigned) {
+    return res.status(403).json({ success: false, message: 'Forbidden: You do not have permission to edit this event' });
   }
 
   const { id } = req.params;
@@ -1370,10 +1377,17 @@ exports.updateEvent = async (req, res) => {
 
   const updatedResult = eventIndex !== -1 ? events[eventIndex] : { id, ...req.body, image: cleanImage };
 
+  try {
+    const { broadcastRegistrationUpdate } = require('../config/websocket');
+    if (broadcastRegistrationUpdate) {
+      broadcastRegistrationUpdate('EVENT_UPDATED', updatedResult);
+    }
+  } catch (_) {}
+
   res.json({ 
     success: true, 
     message: 'Event updated successfully in live database and storage', 
-    data: updatedResult
+    data: updatedResult 
   });
 };
 

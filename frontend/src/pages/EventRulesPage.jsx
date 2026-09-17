@@ -174,6 +174,12 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                 setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
               }
             }
+            if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'EVENT_UPDATED') {
+              if (isMounted && msg.data?.id) {
+                setEventsList(prev => prev.map(ev => (ev.id === msg.data.id ? { ...ev, ...msg.data } : ev)));
+                fetchEventsData(true).catch(() => {});
+              }
+            }
           } catch (_) {}
         };
         ws.onclose = () => {
@@ -213,7 +219,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
 
   useEffect(() => {
     let isMounted = true;
-    fetchEventsData()
+    fetchEventsData(true)
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setEventsList(data);
