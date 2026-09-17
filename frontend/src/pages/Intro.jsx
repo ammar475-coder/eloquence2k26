@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { FaMapMarkerAlt, FaExternalLinkAlt } from 'react-icons/fa';
+const campusPhoto = '/cahcet_campus.jpg';
 
 export default function Intro() {
   const sectionRef = useRef(null);
@@ -7,7 +9,7 @@ export default function Intro() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) setVisible(true); },
-      { threshold: 0.2 }
+      { threshold: 0.15 }
     );
     if (sectionRef.current) observer.observe(sectionRef.current);
     return () => observer.disconnect();
@@ -18,6 +20,7 @@ export default function Intro() {
       id="intro"
       ref={sectionRef}
       className={`intro ${visible ? 'intro-visible' : ''}`}
+      aria-label="About the Event and Campus Venue"
     >
       <div className="intro-container">
         <div className="intro-left">
@@ -34,15 +37,38 @@ export default function Intro() {
         </div>
         <div className="intro-right">
           <div className="intro-image-wrapper">
-            <img 
-              src="/cahcet.jpg" 
-              alt="C Abdul Hakeem College of Engineering and Technology Campus" 
-              className="intro-image" 
-              loading="lazy" 
-              decoding="async" 
-              onError={(e) => { e.currentTarget.src = '/logo.jpg'; }}
-            />
-            <p className="intro-venue">Venue: C Abdul Hakeem College of Engineering and Technology, Melvisharam, Ranipet District</p>
+            <div className="intro-image-frame">
+              <img 
+                src={campusPhoto} 
+                alt="C. Abdul Hakeem College of Engineering and Technology Campus" 
+                className="intro-image" 
+                loading="lazy" 
+                decoding="async" 
+                onError={(e) => { e.currentTarget.src = '/cahcet_campus.jpg'; }}
+              />
+              <div className="intro-venue-pill">
+                <FaMapMarkerAlt className="intro-venue-pill-icon" />
+                <span>OFFICIAL VENUE</span>
+              </div>
+            </div>
+            <div className="intro-venue-details">
+              <h3 className="intro-venue-name">
+                C. Abdul Hakeem College of Engineering &amp; Technology
+              </h3>
+              <p className="intro-venue-address">
+                Hakeem Nagar, Melvisharam, Ranipet District, Tamil Nadu &ndash; 632509
+              </p>
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=C.+Abdul+Hakeem+College+of+Engineering+and+Technology+Melvisharam"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="intro-map-link"
+                title="Open location in Google Maps"
+              >
+                <span>View on Google Maps</span>
+                <FaExternalLinkAlt size={10} />
+              </a>
+            </div>
           </div>
         </div>
       </div>

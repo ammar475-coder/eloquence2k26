@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FaCalendarAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaMapMarkerAlt } from 'react-icons/fa';
 import logoImg from '../assets/logo.png';
 import { getWsUrl } from '../config/api';
 import { fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api';
@@ -861,6 +861,16 @@ export default function Hero({ onExplore, onRegister }) {
           <span className="hero-date-dot" aria-hidden="true">&bull;</span>
           <span className="hero-date-text">SEPTEMBER 26, 2026</span>
         </div>
+
+        {/* Campus Venue Chip Link */}
+        <a 
+          href="#intro" 
+          className="hero-venue-chip" 
+          title="Campus: C. Abdul Hakeem College of Engineering & Technology — Click to view campus details"
+        >
+          <FaMapMarkerAlt className="hero-venue-chip-icon" />
+          <span>CAHCET Campus &bull; Melvisharam, Ranipet</span>
+        </a>
 
         {/* Dynamic Registration Status Banner: Red Marquee Capsule Pill when CLOSED */}
         {isRegClosed ? (
