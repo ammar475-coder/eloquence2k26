@@ -548,7 +548,7 @@ exports.requireAdminOrSuperadmin = (req, res, next) => {
 // ==================== DASHBOARD STATS ====================
 exports.getDashboardData = async (req, res) => {
   try {
-    let registrations = getRegistrationsData();
+    let registrations = [];
     let sponsors = getSponsorsData();
     let coordinators = getCoordinatorsData();
     let homepageTeams = getHomepageCoordinatorsData();
@@ -556,16 +556,15 @@ exports.getDashboardData = async (req, res) => {
 
     try {
       const [regRes, spRes, coRes, evRes, hpRes] = await Promise.all([
-        supabase.from('registrations').select('*'),
+        supabase.from('registrations').select('*, registration_members(*)').order('created_at', { ascending: false }),
         supabase.from('sponsors').select('*'),
         supabase.from('coordinators').select('*'),
         supabase.from('events').select('*'),
         supabase.from('homepage_coordinators').select('*')
       ]);
 
-      let dbRegs = [];
-      if (regRes.data && regRes.data.length > 0) {
-        dbRegs = regRes.data.map(r => {
+      if (regRes.data && Array.isArray(regRes.data)) {
+        registrations = regRes.data.map(r => {
           const copy = { ...r };
           if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
             try {
@@ -601,78 +600,32 @@ exports.getDashboardData = async (req, res) => {
               }
             } catch (e) {}
           }
+          if (Array.isArray(copy.registration_members) && copy.registration_members.length > 0 && (!copy.teamMembers || copy.teamMembers.length === 0)) {
+            copy.teamMembers = copy.registration_members.map((m, idx) => ({
+              memberNumber: m.member_number || idx + 2,
+              fullName: m.member_name || m.name || m.fullName || `Member ${idx + 2}`,
+              name: m.member_name || m.name || m.fullName || `Member ${idx + 2}`,
+              phone: m.phone || '',
+              email: m.email || ''
+            }));
+            copy.teamMembersList = copy.registration_members.map(m => m.member_name || m.name || m.fullName || '');
+          }
           return copy;
         });
+        // Keep registrations.json synchronized with exact live database records
+        saveRegistrationsData(registrations);
+      } else {
+        // Fallback only if Supabase database query failed
+        registrations = getRegistrationsData();
       }
 
-      const localRegs = getRegistrationsData();
-      const mergedMap = new Map();
-
-      for (const r of dbRegs) {
-        const k = (r.ticket_code || r.ticketCode || r.id || '').toUpperCase();
-        if (k) mergedMap.set(k, r);
-      }
-
-      for (const loc of localRegs) {
-        const k = (loc.ticketCode || loc.ticket_code || loc.registrationId || loc.id || '').toUpperCase();
-        if (!k) continue;
-        if (mergedMap.has(k)) {
-          const existing = mergedMap.get(k);
-          const isVerifiedCombined = Boolean(existing.is_verified || existing.isVerified || loc.is_verified || loc.isVerified || existing.attendance_status === 'verified' || loc.attendance_status === 'verified');
-          const verifiedAtCombined = existing.verified_at || existing.verifiedAt || loc.verified_at || loc.verifiedAt || null;
-          const verifiedByCombined = existing.verified_by || existing.verifiedBy || loc.verified_by || loc.verifiedBy || null;
-
-          const teamMembersCombined = (Array.isArray(loc.teamMembers) && loc.teamMembers.length > 0)
-            ? loc.teamMembers
-            : (Array.isArray(existing.teamMembers) && existing.teamMembers.length > 0)
-            ? existing.teamMembers
-            : (Array.isArray(loc.team_members) && loc.team_members.length > 0)
-            ? loc.team_members
-            : (Array.isArray(existing.team_members) && existing.team_members.length > 0)
-            ? existing.team_members
-            : [];
-
-          const teamMembersListCombined = (Array.isArray(loc.teamMembersList) && loc.teamMembersList.length > 0)
-            ? loc.teamMembersList
-            : (Array.isArray(existing.teamMembersList) && existing.teamMembersList.length > 0)
-            ? existing.teamMembersList
-            : teamMembersCombined.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
-
-          mergedMap.set(k, {
-            ...loc,
-            ...existing,
-            teamMembers: teamMembersCombined,
-            team_members: teamMembersCombined,
-            teamMembersList: teamMembersListCombined,
-            membersCount: Math.max(loc.membersCount || 1, existing.membersCount || 1, loc.members_count || 1, existing.members_count || 1, 1 + teamMembersCombined.length),
-            members_count: Math.max(loc.members_count || 1, existing.members_count || 1, loc.membersCount || 1, existing.membersCount || 1, 1 + teamMembersCombined.length),
-            is_verified: isVerifiedCombined,
-            isVerified: isVerifiedCombined,
-            attendance_status: isVerifiedCombined ? 'verified' : (existing.attendance_status || loc.attendance_status || 'pending'),
-            attendanceStatus: isVerifiedCombined ? 'verified' : (existing.attendanceStatus || loc.attendanceStatus || 'pending'),
-            verified_at: verifiedAtCombined,
-            verifiedAt: verifiedAtCombined,
-            verified_by: verifiedByCombined,
-            verifiedBy: verifiedByCombined,
-            payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
-            paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
-            razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,
-            razorpayPaymentId: existing.razorpayPaymentId || loc.razorpayPaymentId || loc.razorpay_payment_id,
-            razorpay_order_id: existing.razorpay_order_id || loc.razorpay_order_id || loc.razorpayOrderId,
-            razorpayOrderId: existing.razorpayOrderId || loc.razorpayOrderId || loc.razorpay_order_id
-          });
-        } else {
-          mergedMap.set(k, loc);
-        }
-      }
-
-      registrations = Array.from(mergedMap.values());
       if (spRes.data && spRes.data.length > 0) sponsors = spRes.data.map(dbToSponsor);
       if (coRes.data && coRes.data.length > 0) coordinators = coRes.data.map(dbToCoordinator);
       if (evRes.data && evRes.data.length > 0) events = evRes.data.map(dbToEvent);
       if (hpRes.data && hpRes.data.length > 0) homepageTeams = hpRes.data.map(dbToHomepageTeam);
     } catch (dbErr) {
       console.warn('Dashboard live metrics query error fallback:', dbErr.message);
+      registrations = getRegistrationsData();
     }
 
     const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod || '').toUpperCase() !== 'ON_SITE_DESK';
@@ -1942,27 +1895,90 @@ exports.deleteRegistration = async (req, res) => {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }
   const { id } = req.params;
+  const normId = String(id || '').trim();
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
+
   try {
-    // Delete from Supabase if present
+    let targetUUID = isUUID ? normId : null;
+    let targetTicketCode = !isUUID ? normId : null;
+
+    // 1. Look up registration in Supabase to resolve both exact UUID & ticket_code
     try {
-      await supabase.from('registration_members').delete().eq('registration_id', id);
-      await supabase.from('registrations').delete().or(`id.eq.${id},ticket_code.eq.${id}`);
-    } catch (e) {
-      console.warn('Supabase deleteRegistration fallback:', e.message);
+      const query = isUUID
+        ? supabase.from('registrations').select('id, ticket_code').eq('id', normId).maybeSingle()
+        : supabase.from('registrations').select('id, ticket_code').ilike('ticket_code', normId).maybeSingle();
+      const { data: matched } = await query;
+      if (matched) {
+        targetUUID = matched.id;
+        targetTicketCode = matched.ticket_code;
+      }
+    } catch (findErr) {
+      console.warn('Supabase lookup before delete note:', findErr.message);
     }
 
-    // Delete from local file
-    let registrations = getRegistrationsData();
-    const initialLen = registrations.length;
-    registrations = registrations.filter(r => (
-      r.id !== id && 
-      r.registrationId !== id && 
-      r.ticket_code !== id
-    ));
-    if (registrations.length !== initialLen) {
-      saveRegistrationsData(registrations);
+    // 2. Delete linked members from registration_members table in Supabase
+    try {
+      if (targetUUID) {
+        await supabase.from('registration_members').delete().eq('registration_id', targetUUID);
+      } else {
+        await supabase.from('registration_members').delete().eq('registration_id', normId);
+      }
+    } catch (memErr) {
+      console.warn('Supabase delete registration_members note:', memErr.message);
     }
-    return res.json({ success: true, message: 'Registration deleted successfully' });
+
+    // 3. Delete registration from registrations table in Supabase
+    try {
+      if (targetUUID) {
+        await supabase.from('registrations').delete().eq('id', targetUUID);
+      }
+      if (targetTicketCode) {
+        await supabase.from('registrations').delete().ilike('ticket_code', targetTicketCode);
+      }
+      if (!targetUUID && !targetTicketCode) {
+        await supabase.from('registrations').delete().or(`id.eq.${normId},ticket_code.ilike.${normId}`);
+      }
+    } catch (supaErr) {
+      console.warn('Supabase delete registration note:', supaErr.message);
+    }
+
+    // 4. Delete from local persistent file (case-insensitive multi-field match)
+    let registrations = getRegistrationsData();
+    const lowerNorm = normId.toLowerCase();
+    const lowerTicket = targetTicketCode ? targetTicketCode.toLowerCase() : lowerNorm;
+    const lowerUUID = targetUUID ? targetUUID.toLowerCase() : lowerNorm;
+
+    const filteredRegs = registrations.filter(r => {
+      const rId = String(r.id || '').toLowerCase();
+      const rRegId = String(r.registrationId || '').toLowerCase();
+      const rTicket = String(r.ticket_code || r.ticketCode || '').toLowerCase();
+      return (
+        rId !== lowerNorm && rId !== lowerUUID &&
+        rRegId !== lowerNorm && rRegId !== lowerUUID &&
+        rTicket !== lowerNorm && rTicket !== lowerTicket
+      );
+    });
+    saveRegistrationsData(filteredRegs);
+
+    // 5. Broadcast real-time WebSocket event to all connected clients
+    try {
+      const { broadcastRegistrationUpdate } = require('../config/websocket');
+      broadcastRegistrationUpdate('DELETE', {
+        id: targetUUID || normId,
+        registrationId: targetUUID || normId,
+        ticket_code: targetTicketCode || normId,
+        ticketCode: targetTicketCode || normId
+      });
+    } catch (wsErr) {
+      console.warn('WebSocket broadcast error on delete:', wsErr.message);
+    }
+
+    return res.json({ 
+      success: true, 
+      message: 'Registration and linked members deleted successfully from live database',
+      deletedId: targetUUID || normId,
+      deletedTicketCode: targetTicketCode || normId
+    });
   } catch (err) {
     console.error('Error in deleteRegistration:', err);
     return res.status(500).json({ success: false, message: 'Failed to delete registration' });

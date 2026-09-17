@@ -955,7 +955,7 @@ const enrichRegistrationRecord = (r) => {
   const copy = { ...r };
 
   // Harmonize camelCase and snake_case defaults
-  copy.fullName = copy.full_name || copy.fullName;
+  copy.fullName = copy.full_name || copy.fullName || 'Anonymous';
   copy.ticketCode = copy.ticket_code || copy.ticketCode || copy.registrationId || copy.id;
   copy.registrationId = copy.ticketCode;
   copy.eventId = copy.event_id || copy.eventId;
@@ -1018,6 +1018,26 @@ const enrichRegistrationRecord = (r) => {
     }
   }
 
+  // Map joined registration_members table if present
+  if (Array.isArray(copy.registration_members) && copy.registration_members.length > 0) {
+    if (!copy.teamMembers || copy.teamMembers.length === 0) {
+      copy.teamMembers = copy.registration_members.map((m, idx) => ({
+        memberNumber: m.member_number || idx + 2,
+        fullName: m.member_name || m.name || m.fullName || `Member ${idx + 2}`,
+        name: m.member_name || m.name || m.fullName || `Member ${idx + 2}`,
+        email: m.email || '',
+        phone: m.phone || '',
+        whatsapp: m.whatsapp || m.phone || '',
+        college: m.college || copy.college || '',
+        department: m.department || copy.department || '',
+        year: m.year || copy.year || ''
+      }));
+    }
+    if (!copy.teamMembersList || copy.teamMembersList.length === 0) {
+      copy.teamMembersList = copy.registration_members.map(m => m.member_name || m.name || m.fullName || '');
+    }
+  }
+
   // Standardize UTR / Reference number resolution
   const resolvedUtr = copy.upiUtr || copy.upi_utr || copy.transactionId || copy.transaction_id || 
     ((copy.paymentMethod === 'UPI_QR' || copy.payment_method === 'UPI_QR' || (!copy.razorpayPaymentId?.startsWith('pay_') && copy.razorpayPaymentId)) ? (copy.razorpayPaymentId || copy.razorpay_payment_id) : null);
@@ -1054,8 +1074,8 @@ exports.getRegistrations = async (req, res) => {
   try {
     const { eventId, category, status } = req.query;
 
-    let dbRegistrations = [];
-    // Query Supabase live
+    let dbRegistrations = null;
+    // Query Supabase live database directly
     try {
       let query = supabase
         .from('registrations')
@@ -1069,59 +1089,31 @@ exports.getRegistrations = async (req, res) => {
       const { data: dbData, error: dbError } = await query;
       if (!dbError && Array.isArray(dbData)) {
         dbRegistrations = dbData.map(enrichRegistrationRecord);
+      } else if (dbError) {
+        console.warn('Supabase getRegistrations query note:', dbError.message);
       }
     } catch (dbErr) {
-      console.warn('Supabase getRegistrations fallback:', dbErr.message);
+      console.warn('Supabase getRegistrations connection fallback:', dbErr.message);
     }
 
-    // Read local fallback registrations
-    const localRegistrations = readRegistrations().map(enrichRegistrationRecord);
+    let allRegistrations = [];
 
-    // Merge Supabase and local registrations by unique ticket code
-    const mergedMap = new Map();
-
-    for (const r of dbRegistrations) {
-      const key = (r.ticket_code || r.ticketCode || r.id || '').toUpperCase();
-      if (key) mergedMap.set(key, r);
-    }
-
-    for (const loc of localRegistrations) {
-      const key = (loc.ticketCode || loc.ticket_code || loc.registrationId || loc.id || '').toUpperCase();
-      if (!key) continue;
-
-      if (mergedMap.has(key)) {
-        const existing = mergedMap.get(key);
-        const isVerifiedCombined = Boolean(existing.is_verified || existing.isVerified || loc.is_verified || loc.isVerified || existing.attendance_status === 'verified' || loc.attendance_status === 'verified');
-        const verifiedAtCombined = existing.verified_at || existing.verifiedAt || loc.verified_at || loc.verifiedAt || null;
-        const verifiedByCombined = existing.verified_by || existing.verifiedBy || loc.verified_by || loc.verifiedBy || null;
-
-        mergedMap.set(key, {
-          ...loc,
-          ...existing,
-          is_verified: isVerifiedCombined,
-          isVerified: isVerifiedCombined,
-          attendance_status: isVerifiedCombined ? 'verified' : (existing.attendance_status || loc.attendance_status || 'pending'),
-          attendanceStatus: isVerifiedCombined ? 'verified' : (existing.attendanceStatus || loc.attendanceStatus || 'pending'),
-          verified_at: verifiedAtCombined,
-          verifiedAt: verifiedAtCombined,
-          verified_by: verifiedByCombined,
-          verifiedBy: verifiedByCombined,
-          payment_method: existing.payment_method || loc.payment_method || loc.paymentMethod || 'ONLINE',
-          paymentMethod: existing.paymentMethod || loc.paymentMethod || loc.payment_method || 'ONLINE',
-          razorpay_payment_id: existing.razorpay_payment_id || loc.razorpay_payment_id || loc.razorpayPaymentId,
-          razorpayPaymentId: existing.razorpayPaymentId || loc.razorpayPaymentId || loc.razorpay_payment_id,
-          razorpay_order_id: existing.razorpay_order_id || loc.razorpay_order_id || loc.razorpayOrderId,
-          razorpayOrderId: existing.razorpayOrderId || loc.razorpayOrderId || loc.razorpay_order_id,
-          eventName: existing.eventName || loc.eventName,
-          eventId: existing.event_id || existing.eventId || loc.eventId || loc.event_id,
-          event_id: existing.event_id || existing.eventId || loc.eventId || loc.event_id
-        });
-      } else {
-        mergedMap.set(key, loc);
+    if (dbRegistrations !== null) {
+      // Live database query succeeded -> Use live DB as ONLY source of truth
+      allRegistrations = dbRegistrations;
+      // Sync local file with live DB if full unfiltered list
+      if (!eventId && !category && !status) {
+        try {
+          writeRegistrations(dbRegistrations);
+        } catch (_) {}
+      }
+    } else {
+      // Supabase is completely unreachable -> Fallback to local file
+      allRegistrations = readRegistrations().map(enrichRegistrationRecord);
+      if (eventId) {
+        allRegistrations = allRegistrations.filter(r => (r.event_id === eventId || r.eventId === eventId));
       }
     }
-
-    let allRegistrations = Array.from(mergedMap.values());
 
     // Sort descending by creation date
     allRegistrations.sort((a, b) => {
@@ -1130,10 +1122,7 @@ exports.getRegistrations = async (req, res) => {
       return dateB - dateA;
     });
 
-    // Apply optional query filters
-    if (eventId) {
-      allRegistrations = allRegistrations.filter(r => (r.event_id === eventId || r.eventId === eventId));
-    }
+    // Apply optional category and status query filters
     if (category) {
       allRegistrations = allRegistrations.filter(r => {
         const cat = r.eventCategory || r.category || '';
@@ -1161,22 +1150,19 @@ exports.getRegistrations = async (req, res) => {
 exports.getRegistrationById = async (req, res) => {
   try {
     const id = req.params.id;
+    const normId = String(id || '').trim();
 
-    // Try Supabase first
+    // Query Supabase live first
     try {
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('*, registration_members(*)')
-        .or(`ticket_code.eq.${id},id.eq.${id}`);
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
+      const query = isUUID
+        ? supabase.from('registrations').select('*, registration_members(*)').eq('id', normId).maybeSingle()
+        : supabase.from('registrations').select('*, registration_members(*)').ilike('ticket_code', normId).maybeSingle();
 
-      if (!error && data && data.length > 0) {
-        const enriched = enrichRegistrationRecord(data[0]);
-        // Also check local for additional fields
-        const local = readRegistrations().find(
-          r => (r.ticketCode && r.ticketCode.toUpperCase() === id.toUpperCase()) ||
-               (r.ticket_code && r.ticket_code.toUpperCase() === id.toUpperCase())
-        );
-        return res.json(local ? { ...local, ...enriched } : enriched);
+      const { data, error } = await query;
+
+      if (!error && data) {
+        return res.json(enrichRegistrationRecord(data));
       }
     } catch (e) {
       console.warn('Supabase getRegistrationById fallback:', e.message);
@@ -1185,10 +1171,10 @@ exports.getRegistrationById = async (req, res) => {
     // Fallback to local
     const registrations = readRegistrations();
     const record = registrations.find(
-      (r) => (r.registrationId && r.registrationId.toUpperCase() === id.toUpperCase()) ||
-             (r.ticketCode && r.ticketCode.toUpperCase() === id.toUpperCase()) ||
-             (r.ticket_code && r.ticket_code.toUpperCase() === id.toUpperCase()) ||
-             (r.id && r.id.toUpperCase() === id.toUpperCase())
+      (r) => (r.registrationId && r.registrationId.toUpperCase() === normId.toUpperCase()) ||
+             (r.ticketCode && r.ticketCode.toUpperCase() === normId.toUpperCase()) ||
+             (r.ticket_code && r.ticket_code.toUpperCase() === normId.toUpperCase()) ||
+             (r.id && r.id.toUpperCase() === normId.toUpperCase())
     );
     if (!record) {
       return res.status(404).json({ success: false, error: 'Registration record not found' });
