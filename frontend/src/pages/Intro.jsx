@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import cahcetAbout from '../assets/cahcet_about.jpeg';
 
 export default function Intro() {
   const sectionRef = useRef(null);
@@ -35,7 +34,14 @@ export default function Intro() {
         </div>
         <div className="intro-right">
           <div className="intro-image-wrapper">
-            <img src={cahcetAbout} alt="CAHCET" className="intro-image" loading="lazy" decoding="async" />
+            <img 
+              src="/cahcet.jpg" 
+              alt="C Abdul Hakeem College of Engineering and Technology Campus" 
+              className="intro-image" 
+              loading="lazy" 
+              decoding="async" 
+              onError={(e) => { e.currentTarget.src = '/logo.jpg'; }}
+            />
             <p className="intro-venue">Venue: C Abdul Hakeem College of Engineering and Technology, Melvisharam, Ranipet District</p>
           </div>
         </div>

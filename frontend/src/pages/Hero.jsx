@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import logoImg from '../assets/logo.png';
-import cahcetLogo from '../assets/cahcet.png';
+const cahcetLogo = '/cahcet.jpg';
 import { getWsUrl } from '../config/api';
 import { fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api';
 import { FaCalendarAlt } from 'react-icons/fa';
