@@ -24,13 +24,14 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
+    "game": "BGMI",
     "assignedEvents": [
       "tech-01",
       "nontech-05"
     ],
     "displayOrder": 2,
     "isActive": true,
-    "updatedAt": "2026-09-16T06:35:56.623Z"
+    "updatedAt": "2026-09-17T13:12:24.482Z"
   },
   {
     "id": "coord-tech-02-a",
@@ -267,12 +268,30 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
+    "game": "Free Fire",
     "assignedEvents": [
       "nontech-05"
     ],
     "displayOrder": 19,
     "isActive": true,
-    "updatedAt": "2026-09-16T06:38:34.686Z"
+    "updatedAt": "2026-09-17T13:12:38.604Z"
+  },
+  {
+    "id": "coord-nontech-05-b",
+    "name": "Suresh V",
+    "phone": "6379464434",
+    "whatsapp": "6379464434",
+    "email": "",
+    "department": "CSE",
+    "year": "4th Year",
+    "role": "Lead Coordinator",
+    "game": "Free Fire",
+    "assignedEvents": [
+      "nontech-05"
+    ],
+    "displayOrder": 20,
+    "isActive": true,
+    "updatedAt": "2026-09-17T13:52:03.006Z"
   },
   {
     "id": "coord-nontech-06-a",
@@ -356,5 +375,23 @@
     "isActive": true,
     "createdAt": "2026-09-16T06:32:29.076Z",
     "updatedAt": "2026-09-16T06:32:29.076Z"
+  },
+  {
+    "id": "coord-1789651271488",
+    "name": "Mohamed Adnan F",
+    "phone": "9080969891",
+    "whatsapp": "9080969891",
+    "email": "",
+    "department": "CSE",
+    "year": "4th Year",
+    "role": "Lead Coordinator",
+    "game": "BGMI",
+    "assignedEvents": [
+      "nontech-05"
+    ],
+    "displayOrder": 25,
+    "isActive": true,
+    "createdAt": "2026-09-17T13:21:11.487Z",
+    "updatedAt": "2026-09-17T13:21:11.487Z"
   }
 ]

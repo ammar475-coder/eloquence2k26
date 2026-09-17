@@ -110,36 +110,68 @@ const sponsorToDb = (s) => {
   };
 };
 
-const dbToCoordinator = (c) => ({
-  id: c.id,
-  name: c.name,
-  phone: c.phone || '',
-  whatsapp: c.whatsapp || '',
-  email: c.email || '',
-  department: c.department || '',
-  year: c.year || '',
-  role: c.role || 'Lead Coordinator',
-  assignedEvents: Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []),
-  displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
-  isActive: c.is_active !== false && c.isActive !== false,
-  createdAt: c.created_at || c.createdAt,
-  updatedAt: c.updated_at || c.updatedAt
-});
+const dbToCoordinator = (c) => {
+  let game = c.game || '';
+  let events = [];
+  const rawList = Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []);
+  for (const item of rawList) {
+    if (typeof item === 'string' && item.startsWith('game:')) {
+      if (!game) game = item.replace('game:', '').trim();
+    } else if (item && typeof item === 'object' && item.game) {
+      if (!game) game = item.game;
+      if (item.eventId) events.push(item.eventId);
+    } else if (item && typeof item === 'string') {
+      events.push(item.trim());
+    }
+  }
+  if (!game && c.id) {
+    try {
+      const localCoords = getCoordinatorsData();
+      const match = localCoords.find(lc => lc.id === c.id);
+      if (match && match.game) game = match.game;
+    } catch (_) {}
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone || '',
+    whatsapp: c.whatsapp || '',
+    email: c.email || '',
+    department: c.department || '',
+    year: c.year || '',
+    role: c.role || 'Lead Coordinator',
+    game: game || c.game || '',
+    assignedEvents: events,
+    displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
+    isActive: c.is_active !== false && c.isActive !== false,
+    createdAt: c.created_at || c.createdAt,
+    updatedAt: c.updated_at || c.updatedAt
+  };
+};
 
-const coordinatorToDb = (c) => ({
-  id: c.id,
-  name: c.name,
-  phone: c.phone || '',
-  whatsapp: c.whatsapp || '',
-  email: c.email || '',
-  department: c.department || '',
-  year: c.year || '',
-  role: c.role || 'Lead Coordinator',
-  assigned_events: Array.isArray(c.assignedEvents) ? c.assignedEvents : (Array.isArray(c.assigned_events) ? c.assigned_events : []),
-  display_order: Number(c.displayOrder ?? c.display_order ?? 999),
-  is_active: c.isActive !== false && c.is_active !== false,
-  updated_at: new Date().toISOString()
-});
+const coordinatorToDb = (c) => {
+  let assigned_events = Array.isArray(c.assignedEvents) ? [...c.assignedEvents] : (Array.isArray(c.assigned_events) ? [...c.assigned_events] : []);
+  // Clean existing game: tags
+  assigned_events = assigned_events.filter(e => typeof e === 'string' && !e.startsWith('game:'));
+  // If game is present, encode it safely into assigned_events array for Supabase persistence
+  if (c.game && String(c.game).trim()) {
+    assigned_events.push(`game:${String(c.game).trim()}`);
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone || '',
+    whatsapp: c.whatsapp || '',
+    email: c.email || '',
+    department: c.department || '',
+    year: c.year || '',
+    role: c.role || 'Lead Coordinator',
+    assigned_events: assigned_events,
+    display_order: Number(c.displayOrder ?? c.display_order ?? 999),
+    is_active: c.isActive !== false && c.is_active !== false,
+    updated_at: new Date().toISOString()
+  };
+};
 
 const dbToEvent = (e) => ({
   id: e.id,
@@ -1700,6 +1732,7 @@ exports.createCoordinator = async (req, res) => {
     department,
     year,
     role,
+    game,
     assignedEvents,
     displayOrder,
     isActive
@@ -1730,7 +1763,8 @@ exports.createCoordinator = async (req, res) => {
     department: department ? department.trim() : 'CSE',
     year: year ? year.trim() : '3rd Year',
     role: role || 'Lead Coordinator',
-    assignedEvents: assignedEvents.filter(e => e && e.trim()),
+    game: game ? String(game).trim() : '',
+    assignedEvents: assignedEvents.filter(e => e && typeof e === 'string' && e.trim() && !e.startsWith('game:')),
     displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : coordinators.length + 1,
     isActive: isActive !== undefined ? Boolean(isActive) : true,
     createdAt: now,
@@ -1765,6 +1799,7 @@ exports.updateCoordinator = async (req, res) => {
     department,
     year,
     role,
+    game,
     assignedEvents,
     displayOrder,
     isActive
@@ -1787,7 +1822,8 @@ exports.updateCoordinator = async (req, res) => {
     department: department !== undefined ? department.trim() : (coordinators[index]?.department || 'CSE'),
     year: year !== undefined ? year.trim() : (coordinators[index]?.year || '3rd Year'),
     role: role || (coordinators[index]?.role || 'Lead Coordinator'),
-    assignedEvents: Array.isArray(assignedEvents) ? assignedEvents.filter(e => e && e.trim()) : (coordinators[index]?.assignedEvents || []),
+    game: game !== undefined ? (game ? String(game).trim() : '') : (coordinators[index]?.game || ''),
+    assignedEvents: Array.isArray(assignedEvents) ? assignedEvents.filter(e => e && typeof e === 'string' && e.trim() && !e.startsWith('game:')) : (coordinators[index]?.assignedEvents || []),
     displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : (coordinators[index]?.displayOrder || 1),
     isActive: isActive !== undefined ? Boolean(isActive) : (coordinators[index]?.isActive !== false),
     updatedAt: new Date().toISOString()

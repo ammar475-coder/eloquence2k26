@@ -1349,6 +1349,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [coordYear, setCoordYear] = useState('3rd Year');
   const [coordRole, setCoordRole] = useState('Lead Coordinator');
   const [coordEvents, setCoordEvents] = useState([]);
+  const [coordGame, setCoordGame] = useState('');
   const [coordDisplayOrder, setCoordDisplayOrder] = useState('1');
   const [coordIsActive, setCoordIsActive] = useState(true);
 
@@ -2501,6 +2502,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setCoordYear('3rd Year');
     setCoordRole('Lead Coordinator');
     setCoordEvents([]);
+    setCoordGame('');
     setCoordDisplayOrder(String(coordinators.length + 1));
     setCoordIsActive(true);
     setEditingCoordId(null);
@@ -2511,6 +2513,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     resetCoordForm();
     if (preselectedEventId && typeof preselectedEventId === 'string') {
       setCoordEvents([preselectedEventId]);
+      if (preselectedEventId.toLowerCase() === 'nontech-05') {
+        setCoordGame('Free Fire');
+      }
     }
     setIsCoordFormVisible(true);
   };
@@ -2523,7 +2528,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setCoordDept(coord.department || 'CSE');
     setCoordYear(coord.year || '3rd Year');
     setCoordRole(coord.role || 'Lead Coordinator');
-    setCoordEvents(Array.isArray(coord.assignedEvents) ? [...coord.assignedEvents] : []);
+    const assigned = Array.isArray(coord.assignedEvents) ? [...coord.assignedEvents] : [];
+    setCoordEvents(assigned);
+    setCoordGame(coord.game || (assigned.includes('nontech-05') ? 'Free Fire' : ''));
     setCoordDisplayOrder(String(coord.displayOrder !== undefined ? coord.displayOrder : 1));
     setCoordIsActive(coord.isActive !== false);
     setEditingCoordId(coord.id);
@@ -2532,9 +2539,17 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const toggleEventSelection = (eventId) => {
     if (coordEvents.includes(eventId)) {
-      setCoordEvents(coordEvents.filter(e => e !== eventId));
+      const nextEvents = coordEvents.filter(e => e !== eventId);
+      setCoordEvents(nextEvents);
+      if (eventId === 'nontech-05' && !nextEvents.includes('nontech-05')) {
+        setCoordGame('');
+      }
     } else {
-      setCoordEvents([...coordEvents, eventId]);
+      const nextEvents = [...coordEvents, eventId];
+      setCoordEvents(nextEvents);
+      if (eventId === 'nontech-05' && !coordGame) {
+        setCoordGame('Free Fire');
+      }
     }
   };
 
@@ -2550,6 +2565,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (coordEvents.length === 0) {
       return toast.error('Please assign this coordinator to at least one event');
     }
+    if (coordEvents.includes('nontech-05') && !coordGame) {
+      return toast.error('Please select the Game Track (Free Fire or BGMI) for Battle of Champions');
+    }
 
     const payload = {
       name: coordName.trim(),
@@ -2559,6 +2577,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       department: coordDept.trim(),
       year: coordYear.trim(),
       role: coordRole,
+      game: coordEvents.includes('nontech-05') ? coordGame : '',
       assignedEvents: coordEvents,
       displayOrder: Number(coordDisplayOrder) || 1,
       isActive: coordIsActive
@@ -4949,6 +4968,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 <FaShieldAlt style={{ color: '#a855f7' }} /> Sub-Coords: {subs.length}
                               </span>
+                              {ev.id === 'nontech-05' && (
+                                <>
+                                  <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? 'rgba(234, 88, 12, 0.2)' : '#ffedd5', color: isDark ? '#fdba74' : '#c2410c', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    🔥 FF: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('fire') || (c.game || '').toLowerCase().includes('both')).length}
+                                  </span>
+                                  <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? 'rgba(6, 182, 212, 0.2)' : '#cffafe', color: isDark ? '#67e8f9' : '#0891b2', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    🎯 BGMI: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('bgmi') || (c.game || '').toLowerCase().includes('both')).length}
+                                  </span>
+                                </>
+                              )}
                             </div>
 
                             {/* Allocated Members List */}
@@ -5013,6 +5042,40 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                           }}>
                                             {isLead ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaCrown /> Lead</span> : isSub ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaShieldAlt /> Sub-Coord</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaBolt /> Coord</span>}
                                           </span>
+
+                                          {/* Battle of Champions Game Track Badge */}
+                                          {coord.game && (
+                                            <span style={{
+                                              fontSize: '0.68rem',
+                                              fontWeight: '800',
+                                              padding: '0.1rem 0.5rem',
+                                              borderRadius: '999px',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
+                                              background: (coord.game || '').toLowerCase().includes('fire')
+                                                ? (isDark ? 'rgba(234, 88, 12, 0.25)' : '#ffedd5')
+                                                : (coord.game || '').toLowerCase().includes('bgmi')
+                                                ? (isDark ? 'rgba(6, 182, 212, 0.25)' : '#cffafe')
+                                                : (isDark ? 'rgba(124, 58, 237, 0.25)' : '#ede9fe'),
+                                              color: (coord.game || '').toLowerCase().includes('fire')
+                                                ? (isDark ? '#fdba74' : '#c2410c')
+                                                : (coord.game || '').toLowerCase().includes('bgmi')
+                                                ? (isDark ? '#67e8f9' : '#0891b2')
+                                                : (isDark ? '#d8b4fe' : '#6d28d9'),
+                                              border: `1px solid ${
+                                                (coord.game || '').toLowerCase().includes('fire')
+                                                  ? 'rgba(234, 88, 12, 0.4)'
+                                                  : (coord.game || '').toLowerCase().includes('bgmi')
+                                                  ? 'rgba(6, 182, 212, 0.4)'
+                                                  : 'rgba(124, 58, 237, 0.4)'
+                                              }`
+                                            }}>
+                                              {(coord.game || '').toLowerCase().includes('fire') && '🔥 Free Fire'}
+                                              {(coord.game || '').toLowerCase().includes('bgmi') && '🎯 BGMI'}
+                                              {!(coord.game || '').toLowerCase().includes('fire') && !(coord.game || '').toLowerCase().includes('bgmi') && '🎮 ' + coord.game}
+                                            </span>
+                                          )}
                                         </div>
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.78rem' }}>
@@ -5232,6 +5295,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '300px' }}>
                                   {Array.isArray(coord.assignedEvents) && coord.assignedEvents.map(eventId => {
                                     const ev = (eventsList || []).find(e => String(e?.id || '').toLowerCase() === String(eventId || '').toLowerCase());
+                                    const isBoC = String(eventId).toLowerCase() === 'nontech-05';
                                     return (
                                       <span key={eventId} style={{
                                         background: ev?.category === 'technical' ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#831843' : '#fdf2f8'),
@@ -5240,9 +5304,24 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: '6px',
                                         fontSize: '0.72rem',
-                                        fontWeight: '600'
+                                        fontWeight: '600',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
                                       }}>
-                                        {ev ? ev.name : eventId}
+                                        <span>{ev ? ev.name : eventId}</span>
+                                        {isBoC && coord.game && (
+                                          <span style={{
+                                            padding: '0.05rem 0.35rem',
+                                            borderRadius: '4px',
+                                            fontSize: '0.65rem',
+                                            fontWeight: '800',
+                                            background: (coord.game || '').toLowerCase().includes('fire') ? '#ea580c' : (coord.game || '').toLowerCase().includes('bgmi') ? '#0891b2' : '#7c3aed',
+                                            color: '#ffffff'
+                                          }}>
+                                            {(coord.game || '').toLowerCase().includes('fire') ? '🔥 FF' : (coord.game || '').toLowerCase().includes('bgmi') ? '🎯 BGMI' : '🎮 ' + coord.game}
+                                          </span>
+                                        )}
                                       </span>
                                     );
                                   })}
@@ -8997,6 +9076,126 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     </div>
                   </div>
                 </div>
+
+                {/* Battle of Champions Game Selection Option */}
+                {coordEvents.includes('nontech-05') && (
+                  <div style={{
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    background: isDark ? 'linear-gradient(135deg, rgba(234, 88, 12, 0.12), rgba(6, 182, 212, 0.12))' : 'linear-gradient(135deg, #fff7ed, #ecfeff)',
+                    border: `1.5px solid ${isDark ? 'rgba(234, 88, 12, 0.35)' : '#fed7aa'}`,
+                    boxShadow: '0 4px 15px rgba(234, 88, 12, 0.08)',
+                    transition: 'all 0.25s ease'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                      <label style={{ ...S.label, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px', color: isDark ? '#fdba74' : '#c2410c', fontWeight: '800' }}>
+                        <span>🎮 Battle of Champions Game Track *</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isDark ? '#374151' : '#ffedd5' }}>Required</span>
+                      </label>
+                      <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                        Select tournament arena
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      {/* FREE FIRE */}
+                      <button
+                        type="button"
+                        onClick={() => setCoordGame('Free Fire')}
+                        disabled={isLeadCoordinator}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          border: coordGame === 'Free Fire' 
+                            ? '2px solid #ea580c' 
+                            : `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                          background: coordGame === 'Free Fire'
+                            ? (isDark ? 'linear-gradient(135deg, rgba(234, 88, 12, 0.3), rgba(220, 38, 38, 0.3))' : '#ffedd5')
+                            : (isDark ? '#111827' : '#ffffff'),
+                          color: coordGame === 'Free Fire' ? (isDark ? '#fdba74' : '#c2410c') : (isDark ? '#d1d5db' : '#475569'),
+                          fontWeight: coordGame === 'Free Fire' ? '800' : '600',
+                          fontSize: '0.84rem',
+                          cursor: isLeadCoordinator ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: coordGame === 'Free Fire' ? '0 0 12px rgba(234, 88, 12, 0.35)' : 'none',
+                          transform: coordGame === 'Free Fire' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🔥</span>
+                        <span>Free Fire</span>
+                        {coordGame === 'Free Fire' && <FaCheckCircle size={13} color="#ea580c" />}
+                      </button>
+
+                      {/* BGMI */}
+                      <button
+                        type="button"
+                        onClick={() => setCoordGame('BGMI')}
+                        disabled={isLeadCoordinator}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          border: coordGame === 'BGMI' 
+                            ? '2px solid #0891b2' 
+                            : `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                          background: coordGame === 'BGMI'
+                            ? (isDark ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(16, 185, 129, 0.3))' : '#cffafe')
+                            : (isDark ? '#111827' : '#ffffff'),
+                          color: coordGame === 'BGMI' ? (isDark ? '#67e8f9' : '#0e7490') : (isDark ? '#d1d5db' : '#475569'),
+                          fontWeight: coordGame === 'BGMI' ? '800' : '600',
+                          fontSize: '0.84rem',
+                          cursor: isLeadCoordinator ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: coordGame === 'BGMI' ? '0 0 12px rgba(6, 182, 212, 0.35)' : 'none',
+                          transform: coordGame === 'BGMI' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🎯</span>
+                        <span>BGMI</span>
+                        {coordGame === 'BGMI' && <FaCheckCircle size={13} color="#0891b2" />}
+                      </button>
+
+                      {/* BOTH */}
+                      <button
+                        type="button"
+                        onClick={() => setCoordGame('Both')}
+                        disabled={isLeadCoordinator}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          border: coordGame === 'Both' 
+                            ? '2px solid #7c3aed' 
+                            : `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                          background: coordGame === 'Both'
+                            ? (isDark ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(236, 72, 153, 0.3))' : '#ede9fe')
+                            : (isDark ? '#111827' : '#ffffff'),
+                          color: coordGame === 'Both' ? (isDark ? '#d8b4fe' : '#6d28d9') : (isDark ? '#d1d5db' : '#475569'),
+                          fontWeight: coordGame === 'Both' ? '800' : '600',
+                          fontSize: '0.84rem',
+                          cursor: isLeadCoordinator ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: coordGame === 'Both' ? '0 0 12px rgba(124, 58, 237, 0.35)' : 'none',
+                          transform: coordGame === 'Both' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🎮</span>
+                        <span>Both (FF & BGMI)</span>
+                        {coordGame === 'Both' && <FaCheckCircle size={13} color="#7c3aed" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'center' }}>
                   <div style={S.modalInputGroup}>

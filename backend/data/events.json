@@ -166,13 +166,13 @@
     "timing": "10:40 AM TO 12:40 PM",
     "description": "Craft responsive web pages and generate AI visual assets through precision prompting.",
     "rules": [
-      "Systems will be provided for all the participants.",
-      "In Round 1 landing page will be reviewed; in Round 2 the overall website will be reviewed.",
-      "A design theme and required assets will be provided on the spot.",
-      "Use any technology stack, but pre-made external templates are forbidden.",
-      "The entire web UI must be completed and submitted within the time limit.",
-      "Submissions are judged on UI/UX design, creativity, responsiveness, and code quality.",
-      "The final project must reflect the team's own design and implementation work."
+      "Computer systems will be provided to all participants for the competition.",
+      "The event will consist of two rounds: Round 1 focuses on frontend design, and Round 2 involves backend development and connecting it to the frontend.",
+      "Round 1 has a maximum duration of 30 minutes, followed by an intermediate evaluation, while Round 2 allows a maximum duration of 45 minutes.",
+      "Only shortlisted teams from Round 1 will be eligible to advance and participate in Round 2.",
+      "All submissions will be evaluated primarily on their User Interface (UI) design and quality.",
+      "The competition topic or theme will be revealed on the spot at the start of the event.",
+      "Final results for both the winners and runners-up will be officially announced by the end of the event."
     ],
     "rounds": [
       {
@@ -415,12 +415,12 @@
     "description": "Display traditional Indian and Arabic henna patterns with intricacy, neatness, and artistic flair.",
     "rules": [
       "Participants must bring their own mehendi cones and a person to apply the design on.",
-      "A theme will be announced on the spot with a fixed time limit.",
-      "Design one side of one hand, from fingertips to wrist.",
-      "Designs must be original and freehand; no stencils or reference images.",
-      "Glitter and decorative materials are not allowed.",
-      "Judging: creativity, neatness, intricacy & theme relevance.",
-      "Judges' decision is final."
+      "The design must be completed within the allotted time limit.",
+      "The design must cover one side of one hand, from the fingertips to the wrist.",
+      "Designs must be original and freehand. Stencils and reference images are not allowed.",
+      "Glitter and other decorative materials are not allowed.",
+      "Judging will be based on creativity, neatness, intricacy, and theme relevance.",
+      "The judges’ decision is final and binding."
     ],
     "rounds": [
       {
@@ -443,9 +443,9 @@
   {
     "id": "nontech-05",
     "number": "05",
-    "name": "BATTLE OF CHAMPIONS (E-SPORTS)",
+    "name": "BATTLE OF CHAMPIONS",
     "alias": "Battle of Champions",
-    "subtitle": "Mobile Battle Royale Showdown",
+    "subtitle": "BGMI and FREE FIRE",
     "category": "non-technical",
     "teamSize": "Only Squad Match (4 Players)",
     "minMembers": 4,

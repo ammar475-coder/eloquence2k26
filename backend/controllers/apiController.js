@@ -134,21 +134,44 @@ const dbToSponsor = (s) => {
   };
 };
 
-const dbToCoordinator = (c) => ({
-  id: c.id,
-  name: c.name,
-  phone: c.phone || '',
-  whatsapp: c.whatsapp || '',
-  email: c.email || '',
-  department: c.department || '',
-  year: c.year || '',
-  role: c.role || 'Lead Coordinator',
-  assignedEvents: Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []),
-  displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
-  isActive: c.is_active !== false && c.isActive !== false,
-  createdAt: c.created_at || c.createdAt,
-  updatedAt: c.updated_at || c.updatedAt
-});
+const dbToCoordinator = (c) => {
+  let game = c.game || '';
+  let events = [];
+  const rawList = Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []);
+  for (const item of rawList) {
+    if (typeof item === 'string' && item.startsWith('game:')) {
+      if (!game) game = item.replace('game:', '').trim();
+    } else if (item && typeof item === 'object' && item.game) {
+      if (!game) game = item.game;
+      if (item.eventId) events.push(item.eventId);
+    } else if (item && typeof item === 'string') {
+      events.push(item.trim());
+    }
+  }
+  if (!game && c.id) {
+    try {
+      const localCoords = readCoordinators();
+      const match = localCoords.find(lc => lc.id === c.id);
+      if (match && match.game) game = match.game;
+    } catch (_) {}
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone || '',
+    whatsapp: c.whatsapp || '',
+    email: c.email || '',
+    department: c.department || '',
+    year: c.year || '',
+    role: c.role || 'Lead Coordinator',
+    game: game || c.game || '',
+    assignedEvents: events,
+    displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
+    isActive: c.is_active !== false && c.isActive !== false,
+    createdAt: c.created_at || c.createdAt,
+    updatedAt: c.updated_at || c.updatedAt
+  };
+};
 
 const dbToHomepageTeam = (t) => {
   let members = [];
@@ -1227,24 +1250,37 @@ exports.getActiveCoordinators = async (req, res) => {
 exports.getCoordinatorsByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const { role } = req.query;
+    const { role, game } = req.query;
     if (!eventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    const allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
-      ? inMemoryCoordinators
-      : (() => {
-          const coords = readCoordinators();
-          const active = coords.filter(c => c.isActive !== false);
-          active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-          return active;
-        })();
+    let allCoords = [];
+    try {
+      const { data: dbCoords, error } = await supabase
+        .from('coordinators')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+        allCoords = dbCoords.map(dbToCoordinator);
+        inMemoryCoordinators = allCoords;
+      }
+    } catch (e) {
+      console.warn('Supabase getCoordinatorsByEvent fallback:', e.message);
+    }
+
+    if (!allCoords || allCoords.length === 0) {
+      allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
+        ? inMemoryCoordinators
+        : readCoordinators().map(dbToCoordinator).filter(c => c.isActive !== false);
+    }
 
     let matching = allCoords.filter(c => 
       c.isActive !== false && 
       Array.isArray(c.assignedEvents) && 
-      c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase())
+      c.assignedEvents.map(e => String(e).toLowerCase()).includes(eventId.toLowerCase())
     );
 
     if (role) {
@@ -1252,6 +1288,22 @@ exports.getCoordinatorsByEvent = async (req, res) => {
       matching = matching.filter(c => {
         const cRole = String(c.role || '').toLowerCase();
         return cRole.includes(rLower);
+      });
+    }
+
+    if (game) {
+      const gLower = game.toLowerCase().trim();
+      matching = matching.filter(c => {
+        const cGame = String(c.game || '').toLowerCase().trim();
+        if (!cGame) return true;
+        if (cGame.includes('both')) return true;
+        if (gLower.includes('free') || gLower.includes('fire')) {
+          return cGame.includes('fire');
+        }
+        if (gLower.includes('bgmi')) {
+          return cGame.includes('bgmi');
+        }
+        return cGame.includes(gLower);
       });
     }
 
