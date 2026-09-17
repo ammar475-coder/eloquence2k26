@@ -713,8 +713,38 @@ exports.registerEvent = async (req, res) => {
   const ticketCode = `ELQ26-${catPrefix}-${Math.floor(10000 + Math.random() * 90000)}`;
   const registrationId = crypto.randomUUID ? crypto.randomUUID() : `reg-${Date.now()}`;
 
-  const validTeamMembers = (fields.teamMembers || [])
-    .filter(m => (typeof m === 'string' ? m.trim().length > 0 : (m?.name && m.name.trim().length > 0)));
+  const rawTeamMembers = fields.teamMembers || req.body.teamMembers || [];
+  const validTeamMembers = (Array.isArray(rawTeamMembers) ? rawTeamMembers : [])
+    .filter(m => {
+      if (!m) return false;
+      if (typeof m === 'string') return m.trim().length > 0;
+      const n = m.fullName || m.name || '';
+      return typeof n === 'string' && n.trim().length > 0;
+    })
+    .map(m => {
+      if (typeof m === 'string') {
+        return {
+          fullName: m.trim(),
+          name: m.trim(),
+          phone: '',
+          email: '',
+          college: fields.college || '',
+          department: fields.department || '',
+          year: fields.year || ''
+        };
+      }
+      const memberName = (m.fullName || m.name || '').trim();
+      return {
+        fullName: memberName,
+        name: memberName,
+        email: m.email || '',
+        phone: m.phone || '',
+        whatsapp: m.whatsapp || m.phone || '',
+        college: m.college || fields.college || '',
+        department: m.department || fields.department || '',
+        year: m.year || fields.year || ''
+      };
+    });
 
   const isPaid = Number(totalFee) > 0;
   const initialVerificationStatus = isPaid ? 'pending' : 'verified';
@@ -725,7 +755,8 @@ exports.registerEvent = async (req, res) => {
     game: game || null,
     upi_utr: cleanUtr || null,
     transaction_id: cleanUtr || null,
-    verification_status: initialVerificationStatus
+    verification_status: initialVerificationStatus,
+    team_members: validTeamMembers
   };
   const venueSnapshotStr = JSON.stringify(paymentMeta);
 
@@ -747,8 +778,8 @@ exports.registerEvent = async (req, res) => {
     isTeam: Boolean(currentEvent.isTeam),
     teamName: fields.teamName || null,
     membersCount: 1 + validTeamMembers.length,
-    teamMembersList: validTeamMembers.map(m => typeof m === 'string' ? m : (m?.name || '')),
-    teamMembers: validTeamMembers.map(m => typeof m === 'string' ? m : (m?.name || '')),
+    teamMembersList: validTeamMembers.map(m => m.fullName || m.name),
+    teamMembers: validTeamMembers,
     totalFee: Number(totalFee) || 0,
     totalAmount: Number(totalFee) || 0,
     paymentStatus: paymentStatus || 'paid',
@@ -977,6 +1008,10 @@ const enrichRegistrationRecord = (r) => {
       }
       if (parsed.venue) {
         copy.venue = parsed.venue;
+      }
+      if (Array.isArray(parsed.team_members) && parsed.team_members.length > 0 && (!copy.teamMembers || copy.teamMembers.length === 0)) {
+        copy.teamMembers = parsed.team_members;
+        copy.teamMembersList = parsed.team_members.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
       }
     } catch (e) {
       // Not JSON or parse error, keep venue_snapshot as venue string

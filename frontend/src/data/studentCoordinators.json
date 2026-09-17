@@ -4,34 +4,34 @@
     "role": "WEBSITE DEVELOPMENT TEAM",
     "tag": "WEB & TECH CREW",
     "iconName": "Code",
-    "tier": "cyan",
+    "tier": "emerald",
     "desc": "",
     "names": [
-      "SYED MUSTHAFA S",
-      "MOHAMMED AYAZ A",
       "SHAHID AHAMED VS",
-      "MD FAAZIL AMMAR P",
       "SHAWOOR SAQIB SK",
-      "MOHAMMED SAAD V"
+      "SYED MUSTHAFA S",
+      "MD FAAZIL AMMAR P",
+      "MOHAMMED SAAD V",
+      "MOHAMMED AYAZ A"
     ],
     "members": [
       {
-        "name": "SYED MUSTHAFA S"
-      },
-      {
-        "name": "MOHAMMED AYAZ A"
-      },
-      {
         "name": "SHAHID AHAMED VS"
-      },
-      {
-        "name": "MD FAAZIL AMMAR P"
       },
       {
         "name": "SHAWOOR SAQIB SK"
       },
       {
+        "name": "SYED MUSTHAFA S"
+      },
+      {
+        "name": "MD FAAZIL AMMAR P"
+      },
+      {
         "name": "MOHAMMED SAAD V"
+      },
+      {
+        "name": "MOHAMMED AYAZ A"
       }
     ]
   },

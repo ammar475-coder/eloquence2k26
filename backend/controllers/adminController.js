@@ -582,6 +582,23 @@ exports.getDashboardData = async (req, res) => {
                 copy.razorpay_order_id = parsed.razorpay_order_id;
                 copy.razorpayOrderId = parsed.razorpay_order_id;
               }
+              if (parsed.upi_utr) {
+                copy.upi_utr = parsed.upi_utr;
+                copy.upiUtr = parsed.upi_utr;
+              }
+              if (parsed.verification_status) {
+                copy.verification_status = parsed.verification_status;
+                copy.verificationStatus = parsed.verification_status;
+              }
+              if (parsed.flag_reason) {
+                copy.flag_reason = parsed.flag_reason;
+                copy.flagReason = parsed.flag_reason;
+              }
+              if (Array.isArray(parsed.team_members) && parsed.team_members.length > 0) {
+                copy.team_members = parsed.team_members;
+                copy.teamMembers = parsed.team_members;
+                copy.teamMembersList = parsed.team_members.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
+              }
             } catch (e) {}
           }
           return copy;
@@ -605,9 +622,30 @@ exports.getDashboardData = async (req, res) => {
           const verifiedAtCombined = existing.verified_at || existing.verifiedAt || loc.verified_at || loc.verifiedAt || null;
           const verifiedByCombined = existing.verified_by || existing.verifiedBy || loc.verified_by || loc.verifiedBy || null;
 
+          const teamMembersCombined = (Array.isArray(loc.teamMembers) && loc.teamMembers.length > 0)
+            ? loc.teamMembers
+            : (Array.isArray(existing.teamMembers) && existing.teamMembers.length > 0)
+            ? existing.teamMembers
+            : (Array.isArray(loc.team_members) && loc.team_members.length > 0)
+            ? loc.team_members
+            : (Array.isArray(existing.team_members) && existing.team_members.length > 0)
+            ? existing.team_members
+            : [];
+
+          const teamMembersListCombined = (Array.isArray(loc.teamMembersList) && loc.teamMembersList.length > 0)
+            ? loc.teamMembersList
+            : (Array.isArray(existing.teamMembersList) && existing.teamMembersList.length > 0)
+            ? existing.teamMembersList
+            : teamMembersCombined.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
+
           mergedMap.set(k, {
             ...loc,
             ...existing,
+            teamMembers: teamMembersCombined,
+            team_members: teamMembersCombined,
+            teamMembersList: teamMembersListCombined,
+            membersCount: Math.max(loc.membersCount || 1, existing.membersCount || 1, loc.members_count || 1, existing.members_count || 1, 1 + teamMembersCombined.length),
+            members_count: Math.max(loc.members_count || 1, existing.members_count || 1, loc.membersCount || 1, existing.membersCount || 1, 1 + teamMembersCombined.length),
             is_verified: isVerifiedCombined,
             isVerified: isVerifiedCombined,
             attendance_status: isVerifiedCombined ? 'verified' : (existing.attendance_status || loc.attendance_status || 'pending'),
