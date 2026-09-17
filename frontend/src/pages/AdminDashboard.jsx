@@ -274,8 +274,21 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
 
   const getEventName = (r) => {
-    const evt = eventsList.find(e => e.id === (r.event_id || r.eventId));
-    return evt ? evt.name : (r.eventName || r.event_id || r.eventId || 'General Registration');
+    if (!r) return 'General Registration';
+    const all = (Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents;
+    const evId = String(r.event_id || r.eventId || '').trim().toLowerCase();
+    const directName = r.eventName || r.event_name;
+    const evt = all.find(e => {
+      const eId = String(e.id || '').toLowerCase();
+      const eNum = String(e.number || '').toLowerCase();
+      const eName = String(e.name || '').toLowerCase();
+      const eAlias = String(e.alias || '').toLowerCase();
+      return (
+        (evId && (eId === evId || eNum === evId || eName === evId || eAlias === evId)) ||
+        (directName && directName !== '-' && (eName === directName.toLowerCase() || eAlias === directName.toLowerCase()))
+      );
+    });
+    return evt ? evt.name : ((directName && directName !== '-') ? directName : (evId ? `Event (${evId})` : 'General Registration'));
   };
 
   const getDetailedTeamMembers = (r) => {
@@ -344,14 +357,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const getEventCategory = (r) => {
-    if (!r) return 'non-technical';
-    const evtId = r.event_id || r.eventId;
-    if (eventsList && Array.isArray(eventsList)) {
-      const evt = eventsList.find(e => e.id === evtId);
-      if (evt && evt.category) return evt.category;
-    }
-    const id = String(evtId || '').toLowerCase();
-    return id.startsWith('tech') ? 'technical' : 'non-technical';
+    if (!r) return 'technical';
+    const all = (Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents;
+    const evtId = String(r.event_id || r.eventId || '').trim().toLowerCase();
+    const evt = all.find(e => String(e.id || '').toLowerCase() === evtId);
+    if (evt && evt.category) return evt.category;
+    if (r.category || r.eventCategory) return r.category || r.eventCategory;
+    const ticket = String(r.ticket_code || r.ticketCode || '').toUpperCase();
+    if (ticket.includes('TCH')) return 'technical';
+    if (ticket.includes('NTC') || ticket.includes('NT-') || ticket.includes('-NT')) return 'non-technical';
+    return evtId.startsWith('tech') ? 'technical' : 'non-technical';
   };
 
   const isVerifiedRecord = (r) => {

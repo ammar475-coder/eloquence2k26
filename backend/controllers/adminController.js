@@ -1264,8 +1264,15 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.updateEvent = async (req, res) => {
-  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const isAdmin = userRole === 'superadmin' || userRole === 'admin';
+  const assigned = req.user?.assignedEvents || (req.user?.eventId ? [req.user.eventId] : []);
+  const isAssigned = Array.isArray(assigned) && assigned.some(
+    e => String(e || '').toLowerCase() === String(req.params.id || '').toLowerCase()
+  );
+
+  if (!isAdmin && !isAssigned) {
+    return res.status(403).json({ success: false, message: 'Forbidden: You do not have permission to edit this event' });
   }
 
   const { id } = req.params;
@@ -1402,10 +1409,17 @@ exports.updateEvent = async (req, res) => {
 
   const updatedResult = eventIndex !== -1 ? events[eventIndex] : { id, ...req.body, image: cleanImage };
 
+  try {
+    const { broadcastRegistrationUpdate } = require('../config/websocket');
+    if (broadcastRegistrationUpdate) {
+      broadcastRegistrationUpdate('EVENT_UPDATED', updatedResult);
+    }
+  } catch (_) {}
+
   res.json({ 
     success: true, 
     message: 'Event updated successfully in live database and storage', 
-    data: updatedResult
+    data: updatedResult 
   });
 };
 
@@ -2005,12 +2019,34 @@ exports.verifyRegistration = async (req, res) => {
 
   // Determine target state
   let newStatus = 'pending';
-  if (status === 'verified' || action === 'verify' || isVerified === true) {
+  if (action === 'admit') {
+    newStatus = 'verified';
+  } else if (action === 'unadmit') {
+    newStatus = 'verified'; // keeps registration verified
+  } else if (status === 'verified' || action === 'verify' || isVerified === true) {
     newStatus = 'verified';
   } else if (status === 'flagged' || action === 'flag' || req.body.isFlagged === true) {
     newStatus = 'flagged';
   } else if (status === 'pending' || action === 'unverify' || action === 'unflag' || isVerified === false) {
     newStatus = 'pending';
+  }
+
+  // Guard against admitting or verifying a flagged registration
+  if ((action === 'admit' || action === 'verify' || isVerified === true) && action !== 'unflag' && status !== 'flagged') {
+    try {
+      const chkQuery = isUUID
+        ? supabase.from('registrations').select('is_flagged, flag_reason, verification_status').eq('id', normId).maybeSingle()
+        : supabase.from('registrations').select('is_flagged, flag_reason, verification_status').ilike('ticket_code', normId).maybeSingle();
+      const { data: chkData } = await chkQuery;
+      if (chkData && (chkData.is_flagged === true || chkData.verification_status === 'flagged')) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot admit participant. Ticket is FLAGGED in Registration Verification: "${chkData.flag_reason || 'Flagged for investigation'}"`
+        });
+      }
+    } catch (chkErr) {
+      console.warn('Flag check warning:', chkErr.message);
+    }
   }
 
   const isNowVerified = newStatus === 'verified';
@@ -2023,13 +2059,14 @@ exports.verifyRegistration = async (req, res) => {
   const flaggedAt = isNowFlagged ? nowIso : null;
   const flaggedBy = isNowFlagged ? operatorName : null;
   const finalFlagReason = isNowFlagged ? noteReason : null;
+  const targetAttendance = req.body.attendance_status || (action === 'unadmit' ? 'pending' : (isNowVerified ? 'verified' : 'pending'));
 
   try {
     const updatePayload = {
       is_verified: isNowVerified,
       verified_at: verifiedAt,
       verified_by: verifiedBy,
-      attendance_status: isNowVerified ? 'verified' : 'pending',
+      attendance_status: targetAttendance,
       verification_status: newStatus,
       is_flagged: isNowFlagged,
       flag_reason: finalFlagReason,
@@ -2070,8 +2107,8 @@ exports.verifyRegistration = async (req, res) => {
         isFlagged: isNowFlagged,
         verification_status: newStatus,
         verificationStatus: newStatus,
-        attendance_status: isNowVerified ? 'verified' : 'pending',
-        attendanceStatus: isNowVerified ? 'verified' : 'pending',
+        attendance_status: targetAttendance,
+        attendanceStatus: targetAttendance,
         verified_at: verifiedAt,
         verified_by: verifiedBy,
         flagged_at: flaggedAt,
@@ -2089,6 +2126,8 @@ exports.verifyRegistration = async (req, res) => {
 
     let statusMsg = 'Participant verified and payment confirmed successfully!';
     if (isNowFlagged) statusMsg = 'Registration flagged for UTR / payment investigation.';
+    else if (action === 'admit') statusMsg = 'Participant successfully admitted to event!';
+    else if (action === 'unadmit') statusMsg = 'Participant admission reset to pending.';
     else if (!isNowVerified) statusMsg = 'Registration verification status reset to pending.';
 
     return res.json({

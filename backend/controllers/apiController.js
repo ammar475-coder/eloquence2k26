@@ -915,6 +915,41 @@ const enrichRegistrationRecord = (r) => {
   copy.ticketCode = copy.ticket_code || copy.ticketCode || copy.registrationId || copy.id;
   copy.registrationId = copy.ticketCode;
   copy.eventId = copy.event_id || copy.eventId;
+  copy.event_id = copy.eventId;
+
+  // If Supabase joined events relation is present
+  if (copy.events && typeof copy.events === 'object') {
+    copy.eventName = copy.events.name || copy.events.alias || copy.eventName;
+    copy.event_name = copy.eventName;
+    copy.category = copy.events.category || copy.category;
+    copy.eventCategory = copy.category;
+  }
+
+  // Resolve event metadata from catalog if not present
+  const evId = String(copy.eventId || '').trim().toLowerCase();
+  let evList = inMemoryEvents || [];
+  if (evList.length === 0) {
+    try {
+      const eventsFile = path.join(DATA_DIR, 'events.json');
+      if (fs.existsSync(eventsFile)) {
+        evList = JSON.parse(fs.readFileSync(eventsFile, 'utf-8') || '[]');
+        inMemoryEvents = evList;
+      }
+    } catch (e) {}
+  }
+  const foundEvt = evList.find(e => {
+    const eId = String(e.id || '').trim().toLowerCase();
+    const eNum = String(e.number || '').trim().toLowerCase();
+    const eName = String(e.name || '').trim().toLowerCase();
+    const eAlias = String(e.alias || '').trim().toLowerCase();
+    return evId && (eId === evId || eNum === evId || eName === evId || eAlias === evId);
+  });
+
+  copy.eventName = copy.eventName || copy.event_name || foundEvt?.name || foundEvt?.alias || (evId ? `Event (${evId})` : 'Symposium Event');
+  copy.event_name = copy.eventName;
+  copy.category = copy.category || copy.eventCategory || foundEvt?.category || (String(copy.ticketCode || '').includes('TCH') ? 'technical' : (String(copy.ticketCode || '').includes('NTC') ? 'non-technical' : 'technical'));
+  copy.eventCategory = copy.category;
+
   copy.teamName = copy.team_name || copy.teamName;
   copy.totalAmount = Number(copy.total_fee || copy.totalAmount || copy.total_fee || 0);
   copy.totalFee = copy.totalAmount;
@@ -934,6 +969,18 @@ const enrichRegistrationRecord = (r) => {
   if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(copy.venue_snapshot);
+      if (parsed.eventName || parsed.event_name) {
+        copy.eventName = copy.eventName || parsed.eventName || parsed.event_name;
+        copy.event_name = copy.eventName;
+      }
+      if (parsed.eventId || parsed.event_id) {
+        copy.eventId = copy.eventId || parsed.eventId || parsed.event_id;
+        copy.event_id = copy.eventId;
+      }
+      if (parsed.category || parsed.eventCategory) {
+        copy.category = copy.category || parsed.category || parsed.eventCategory;
+        copy.eventCategory = copy.category;
+      }
       if (parsed.payment_method) {
         copy.payment_method = parsed.payment_method;
         copy.paymentMethod = parsed.payment_method;
@@ -1009,10 +1056,13 @@ const enrichRegistrationRecord = (r) => {
   copy.is_flagged = isFlagged;
   copy.isFlagged = isFlagged;
   copy.flagReason = copy.flag_reason || copy.flagReason || null;
+  copy.flag_reason = copy.flagReason;
   copy.flaggedAt = copy.flagged_at || copy.flaggedAt || null;
   copy.flaggedBy = copy.flagged_by || copy.flaggedBy || null;
 
   if (isFlagged) {
+    copy.is_verified = false;
+    copy.isVerified = false;
     copy.verificationStatus = 'flagged';
     copy.verification_status = 'flagged';
   } else if (copy.is_verified) {
@@ -1032,7 +1082,7 @@ exports.getRegistrations = async (req, res) => {
 
     let query = supabase
       .from('registrations')
-      .select('*, registration_members(*)')
+      .select('*, events(*), registration_members(*)')
       .order('created_at', { ascending: false });
 
     if (eventId) {
@@ -1079,8 +1129,8 @@ exports.getRegistrationById = async (req, res) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
 
     const query = isUUID
-      ? supabase.from('registrations').select('*, registration_members(*)').eq('id', normId).maybeSingle()
-      : supabase.from('registrations').select('*, registration_members(*)').ilike('ticket_code', normId).maybeSingle();
+      ? supabase.from('registrations').select('*, events(*), registration_members(*)').eq('id', normId).maybeSingle()
+      : supabase.from('registrations').select('*, events(*), registration_members(*)').ilike('ticket_code', normId).maybeSingle();
 
     const { data, error } = await query;
 
@@ -1690,7 +1740,8 @@ exports.submitEventWinners = async (req, res) => {
 exports.updateEventCoordinatorDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rounds, rules, venue, time, conductorNotes, venueImage, venue_image } = req.body;
+    const { rounds, rules, venue, time, timing, conductorNotes, venueImage, venue_image, description, subtitle } = req.body;
+    const finalTiming = (timing !== undefined && timing !== '') ? timing : time;
     const rawVenueImage = venueImage !== undefined ? venueImage : venue_image;
     const finalVenueImage = rawVenueImage !== undefined ? saveBase64ImageIfPresent(rawVenueImage, 'venue') : undefined;
 
@@ -1700,13 +1751,18 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8') || '[]');
     }
 
-    const idx = events.findIndex(e => e.id === id);
+    const idx = events.findIndex(e => String(e.id || '').toLowerCase() === String(id || '').toLowerCase());
     if (idx !== -1) {
-      if (rounds) events[idx].rounds = rounds;
-      if (rules) events[idx].rules = rules;
-      if (venue) events[idx].venue = venue;
-      if (time) events[idx].time = time;
+      if (Array.isArray(rounds)) events[idx].rounds = rounds;
+      if (Array.isArray(rules)) events[idx].rules = rules;
+      if (venue !== undefined) events[idx].venue = venue.trim();
+      if (finalTiming !== undefined) {
+        events[idx].timing = typeof finalTiming === 'string' ? finalTiming.trim() : finalTiming;
+        events[idx].time = events[idx].timing;
+      }
       if (conductorNotes !== undefined) events[idx].conductorNotes = conductorNotes;
+      if (description !== undefined) events[idx].description = description.trim();
+      if (subtitle !== undefined) events[idx].subtitle = subtitle.trim();
       if (finalVenueImage !== undefined) {
         events[idx].venueImage = finalVenueImage ? finalVenueImage.trim() : '';
         events[idx].venue_image = finalVenueImage ? finalVenueImage.trim() : '';
@@ -1715,26 +1771,60 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf-8');
     }
 
-    try {
-      const updateData = {};
-      if (rounds) updateData.rounds = rounds;
-      if (rules) updateData.rules = rules;
-      if (venue) updateData.venue = venue;
-      if (time) updateData.time = time;
-      if (finalVenueImage !== undefined) {
-        updateData.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+    // 1. Immediately invalidate & update in-memory cache
+    exports.invalidateEventsCache();
+    if (idx !== -1 && Array.isArray(inMemoryEvents)) {
+      const memIdx = inMemoryEvents.findIndex(e => String(e.id || '').toLowerCase() === String(id || '').toLowerCase());
+      if (memIdx !== -1) {
+        inMemoryEvents[memIdx] = { ...inMemoryEvents[memIdx], ...events[idx] };
       }
-      if (Object.keys(updateData).length > 0) {
-        await supabase.from('events').update(updateData).eq('id', id);
+    }
+
+    // 2. Persist to Supabase events table with correct schema columns ('timing', NOT 'time')
+    try {
+      const { data: existingDbEvent } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
+      const currentEv = idx !== -1 ? events[idx] : {};
+      const dbPayload = {
+        id,
+        number: (existingDbEvent && existingDbEvent.number) ? existingDbEvent.number : (currentEv.number || '01'),
+        ...(existingDbEvent || {}),
+        updated_at: new Date().toISOString()
+      };
+      if (Array.isArray(rounds)) dbPayload.rounds = rounds;
+      if (Array.isArray(rules)) dbPayload.rules = rules;
+      if (venue !== undefined) dbPayload.venue = venue.trim();
+      if (finalTiming !== undefined) dbPayload.timing = typeof finalTiming === 'string' ? finalTiming.trim() : finalTiming;
+      if (description !== undefined) dbPayload.description = description.trim();
+      if (subtitle !== undefined) dbPayload.subtitle = subtitle.trim();
+      if (finalVenueImage !== undefined) dbPayload.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+
+      let { error: dbErr } = await supabase.from('events').upsert(dbPayload, { onConflict: 'id' });
+      if (dbErr && dbErr.code === 'PGRST204') {
+        delete dbPayload.venue_image;
+        const retryRes = await supabase.from('events').upsert(dbPayload, { onConflict: 'id' });
+        dbErr = retryRes.error;
+      }
+      if (dbErr) {
+        console.warn('Supabase updateEventCoordinatorDetails upsert error:', dbErr.message);
+      } else {
+        console.log(`[Supabase] Event ${id} rules & details successfully synced by coordinator`);
       }
     } catch (dbErr) {
-      console.warn('Supabase update event coordinator details fallback:', dbErr.message);
+      console.warn('Supabase update event coordinator details exception:', dbErr.message);
     }
+
+    // 3. Broadcast real-time WebSocket event to all connected dashboards and public pages
+    try {
+      const { broadcastRegistrationUpdate } = require('../config/websocket');
+      if (broadcastRegistrationUpdate) {
+        broadcastRegistrationUpdate('EVENT_UPDATED', idx !== -1 ? events[idx] : { id, rounds, rules, venue, timing: finalTiming });
+      }
+    } catch (_) {}
 
     res.json({
       success: true,
-      message: 'Event venue and coordinator details updated successfully',
-      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time, venueImage: finalVenueImage }
+      message: 'Event venue, rounds, and rules updated successfully!',
+      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, timing: finalTiming, venueImage: finalVenueImage }
     });
   } catch (err) {
     console.error('Error updating event coordinator details:', err);

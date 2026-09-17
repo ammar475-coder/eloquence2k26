@@ -26,6 +26,7 @@ import {
   FaFilePdf
 } from 'react-icons/fa';
 import { getApiUrl } from '../config/api';
+import defaultEvents from '../data/events.js';
 
 export default function RegistrationVerification({
   registrationsList = [],
@@ -138,6 +139,61 @@ export default function RegistrationVerification({
     return 'pending';
   };
 
+  // Helper to resolve Event Name & Category accurately from eventsList or defaultEvents
+  const getEventDetails = (r) => {
+    if (!r) return { eventName: 'Symposium Event', category: 'technical' };
+
+    // Direct or nested event object
+    const eventObj = (r.events && typeof r.events === 'object') ? r.events : (r.event && typeof r.event === 'object' ? r.event : null);
+    let directName = r.eventName || r.event_name || eventObj?.name || eventObj?.alias;
+    let directCat = r.category || r.eventCategory || eventObj?.category;
+    let evId = String(r.event_id || r.eventId || eventObj?.id || '').trim().toLowerCase();
+
+    // Parse venue_snapshot if evId or directName is missing
+    if ((!evId || !directName || directName === '-') && r.venue_snapshot && typeof r.venue_snapshot === 'string' && r.venue_snapshot.trim().startsWith('{')) {
+      try {
+        const snap = JSON.parse(r.venue_snapshot);
+        if (snap.eventName || snap.event_name) directName = snap.eventName || snap.event_name;
+        if (snap.eventId || snap.event_id) evId = String(snap.eventId || snap.event_id).trim().toLowerCase();
+        if (snap.category || snap.eventCategory) directCat = snap.category || snap.eventCategory;
+      } catch (e) {}
+    }
+
+    const allEvents = (Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents;
+
+    const found = allEvents.find((e) => {
+      const eId = String(e.id || '').trim().toLowerCase();
+      const eNum = String(e.number || '').trim().toLowerCase();
+      const eName = String(e.name || '').trim().toLowerCase();
+      const eAlias = String(e.alias || '').trim().toLowerCase();
+      return (
+        (evId && (eId === evId || eNum === evId || eName === evId || eAlias === evId)) ||
+        (directName && directName !== '-' && (eName === directName.toLowerCase() || eAlias === directName.toLowerCase()))
+      );
+    });
+
+    const ticket = String(r.ticketCode || r.ticket_code || '').toUpperCase();
+    const isTechPrefix = ticket.includes('TCH');
+    const isNonTechPrefix = ticket.includes('NTC') || ticket.includes('NT-') || ticket.includes('-NT');
+
+    const resolvedCat = directCat || found?.category || (isTechPrefix ? 'technical' : isNonTechPrefix ? 'non-technical' : 'technical');
+
+    let resolvedName = (directName && directName !== '-') ? directName : (found?.name || found?.alias);
+    if (!resolvedName || resolvedName === '-') {
+      if (evId) {
+        resolvedName = `Event (${evId})`;
+      } else if (isTechPrefix) {
+        resolvedName = 'Technical Symposium Event';
+      } else if (isNonTechPrefix) {
+        resolvedName = 'Non-Technical Symposium Event';
+      } else {
+        resolvedName = 'Symposium Event';
+      }
+    }
+
+    return { eventName: resolvedName, category: resolvedCat, event: found || eventObj };
+  };
+
   // Filter registrations that have UTR or are online payments
   const allUtrRegistrations = useMemo(() => {
     return registrationsList.filter((r) => {
@@ -195,8 +251,8 @@ export default function RegistrationVerification({
       if (statusFilter !== 'all' && st !== statusFilter) return false;
 
       // 2. Event Filter
-      const rEventId = r.eventId || r.event_id || '';
-      if (eventFilter !== 'all' && rEventId !== eventFilter) return false;
+      const rEventId = String(r.eventId || r.event_id || '').toLowerCase();
+      if (eventFilter !== 'all' && rEventId !== eventFilter.toLowerCase()) return false;
 
       // 3. Search Query
       if (searchQuery.trim()) {
@@ -207,7 +263,9 @@ export default function RegistrationVerification({
         const phone = (r.phone || r.whatsapp || '').toLowerCase();
         const email = (r.email || '').toLowerCase();
         const college = (r.college || '').toLowerCase();
-        const eventName = (r.eventName || '').toLowerCase();
+        const eventInfo = getEventDetails(r);
+        const eventName = eventInfo.eventName.toLowerCase();
+        const eventCategory = eventInfo.category.toLowerCase();
 
         const match =
           utr.includes(q) ||
@@ -216,7 +274,8 @@ export default function RegistrationVerification({
           phone.includes(q) ||
           email.includes(q) ||
           college.includes(q) ||
-          eventName.includes(q);
+          eventName.includes(q) ||
+          eventCategory.includes(q);
 
         if (!match) return false;
       }
@@ -418,25 +477,28 @@ export default function RegistrationVerification({
       'Submitted At'
     ];
 
-    const rows = filteredRegistrations.map((r) => [
-      `"${r.ticketCode || r.ticket_code || r.id || ''}"`,
-      `"${getRegUtr(r)}"`,
-      `"${getVerificationStatus(r).toUpperCase()}"`,
-      `"${r.fullName || r.full_name || ''}"`,
-      `"${r.phone || ''}"`,
-      `"${r.email || ''}"`,
-      `"${r.college || ''}"`,
-      `"${r.department || ''}"`,
-      `"${r.year || ''}"`,
-      `"${r.eventName || ''}"`,
-      `"${r.category || r.eventCategory || ''}"`,
-      Number(r.totalAmount || r.totalFee || r.total_fee || 0),
-      `"${r.paymentMethod || r.payment_method || ''}"`,
-      `"${r.verifiedAt || r.verified_at || ''}"`,
-      `"${r.verifiedBy || r.verified_by || ''}"`,
-      `"${r.flagReason || r.flag_reason || ''}"`,
-      `"${r.timestamp || r.createdAt || ''}"`
-    ]);
+    const rows = filteredRegistrations.map((r) => {
+      const { eventName, category } = getEventDetails(r);
+      return [
+        `"${r.ticketCode || r.ticket_code || r.id || ''}"`,
+        `"${getRegUtr(r)}"`,
+        `"${getVerificationStatus(r).toUpperCase()}"`,
+        `"${r.fullName || r.full_name || ''}"`,
+        `"${r.phone || ''}"`,
+        `"${r.email || ''}"`,
+        `"${r.college || ''}"`,
+        `"${r.department || ''}"`,
+        `"${r.year || ''}"`,
+        `"${eventName}"`,
+        `"${category}"`,
+        Number(r.totalAmount || r.totalFee || r.total_fee || 0),
+        `"${r.paymentMethod || r.payment_method || ''}"`,
+        `"${r.verifiedAt || r.verified_at || ''}"`,
+        `"${r.verifiedBy || r.verified_by || ''}"`,
+        `"${r.flagReason || r.flag_reason || ''}"`,
+        `"${r.timestamp || r.createdAt || ''}"`
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -465,6 +527,12 @@ export default function RegistrationVerification({
     const pendingCount = filteredRegistrations.filter(r => getVerificationStatus(r) === 'pending').length;
     const flaggedCount = filteredRegistrations.filter(r => getVerificationStatus(r) === 'flagged').length;
 
+    const allEvents = (Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents;
+    const activeEventObj = allEvents.find(e => e.id === eventFilter || String(e.id).toLowerCase() === String(eventFilter).toLowerCase());
+    const eventFilterLabel = eventFilter === 'all' 
+      ? 'ALL' 
+      : (activeEventObj ? `[${(activeEventObj.category || '').toUpperCase()}] ${activeEventObj.name}` : eventFilter);
+
     const rowsHtml = filteredRegistrations.map((r, idx) => {
       const ticketId = r.ticketCode || r.ticket_code || r.id || '-';
       const utr = getRegUtr(r);
@@ -472,8 +540,7 @@ export default function RegistrationVerification({
       const pName = r.fullName || r.full_name || 'Anonymous';
       const fee = Number(r.totalAmount || r.totalFee || r.total_fee || 0);
       const paymentMethod = r.paymentMethod || r.payment_method || 'Online';
-      const eventName = r.eventName || '-';
-      const category = r.category || r.eventCategory || '';
+      const { eventName, category } = getEventDetails(r);
       const flagReason = r.flagReason || r.flag_reason || '';
       const verifiedBy = r.verifiedBy || r.verified_by || '';
       const submittedAt = r.timestamp || r.createdAt || 'N/A';
@@ -495,8 +562,9 @@ export default function RegistrationVerification({
             <div style="font-size: 9.5px; color: #475569;">${r.email || '-'}</div>
           </td>
           <td>
-            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${eventName}</div>
-            ${category ? `<span class="badge badge-tech">${category.toUpperCase()}</span>` : ''}
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">${eventName}</div>
+            ${category ? `<span class="badge ${category === 'technical' ? 'badge-tech' : 'badge-nontech'}">${category.toUpperCase()}</span>` : ''}
+            ${(r.teamName || r.team_name) ? `<div style="font-size: 9px; color: #64748b; margin-top: 2px;">Team: ${r.teamName || r.team_name}</div>` : ''}
           </td>
           <td>
             <div style="font-weight: 800; color: #0f172a; font-size: 11px;">₹${fee}</div>
@@ -528,11 +596,12 @@ export default function RegistrationVerification({
           .action-btn { background: #2563eb; color: white; border: none; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
           .action-btn.btn-close { background: #475569; margin-left: 8px; }
           @media print { .no-print { display: none !important; } body { padding: 0; } }
-          .doc-header { border-bottom: 2.5px solid #2563eb; padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .title-area h1 { font-size: 19px; font-weight: 800; color: #1e3a8a; }
-          .title-area h2 { font-size: 11.5px; color: #475569; font-weight: 600; margin-top: 1px; }
-          .meta-box { text-align: right; font-size: 10px; color: #475569; line-height: 1.5; }
-          .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+          .doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 12px; }
+          .title-area h1 { font-size: 17px; color: #1e3a8a; font-weight: 900; letter-spacing: -0.2px; }
+          .title-area h2 { font-size: 10.5px; color: #475569; font-weight: 700; margin-top: 1px; }
+          .title-area p { font-size: 9.5px; color: #64748b; margin-top: 2px; }
+          .meta-box { text-align: right; font-size: 10px; color: #334155; line-height: 1.5; }
+          .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
           .kpi-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 7px 10px; border-radius: 6px; }
           .kpi-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; }
           .kpi-val { font-size: 13.5px; font-weight: 800; color: #0f172a; margin-top: 2px; }
@@ -544,6 +613,7 @@ export default function RegistrationVerification({
           tr:nth-child(even) { background: #f8fafc; }
           .badge { display: inline-block; font-size: 8px; font-weight: 700; padding: 1.5px 5px; border-radius: 4px; text-transform: uppercase; }
           .badge-tech { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+          .badge-nontech { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
           .badge-verified { background: #dcfce7; color: #15803d; }
           .badge-pending { background: #fef9c3; color: #a16207; }
           .badge-flagged { background: #fee2e2; color: #dc2626; }
@@ -571,7 +641,7 @@ export default function RegistrationVerification({
           <div class="meta-box">
             <div>Generated: <strong>${new Date().toLocaleString('en-IN')}</strong></div>
             <div>Status Filter: <strong>${statusFilter.toUpperCase()}</strong></div>
-            <div>Event Filter: <strong>${eventFilter}</strong></div>
+            <div>Event Filter: <strong>${eventFilterLabel}</strong></div>
           </div>
         </div>
 
@@ -969,7 +1039,7 @@ export default function RegistrationVerification({
               }}
             >
               <option value="all">-- Filter by Event (All) --</option>
-              {eventsList.map((evt) => (
+              {((Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents).map((evt) => (
                 <option key={evt.id} value={evt.id}>
                   [{evt.category?.toUpperCase()}] {evt.name}
                 </option>
@@ -1114,10 +1184,10 @@ export default function RegistrationVerification({
 
                       {/* 2. EVENT CELL */}
                       <td style={{ padding: '1rem 1.25rem' }}>
-                        <div style={{ fontWeight: '600', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.88rem' }}>
-                          {r.eventName || 'Symposium Event'}
+                        <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a', fontSize: '0.9rem' }}>
+                          {getEventDetails(r).eventName}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                           <span
                             style={{
                               fontFamily: 'monospace',
@@ -1130,6 +1200,19 @@ export default function RegistrationVerification({
                             }}
                           >
                             {r.ticketCode || r.ticket_code || r.registrationId || 'TICKET'}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              textTransform: 'uppercase',
+                              fontWeight: '700',
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '4px',
+                              background: getEventDetails(r).category === 'technical' ? (isDark ? '#1e3a8a44' : '#dbeafe') : (isDark ? '#83184344' : '#fce7f3'),
+                              color: getEventDetails(r).category === 'technical' ? (isDark ? '#93c5fd' : '#1e40af') : (isDark ? '#f472b6' : '#9d174d')
+                            }}
+                          >
+                            {getEventDetails(r).category}
                           </span>
                           {(r.teamName || r.team_name || (r.membersCount && r.membersCount > 1) || (r.members_count && r.members_count > 1)) && (
                             <span style={{ fontSize: '0.72rem', color: isDark ? '#9ca3af' : '#64748b' }}>
@@ -1637,7 +1720,10 @@ export default function RegistrationVerification({
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Event</div>
-                  <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a' }}>{selectedReg.eventName}</div>
+                  <div style={{ fontWeight: '700', color: isDark ? '#f9fafb' : '#0f172a' }}>{getEventDetails(selectedReg).eventName}</div>
+                  <div style={{ fontSize: '0.75rem', color: isDark ? '#93c5fd' : '#2563eb', textTransform: 'capitalize', marginTop: '2px', fontWeight: '600' }}>
+                    {getEventDetails(selectedReg).category} Event
+                  </div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Phone</div>
@@ -1886,7 +1972,7 @@ export default function RegistrationVerification({
                 <div>
                   <div style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Ticket / Event</div>
                   <div style={{ fontWeight: '700', color: isDark ? '#93c5fd' : '#2563eb' }}>{viewFlagModalReg.ticketCode || viewFlagModalReg.ticket_code}</div>
-                  <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b' }}>{viewFlagModalReg.eventName}</div>
+                  <div style={{ fontSize: '0.78rem', color: isDark ? '#9ca3af' : '#64748b', fontWeight: '600' }}>{getEventDetails(viewFlagModalReg).eventName}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '0.72rem', fontWeight: '700', color: isDark ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>UTR / Reference</div>
