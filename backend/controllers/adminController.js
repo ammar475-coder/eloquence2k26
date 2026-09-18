@@ -1905,8 +1905,14 @@ exports.deleteRegistration = async (req, res) => {
     try {
       if (targetUUID) {
         await supabase.from('registration_members').delete().eq('registration_id', targetUUID);
-      } else {
+      }
+      if (targetTicketCode) {
+        await supabase.from('registration_members').delete().ilike('ticket_code', targetTicketCode);
+      }
+      if (isUUID) {
         await supabase.from('registration_members').delete().eq('registration_id', normId);
+      } else {
+        await supabase.from('registration_members').delete().ilike('ticket_code', normId);
       }
     } catch (memErr) {
       console.warn('Supabase delete registration_members note:', memErr.message);
@@ -1920,8 +1926,10 @@ exports.deleteRegistration = async (req, res) => {
       if (targetTicketCode) {
         await supabase.from('registrations').delete().ilike('ticket_code', targetTicketCode);
       }
-      if (!targetUUID && !targetTicketCode) {
-        await supabase.from('registrations').delete().or(`id.eq.${normId},ticket_code.ilike.${normId}`);
+      if (isUUID) {
+        await supabase.from('registrations').delete().eq('id', normId);
+      } else {
+        await supabase.from('registrations').delete().ilike('ticket_code', normId);
       }
     } catch (supaErr) {
       console.warn('Supabase delete registration note:', supaErr.message);

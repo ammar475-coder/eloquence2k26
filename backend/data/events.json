@@ -1,10 +1,367 @@
 [
   {
+    "id": "nontech-01",
+    "number": "01",
+    "name": "SNAP & REEL",
+    "alias": "Snap & Reel",
+    "subtitle": "reels and photography",
+    "category": "non-technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Visual Media",
+    "venue": "2ND CSE B",
+    "venueImage": "",
+    "timing": "11 :00 AM TO 1:00 PM",
+    "description": "Capture cinematic campus moments, dynamic event energy, and craft creative 30-60 second Instagram reels.",
+    "image": "/events/event-1789617780279-2457.png",
+    "rules": [
+      "Create content based on the theme announced on the spot.",
+      "Photos and reels must be captured on campus on the event day.",
+      "Submit one photo and one reel (max. 60s); basic editing is allowed.",
+      "Entries must be original and submitted to the given email within the deadline.",
+      "Avoid restricted areas and disturbances; content must be suitable for all.",
+      "Judging will be based on creativity, theme relevance, originality, and presentation."
+    ],
+    "rounds": [
+      {
+        "desc": "Shoot footage across symposium events.",
+        "name": "Campus Capture",
+        "time": "3 Hours"
+      },
+      {
+        "desc": "Final color grading, sound mixing, and upload.",
+        "name": "Editing & Reel Submission",
+        "time": "1 Hour"
+      }
+    ],
+    "guidelines": [
+      "Submission via Google Drive link or designated upload portal."
+    ],
+    "highlights": [
+      "Original campus footage",
+      "30-60 sec reel length",
+      "Background music allowed"
+    ],
+    "createdAt": "2026-09-16T10:16:14.109639+00:00",
+    "updatedAt": "2026-09-18T09:03:48.985+00:00"
+  },
+  {
+    "id": "nontech-02",
+    "number": "02",
+    "name": "LINK UP",
+    "alias": "Link Up",
+    "subtitle": "connection",
+    "category": "non-technical",
+    "teamSize": "Max of 3 members",
+    "minMembers": 1,
+    "maxMembers": 3,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Brain Teaser",
+    "venue": "MBA SEMINAR HALL",
+    "venueImage": "",
+    "timing": "1:30 PM to 3:00PM",
+    "description": "Decode visual rebus puzzles, connected clues, movie scenes, and pop-culture links with fast buzzer reflexes.",
+    "image": "/events/event-1789617806355-7221.png",
+    "rules": [
+      "The quiz will be conducted in teams through multiple rounds.",
+      "Each question will appear on the screen for a fixed duration.",
+      "Responses must be submitted within the time specified by the organizers.",
+      "No electronic devices, internet access, or outside assistance are permitted.",
+      "Teams will be shortlisted based on their performance in each round.",
+      "The highest-scoring team at the end of the quiz will be declared as the winner."
+    ],
+    "rounds": [
+      {
+        "desc": "Solve interconnected images to find movie or word titles.",
+        "name": "Round 1: Picture Rebus Clues",
+        "time": "20 Mins"
+      },
+      {
+        "desc": "Complex multi-stage connection puzzles with countdown timer.",
+        "name": "Round 2: Rapid Buzzer Connection",
+        "time": "30 Mins"
+      }
+    ],
+    "guidelines": [
+      "Decisions of the quizmaster are final and binding."
+    ],
+    "highlights": [
+      "Visual connection puzzles",
+      "Fast buzzer mechanics",
+      "Max 3 per squad"
+    ],
+    "createdAt": "2026-09-16T10:16:14.234348+00:00",
+    "updatedAt": "2026-09-18T09:05:30.275+00:00"
+  },
+  {
+    "id": "nontech-03",
+    "number": "03",
+    "name": "Hunt Zone",
+    "alias": "Hunt Zone",
+    "subtitle": "TREASURE HUNT",
+    "category": "non-technical",
+    "teamSize": "Max of 4 members",
+    "minMembers": 2,
+    "maxMembers": 4,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Adventure & Mystery",
+    "venue": "EEE Class Room",
+    "venueImage": "",
+    "timing": "1:30 PM TO 3:00 PM",
+    "description": "An exciting treasure hunt across the campus uncovering riddles, cryptographic clues, and physical tokens.",
+    "image": "/events/event-1789617826039-8458.png",
+    "rules": [
+      "Teams must follow a series of clues to reach the final destination.",
+      "All clues will be placed within the designated college campus areas.",
+      "Clues should be solved in sequence without skipping any stage.",
+      "Online maps, external resources, and non-team assistance are not allowed.",
+      "Participants must respect campus property and avoid restricted zones.",
+      "The first team to reach the final destination with all required proofs wins."
+    ],
+    "rounds": [
+      {
+        "desc": "Solve opening riddles to locate quadrant beacons.",
+        "name": "Checkpoint 1: The Cryptic Trail",
+        "time": "45 Mins"
+      },
+      {
+        "desc": "Race to unlock the cipher box on the central quad.",
+        "name": "Checkpoint 2: The Final Relic Vault",
+        "time": "45 Mins"
+      }
+    ],
+    "guidelines": [
+      "Wear comfortable athletic shoes for campus navigation."
+    ],
+    "highlights": [
+      "Campus-wide trail",
+      "Cryptic clue checkpoints",
+      "Timed squad adventure"
+    ],
+    "createdAt": "2026-09-16T10:16:14.31109+00:00",
+    "updatedAt": "2026-09-17T09:43:36.138+00:00"
+  },
+  {
+    "id": "nontech-04",
+    "number": "04",
+    "name": "HENNA HEIST",
+    "alias": "Henna Heist",
+    "subtitle": "Henna Art & Elegance",
+    "category": "non-technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Traditional Art",
+    "venue": "2ND year CSE A",
+    "venueImage": "",
+    "timing": "11 :00 AM TO 1:00 PM",
+    "description": "Display traditional Indian and Arabic henna patterns with intricacy, neatness, and artistic flair.",
+    "image": "/events/event-1789617843336-809.png",
+    "rules": [
+      "Participants must bring their own mehendi cones and a person to apply the design on.",
+      "The design must be completed within the allotted time limit.",
+      "The design must cover one side of one hand, from the fingertips to the wrist.",
+      "Designs must be original and freehand. Stencils and reference images are not allowed.",
+      "Glitter and other decorative materials are not allowed.",
+      "Judging will be based on creativity, neatness, intricacy, and theme relevance.",
+      "The judges’ decision is final and binding."
+    ],
+    "rounds": [
+      {
+        "desc": "Live henna application on partner/volunteer hand.",
+        "name": "Single Artistry Round",
+        "time": "60 Mins"
+      }
+    ],
+    "guidelines": [
+      "Arrive 10 minutes prior with your volunteer/partner."
+    ],
+    "highlights": [
+      "1 hour duration",
+      "Intricate patterns",
+      "Bring cones"
+    ],
+    "createdAt": "2026-09-16T10:16:14.405773+00:00",
+    "updatedAt": "2026-09-17T13:54:57.09+00:00"
+  },
+  {
+    "id": "nontech-05",
+    "number": "05",
+    "name": "BATTLE OF CHAMPIONS",
+    "alias": "Battle of Champions",
+    "subtitle": "BGMI and FREE FIRE",
+    "category": "non-technical",
+    "teamSize": "Only Squad Match (4 Players)",
+    "minMembers": 4,
+    "maxMembers": 4,
+    "fee": "₹200 per squad",
+    "feePerHead": 200,
+    "feeType": "per_squad",
+    "isTeam": true,
+    "tag": "Mobile Gaming",
+    "venue": "Mech dept Drawing Hall",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
+    "description": "High-stakes squad battle royale competition in Free Fire / BGMI on custom symposium rooms.",
+    "image": "/events/event-nontech-05-1789621679544-5090.png",
+    "rules": [
+      "Battle Royale – Squad mode with 4 players per team.",
+      "Mobile devices only; iPads allowed for BGMI. PCs and emulators are prohibited.",
+      "Players must use registered in-game names and join the custom room on time.",
+      "Cheating, hacking, or third-party software will lead to disqualification.",
+      "Disconnections, abusive language, and misconduct will not be entertained.",
+      "Scoring is based on placement and kills; organizers' decision is final."
+    ],
+    "rounds": [
+      {
+        "desc": "Survival and kill points bracket ranking.",
+        "name": "Match 1: Bermuda / Erangel Qualifying Drop",
+        "time": "35 Mins"
+      },
+      {
+        "desc": "Top seeded squads battle for the championship trophy.",
+        "name": "Match 2: Purgatory / Miramar Finals",
+        "time": "40 Mins"
+      }
+    ],
+    "guidelines": [
+      "Bring fully charged mobile devices and personal headphones."
+    ],
+    "highlights": [
+      "Emotes strictly restricted",
+      "4-Player squad match only",
+      "Flat ₹200 per squad"
+    ],
+    "createdAt": "2026-09-16T10:16:14.505182+00:00",
+    "updatedAt": "2026-09-18T09:11:45.875+00:00"
+  },
+  {
+    "id": "nontech-06",
+    "number": "06",
+    "name": "64 SQUARES",
+    "alias": "64 Squares",
+    "subtitle": "chess",
+    "category": "non-technical",
+    "teamSize": "Individual only",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Board Strategy",
+    "venue": "3rd CSE B",
+    "venueImage": "",
+    "timing": "11 :00 AM TO 1:00 PM",
+    "description": "FIDE-timed blitz chess tournament testing deep positional play, tactical vision, and endgame nerve.",
+    "image": "/events/event-1789617856983-8484.png",
+    "rules": [
+      "Blitz format with a fixed time limit per player.",
+      "Standard FIDE rules, including touch-move, apply.",
+      "Opponents will be assigned by the organizers.",
+      "Phones, smartwatches, and electronic devices are prohibited.",
+      "Ties will be decided through a tie-breaker round.",
+      "Good sportsmanship is expected; the arbiter's decision is final."
+    ],
+    "rounds": [
+      {
+        "desc": "Preliminary matches to seed into the championship bracket.",
+        "name": "Round 1: Swiss / Knockout Prelims",
+        "time": "45 Mins"
+      },
+      {
+        "desc": "Direct elimination knockout matches under digital clocks.",
+        "name": "Round 2: Quarter, Semi & Grand Finals",
+        "time": "60 Mins"
+      }
+    ],
+    "guidelines": [
+      "Chess boards, pieces, and digital clocks provided."
+    ],
+    "highlights": [
+      "Rapid / Blitz time control",
+      "FIDE standard rules",
+      "Digital clocks provided"
+    ],
+    "createdAt": "2026-09-16T10:16:14.610922+00:00",
+    "updatedAt": "2026-09-18T09:07:22.597+00:00"
+  },
+  {
+    "id": "nontech-07",
+    "number": "07",
+    "name": "BATTLEWORLD BIDDING",
+    "alias": "Battleworld Bidding",
+    "subtitle": "Auction",
+    "category": "non-technical",
+    "teamSize": "Team of 5 Members",
+    "minMembers": 5,
+    "maxMembers": 5,
+    "fee": "₹250 per team",
+    "feePerHead": 250,
+    "feeType": "per_team",
+    "isTeam": true,
+    "tag": "Strategy & Bidding",
+    "venue": "CSE Seminar Hall",
+    "venueImage": "",
+    "timing": "10:00 AM – 01:00 PM",
+    "description": "Step into the world of strategy, wit, and quick decisions. Bid smart, outthink the rest, and take the win!",
+    "image": "/events/event-1789617873087-3103.png",
+    "rules": [
+      "Strictly a team of 5 members.",
+      "Registration fee: ₹250 per team.",
+      "Virtual purse budget will be allocated to each participating team at the start.",
+      "Bidding follows sequential live auction rounds with strict countdown timers.",
+      "Exceeding allocated purse budget or bid collusion will result in penalty or disqualification.",
+      "Scoring is calculated from total squad/asset valuation, strategic diversity, and remaining funds.",
+      "Decision of the Auctioneer and judges is final and binding."
+    ],
+    "rounds": [
+      {
+        "desc": "Rules explanation, category tier reveal, and budget distribution.",
+        "name": "Purse Allocation & Rules Brief",
+        "time": "15 Mins"
+      },
+      {
+        "desc": "Fast-paced live bidding rounds across featured player/asset pools.",
+        "name": "Live Auction Bidding",
+        "time": "90 Mins"
+      }
+    ],
+    "guidelines": [
+      "Paper and calculators will be provided for tracking bids.",
+      "Keep your bidding paddle clearly visible when placing bids.",
+      "Virtual purse ledger will be maintained by auction marshals."
+    ],
+    "highlights": [
+      "Virtual purse budget",
+      "Strategic auctioning",
+      "Strictly 5-member team",
+      "₹250 per team"
+    ],
+    "createdAt": "2026-09-16T10:16:14.674392+00:00",
+    "updatedAt": "2026-09-18T09:13:00.937+00:00"
+  },
+  {
     "id": "tech-01",
     "number": "01",
     "name": "SLIDE CRAFT",
     "alias": "Slide Craft",
-    "subtitle": "PowerPoint & Idea Pitch Deck",
+    "subtitle": "PPT PRESENTATION",
     "category": "technical",
     "teamSize": "Max of 3 members",
     "minMembers": 1,
@@ -14,9 +371,11 @@
     "feeType": "per_head",
     "isTeam": true,
     "tag": "Technical Presentation",
-    "venue": "CSE Seminar Hall",
-    "timing": "10:00 AM – 01:00 PM",
+    "venue": "CSE & AIDS Smart room",
+    "venueImage": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80",
+    "timing": "10:40 AM TO 3:00 PM",
     "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
+    "image": "/events/card_ppt_presentation-BHzUng4c.png",
     "rules": [
       "Submit a 300-word abstract during registration and the final PPT before the event.",
       "Each team has 5 minutes to present, followed by a 2-minute Q&A session. Slides must be less than 7.",
@@ -27,14 +386,14 @@
     ],
     "rounds": [
       {
+        "desc": "Initial slide deck review by panel judges.",
         "name": "Preliminary Deck Screening",
-        "time": "15 Mins",
-        "desc": "Initial slide deck review by panel judges."
+        "time": "15 Mins"
       },
       {
+        "desc": "Live presentation followed by jury Q&A.",
         "name": "Final Stage Pitch",
-        "time": "7 Mins / Team",
-        "desc": "Live presentation followed by jury Q&A."
+        "time": "7 Mins / Team"
       }
     ],
     "guidelines": [
@@ -47,15 +406,15 @@
       "< 7 slides limit",
       "₹100/head"
     ],
-    "image": "/events/card_ppt_presentation-BHzUng4c.png",
-    "venueImage": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80"
+    "createdAt": "2026-09-16T10:16:13.515539+00:00",
+    "updatedAt": "2026-09-18T08:58:22.23+00:00"
   },
   {
     "id": "tech-02",
     "number": "02",
     "name": "CRACK THE CODE",
     "alias": "Crack the Code",
-    "subtitle": "Code Craft & Bug Hunter",
+    "subtitle": "coding and debugging",
     "category": "technical",
     "teamSize": "Individual / Team of 2",
     "minMembers": 1,
@@ -65,9 +424,11 @@
     "feeType": "per_head",
     "isTeam": true,
     "tag": "Competitive Coding",
-    "venue": "CSE Lab 1 & 2",
-    "timing": "10:30 AM – 12:30 PM",
+    "venue": "Lab 1 & 2",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
     "description": "Test your logic and debugging prowess across intense algorithmic challenges and bug fixes.",
+    "image": "/events/event-1789617913099-6240.png",
     "rules": [
       "Round 1 is a written test on code analysis and technical questions.",
       "Inbuilt library should not be used. No gadgets are allowed.",
@@ -89,18 +450,15 @@
       "Round 1: Written test",
       "Round 2: Coding & Debugging"
     ],
-    "image": "/events/event-1789617913099-6240.png",
-    "time": "10:00 AM - 1:00 PM",
-    "conductorNotes": "",
-    "updatedAt": "2026-09-12T12:12:02.894Z",
-    "venueImage": ""
+    "createdAt": "2026-09-16T10:16:13.781394+00:00",
+    "updatedAt": "2026-09-18T09:00:16.827+00:00"
   },
   {
     "id": "tech-03",
     "number": "03",
     "name": "TECH BATTLE",
     "alias": "Tech Battle",
-    "subtitle": "Brain Bytes & Rapid Trivia",
+    "subtitle": "Tech Quiz",
     "category": "technical",
     "teamSize": "Individual / Team of 2",
     "minMembers": 1,
@@ -110,9 +468,11 @@
     "feeType": "per_head",
     "isTeam": true,
     "tag": "Knowledge Battle",
-    "venue": "Digital Library / Lab 3",
-    "timing": "11:00 AM – 12:00 PM",
+    "venue": "CSE DEPT 3RD Year Class A",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
     "description": "Rapid-fire online technology trivia covering computer fundamentals, latest trends, AI, and IT giants.",
+    "image": "/events/event-1789617928386-8030.png",
     "rules": [
       "Screen sharing or cheating must be strictly restricted.",
       "Questions will cover core CSE/IT domains like programming, networks, databases, and AI.",
@@ -121,19 +481,19 @@
     ],
     "rounds": [
       {
+        "desc": "30 fast-paced technical questions.",
         "name": "Round 1: Rapid Fire MCQs",
-        "time": "15 Mins",
-        "desc": "30 fast-paced technical questions."
+        "time": "15 Mins"
       },
       {
+        "desc": "Audio-visual and logo identification.",
         "name": "Round 2: Identify the Tech & Buzz",
-        "time": "15 Mins",
-        "desc": "Audio-visual and logo identification."
+        "time": "15 Mins"
       },
       {
+        "desc": "Buzzer-based tie-breaker and high-difficulty trivia.",
         "name": "Round 3: Grand Finale Showdown",
-        "time": "15 Mins",
-        "desc": "Buzzer-based tie-breaker and high-difficulty trivia."
+        "time": "15 Mins"
       }
     ],
     "guidelines": [
@@ -144,15 +504,15 @@
       "3 Rounds (15 mins/round)",
       "Total 45 mins"
     ],
-    "venueImage": "",
-    "image": "/events/event-1789617928386-8030.png"
+    "createdAt": "2026-09-16T10:16:13.863678+00:00",
+    "updatedAt": "2026-09-18T09:09:53.513+00:00"
   },
   {
     "id": "tech-04",
     "number": "04",
     "name": "WEB PROMPT",
     "alias": "Web / Prompt",
-    "subtitle": "Web Design & Generative AI Prompting",
+    "subtitle": "Web Development & Generative AI Prompting",
     "category": "technical",
     "teamSize": "Individual / Team of 2",
     "minMembers": 1,
@@ -162,28 +522,30 @@
     "feeType": "per_head",
     "isTeam": true,
     "tag": "Web & Prompt AI",
-    "venue": "IT Lab 2",
-    "timing": "01:30 PM – 03:30 PM",
+    "venue": "Lab 3 & 4",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
     "description": "Craft responsive web pages and generate AI visual assets through precision prompting.",
+    "image": "/events/event-1789617939462-850.png",
     "rules": [
-      "Systems will be provided for all the participants.",
-      "In Round 1 landing page will be reviewed; in Round 2 the overall website will be reviewed.",
-      "A design theme and required assets will be provided on the spot.",
-      "Use any technology stack, but pre-made external templates are forbidden.",
-      "The entire web UI must be completed and submitted within the time limit.",
-      "Submissions are judged on UI/UX design, creativity, responsiveness, and code quality.",
-      "The final project must reflect the team's own design and implementation work."
+      "Computer systems will be provided to all participants for the competition.",
+      "The event will consist of two rounds: Round 1 focuses on frontend design, and Round 2 involves backend development and connecting it to the frontend.",
+      "Round 1 has a maximum duration of 30 minutes, followed by an intermediate evaluation, while Round 2 allows a maximum duration of 45 minutes.",
+      "Only shortlisted teams from Round 1 will be eligible to advance and participate in Round 2.",
+      "All submissions will be evaluated primarily on their User Interface (UI) design and quality.",
+      "The competition topic or theme will be revealed on the spot at the start of the event.",
+      "Final results for both the winners and runners-up will be officially announced by the end of the event."
     ],
     "rounds": [
       {
+        "desc": "Design a pixel-perfect hero and feature section on given theme.",
         "name": "Round 1: Responsive Landing Page",
-        "time": "45 Mins",
-        "desc": "Design a pixel-perfect hero and feature section on given theme."
+        "time": "45 Mins"
       },
       {
+        "desc": "Complete interactive web application with generated UI assets.",
         "name": "Round 2: AI Prompt Integration & Full UI",
-        "time": "45 Mins",
-        "desc": "Complete interactive web application with generated UI assets."
+        "time": "45 Mins"
       }
     ],
     "guidelines": [
@@ -194,15 +556,15 @@
       "Round 1: Landing page",
       "Round 2: Overall website"
     ],
-    "image": "/events/event-1789617939462-850.png",
-    "venueImage": ""
+    "createdAt": "2026-09-16T10:16:13.942986+00:00",
+    "updatedAt": "2026-09-18T09:02:32.61+00:00"
   },
   {
     "id": "tech-06",
     "number": "06",
     "name": "UI/UX",
     "alias": "UI/UX",
-    "subtitle": "Digital Prototype & Experience Design",
+    "subtitle": "UI and UX DESIGN",
     "category": "technical",
     "teamSize": "Individual",
     "minMembers": 1,
@@ -212,9 +574,11 @@
     "feeType": "per_head",
     "isTeam": false,
     "tag": "Product Design",
-    "venue": "Design & Multimedia Lab 5",
-    "timing": "11:00 AM – 01:30 PM",
+    "venue": "MAIN BUILDING Python Lab",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
     "description": "Design intuitive, modern digital interfaces and user experiences using industry-standard design tools.",
+    "image": "/events/event-tech-06-1789621679528-2221.png",
     "rules": [
       "Systems will be provided for all the participants.",
       "The theme or topic will be announced on the spot; AI tools are strictly restricted.",
@@ -225,14 +589,14 @@
     ],
     "rounds": [
       {
+        "desc": "Design smooth login, registration, and onboarding screens.",
         "name": "Round 1: Auth & Onboarding Flow",
-        "time": "30 Mins",
-        "desc": "Design smooth login, registration, and onboarding screens."
+        "time": "30 Mins"
       },
       {
+        "desc": "Create main dashboard UI with interactive prototypes.",
         "name": "Round 2: Feature Dashboard & Interactions",
-        "time": "60 Mins",
-        "desc": "Create main dashboard UI with interactive prototypes."
+        "time": "60 Mins"
       }
     ],
     "guidelines": [
@@ -244,363 +608,7 @@
       "Round 1: Login page",
       "Round 2: Dashboard"
     ],
-    "image": "/events/event-tech-06-1789621679528-2221.png",
-    "venueImage": ""
-  },
-  {
-    "id": "nontech-01",
-    "number": "01",
-    "name": "SNAP & REEL",
-    "alias": "Snap & Reel",
-    "subtitle": "Frames & Cinematic Shots",
-    "category": "non-technical",
-    "teamSize": "Individual",
-    "minMembers": 1,
-    "maxMembers": 1,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": false,
-    "tag": "Visual Media",
-    "venue": "Campus Grounds & Media Room",
-    "timing": "10:00 AM – 03:00 PM",
-    "description": "Capture cinematic campus moments, dynamic event energy, and craft creative 30-60 second Instagram reels.",
-    "rules": [
-      "Create content based on the theme announced on the spot.",
-      "Photos and reels must be captured on campus on the event day.",
-      "Submit one photo and one reel (max. 60s); basic editing is allowed.",
-      "Entries must be original and submitted to the given email within the deadline.",
-      "Avoid restricted areas and disturbances; content must be suitable for all.",
-      "Judging will be based on creativity, theme relevance, originality, and presentation."
-    ],
-    "rounds": [
-      {
-        "name": "Campus Capture",
-        "time": "3 Hours",
-        "desc": "Shoot footage across symposium events."
-      },
-      {
-        "name": "Editing & Reel Submission",
-        "time": "1 Hour",
-        "desc": "Final color grading, sound mixing, and upload."
-      }
-    ],
-    "guidelines": [
-      "Submission via Google Drive link or designated upload portal."
-    ],
-    "highlights": [
-      "Original campus footage",
-      "30-60 sec reel length",
-      "Background music allowed"
-    ],
-    "image": "/events/event-1789617780279-2457.png",
-    "venueImage": ""
-  },
-  {
-    "id": "nontech-02",
-    "number": "02",
-    "name": "LINK UP (CONNECTION)",
-    "alias": "Link Up",
-    "subtitle": "Find The Hidden Link",
-    "category": "non-technical",
-    "teamSize": "Max of 3 members",
-    "minMembers": 1,
-    "maxMembers": 3,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Brain Teaser",
-    "venue": "Auditorium Annex",
-    "timing": "11:30 AM – 01:00 PM",
-    "description": "Decode visual rebus puzzles, connected clues, movie scenes, and pop-culture links with fast buzzer reflexes.",
-    "rules": [
-      "The quiz will be conducted in teams through multiple rounds.",
-      "Each question will appear on the screen for a fixed duration.",
-      "Responses must be submitted within the time specified by the organizers.",
-      "No electronic devices, internet access, or outside assistance are permitted.",
-      "Teams will be shortlisted based on their performance in each round.",
-      "The highest-scoring team at the end of the quiz will be declared as the winner."
-    ],
-    "rounds": [
-      {
-        "name": "Round 1: Picture Rebus Clues",
-        "time": "20 Mins",
-        "desc": "Solve interconnected images to find movie or word titles."
-      },
-      {
-        "name": "Round 2: Rapid Buzzer Connection",
-        "time": "30 Mins",
-        "desc": "Complex multi-stage connection puzzles with countdown timer."
-      }
-    ],
-    "guidelines": [
-      "Decisions of the quizmaster are final and binding."
-    ],
-    "highlights": [
-      "Visual connection puzzles",
-      "Fast buzzer mechanics",
-      "Max 3 per squad"
-    ],
-    "image": "/events/event-1789617806355-7221.png",
-    "venueImage": "",
-    "sticker": "https://res.cloudinary.com/dtz0urit6/image/upload/q_auto:best,f_jpg/cloudinary-tools-uploads/mcp0wmdi2hqtauutpt27"
-  },
-  {
-    "id": "nontech-03",
-    "number": "03",
-    "name": "HUNT ZONE (TREASURE HUNT)",
-    "alias": "Hunt Zone",
-    "subtitle": "Quest of The Ancients",
-    "category": "non-technical",
-    "teamSize": "Max of 4 members",
-    "minMembers": 2,
-    "maxMembers": 4,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Adventure & Mystery",
-    "venue": "Campus Wide / Starting at Main Lawn",
-    "timing": "01:00 PM – 03:00 PM",
-    "description": "An exciting treasure hunt across the campus uncovering riddles, cryptographic clues, and physical tokens.",
-    "rules": [
-      "Teams must follow a series of clues to reach the final destination.",
-      "All clues will be placed within the designated college campus areas.",
-      "Clues should be solved in sequence without skipping any stage.",
-      "Online maps, external resources, and non-team assistance are not allowed.",
-      "Participants must respect campus property and avoid restricted zones.",
-      "The first team to reach the final destination with all required proofs wins."
-    ],
-    "rounds": [
-      {
-        "name": "Checkpoint 1: The Cryptic Trail",
-        "time": "45 Mins",
-        "desc": "Solve opening riddles to locate quadrant beacons."
-      },
-      {
-        "name": "Checkpoint 2: The Final Relic Vault",
-        "time": "45 Mins",
-        "desc": "Race to unlock the cipher box on the central quad."
-      }
-    ],
-    "guidelines": [
-      "Wear comfortable athletic shoes for campus navigation."
-    ],
-    "highlights": [
-      "Campus-wide trail",
-      "Cryptic clue checkpoints",
-      "Timed squad adventure"
-    ],
-    "image": "/events/event-1789617826039-8458.png",
-    "venueImage": ""
-  },
-  {
-    "id": "nontech-04",
-    "number": "04",
-    "name": "HENNA HEIST",
-    "alias": "Henna Heist",
-    "subtitle": "Henna Art & Elegance",
-    "category": "non-technical",
-    "teamSize": "Individual",
-    "minMembers": 1,
-    "maxMembers": 1,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": false,
-    "tag": "Traditional Art",
-    "venue": "Classroom Block B – 204",
-    "timing": "10:30 AM – 12:00 PM",
-    "description": "Display traditional Indian and Arabic henna patterns with intricacy, neatness, and artistic flair.",
-    "rules": [
-      "Participants must bring their own mehendi cones and a person to apply the design on.",
-      "A theme will be announced on the spot with a fixed time limit.",
-      "Design one side of one hand, from fingertips to wrist.",
-      "Designs must be original and freehand; no stencils or reference images.",
-      "Glitter and decorative materials are not allowed.",
-      "Judging: creativity, neatness, intricacy & theme relevance.",
-      "Judges' decision is final."
-    ],
-    "rounds": [
-      {
-        "name": "Single Artistry Round",
-        "time": "60 Mins",
-        "desc": "Live henna application on partner/volunteer hand."
-      }
-    ],
-    "guidelines": [
-      "Arrive 10 minutes prior with your volunteer/partner."
-    ],
-    "highlights": [
-      "1 hour duration",
-      "Intricate patterns",
-      "Bring cones"
-    ],
-    "image": "/events/event-1789617843336-809.png",
-    "venueImage": ""
-  },
-  {
-    "id": "nontech-05",
-    "number": "05",
-    "name": "BATTLE OF CHAMPIONS (E-SPORTS)",
-    "alias": "Battle of Champions",
-    "subtitle": "Mobile Battle Royale Showdown",
-    "category": "non-technical",
-    "teamSize": "Only Squad Match (4 Players)",
-    "minMembers": 4,
-    "maxMembers": 4,
-    "fee": "₹200 per squad",
-    "feePerHead": 200,
-    "feeType": "per_squad",
-    "isTeam": true,
-    "tag": "Mobile Gaming",
-    "venue": "Seminar Hall 2 / Annex",
-    "timing": "10:00 AM – 02:00 PM",
-    "description": "High-stakes squad battle royale competition in Free Fire / BGMI on custom symposium rooms.",
-    "rules": [
-      "Battle Royale – Squad mode with 4 players per team.",
-      "Mobile devices only; iPads allowed for BGMI. PCs and emulators are prohibited.",
-      "Players must use registered in-game names and join the custom room on time.",
-      "Cheating, hacking, or third-party software will lead to disqualification.",
-      "Disconnections, abusive language, and misconduct will not be entertained.",
-      "Scoring is based on placement and kills; organizers' decision is final."
-    ],
-    "rounds": [
-      {
-        "name": "Match 1: Bermuda / Erangel Qualifying Drop",
-        "time": "35 Mins",
-        "desc": "Survival and kill points bracket ranking."
-      },
-      {
-        "name": "Match 2: Purgatory / Miramar Finals",
-        "time": "40 Mins",
-        "desc": "Top seeded squads battle for the championship trophy."
-      }
-    ],
-    "guidelines": [
-      "Bring fully charged mobile devices and personal headphones."
-    ],
-    "highlights": [
-      "Emotes strictly restricted",
-      "4-Player squad match only",
-      "Flat ₹200 per squad"
-    ],
-    "image": "/events/event-nontech-05-1789621679544-5090.png",
-    "venueImage": ""
-  },
-  {
-    "id": "nontech-06",
-    "number": "06",
-    "name": "64 SQUARES",
-    "alias": "64 Squares",
-    "subtitle": "Grandmaster Board Tactics",
-    "category": "non-technical",
-    "teamSize": "Individual only",
-    "minMembers": 1,
-    "maxMembers": 1,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": false,
-    "tag": "Board Strategy",
-    "venue": "Indoor Sports Complex / Room 204",
-    "timing": "10:30 AM – 01:30 PM",
-    "description": "FIDE-timed blitz chess tournament testing deep positional play, tactical vision, and endgame nerve.",
-    "rules": [
-      "Blitz format with a fixed time limit per player.",
-      "Standard FIDE rules, including touch-move, apply.",
-      "Opponents will be assigned by the organizers.",
-      "Phones, smartwatches, and electronic devices are prohibited.",
-      "Ties will be decided through a tie-breaker round.",
-      "Good sportsmanship is expected; the arbiter's decision is final."
-    ],
-    "rounds": [
-      {
-        "name": "Round 1: Swiss / Knockout Prelims",
-        "time": "45 Mins",
-        "desc": "Preliminary matches to seed into the championship bracket."
-      },
-      {
-        "name": "Round 2: Quarter, Semi & Grand Finals",
-        "time": "60 Mins",
-        "desc": "Direct elimination knockout matches under digital clocks."
-      }
-    ],
-    "guidelines": [
-      "Chess boards, pieces, and digital clocks provided."
-    ],
-    "highlights": [
-      "Rapid / Blitz time control",
-      "FIDE standard rules",
-      "Digital clocks provided"
-    ],
-    "image": "/events/event-1789617856983-8484.png",
-    "venueImage": ""
-  },
-  {
-    "id": "nontech-07",
-    "number": "07",
-    "name": "BATTLEWORLD BIDDING",
-    "alias": "Battleworld Bidding",
-    "subtitle": "Bid. Think. Win.",
-    "category": "non-technical",
-    "teamSize": "Team of 5 Members",
-    "minMembers": 5,
-    "maxMembers": 5,
-    "fee": "₹250 per team",
-    "feePerHead": 250,
-    "feeType": "per_team",
-    "isTeam": true,
-    "tag": "Strategy & Bidding",
-    "venue": "CSE Seminar Hall",
-    "timing": "10:00 AM – 01:00 PM",
-    "description": "Step into the world of strategy, wit, and quick decisions. Bid smart, outthink the rest, and take the win!",
-    "rules": [
-      "Strictly a team of 5 members.",
-      "Registration fee: ₹250 per team.",
-      "Virtual purse budget will be allocated to each participating team at the start.",
-      "Bidding follows sequential live auction rounds with strict countdown timers.",
-      "Exceeding allocated purse budget or bid collusion will result in penalty or disqualification.",
-      "Scoring is calculated from total squad/asset valuation, strategic diversity, and remaining funds.",
-      "Decision of the Auctioneer and judges is final and binding."
-    ],
-    "rounds": [
-      {
-        "name": "Purse Allocation & Rules Brief",
-        "time": "15 Mins",
-        "desc": "Rules explanation, category tier reveal, and budget distribution."
-      },
-      {
-        "name": "Live Auction Bidding",
-        "time": "90 Mins",
-        "desc": "Fast-paced live bidding rounds across featured player/asset pools."
-      }
-    ],
-    "guidelines": [
-      "Paper and calculators will be provided for tracking bids.",
-      "Keep your bidding paddle clearly visible when placing bids.",
-      "Virtual purse ledger will be maintained by auction marshals."
-    ],
-    "highlights": [
-      "Virtual purse budget",
-      "Strategic auctioning",
-      "Strictly 5-member team",
-      "₹250 per team"
-    ],
-    "image": "/events/event-1789617873087-3103.png",
-    "coordinators": [
-      {
-        "name": "Bala Murugan M.K.",
-        "role": "Lead Coordinator",
-        "phone": "8681029193"
-      },
-      {
-        "name": "Vijay Kumar M.",
-        "role": "Lead Coordinator",
-        "phone": "9840251140"
-      }
-    ],
-    "venueImage": ""
+    "createdAt": "2026-09-16T10:16:14.040091+00:00",
+    "updatedAt": "2026-09-18T09:03:11.131+00:00"
   }
 ]

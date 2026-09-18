@@ -12,8 +12,7 @@
       "tech-01"
     ],
     "displayOrder": 1,
-    "isActive": true,
-    "updatedAt": "2026-09-16T16:31:44.976Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-01-b",
@@ -29,8 +28,7 @@
       "nontech-05"
     ],
     "displayOrder": 2,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:35:56.623Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-02-a",
@@ -46,8 +44,7 @@
       "nontech-07"
     ],
     "displayOrder": 3,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:35:06.991Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-02-b",
@@ -62,9 +59,7 @@
       "tech-02"
     ],
     "displayOrder": 4,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:22:31.077Z",
-    "createdAt": "2026-09-01T00:00:00.000Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-03-a",
@@ -79,8 +74,7 @@
       "tech-03"
     ],
     "displayOrder": 5,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:16.219Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-03-b",
@@ -95,8 +89,7 @@
       "tech-03"
     ],
     "displayOrder": 6,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:26.736Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-04-a",
@@ -111,8 +104,7 @@
       "tech-04"
     ],
     "displayOrder": 7,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:36.958Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-04-b",
@@ -127,8 +119,7 @@
       "tech-04"
     ],
     "displayOrder": 8,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:44.689Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-06-a",
@@ -143,8 +134,7 @@
       "tech-06"
     ],
     "displayOrder": 11,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:22:55.182Z"
+    "isActive": true
   },
   {
     "id": "coord-tech-06-b",
@@ -159,8 +149,7 @@
       "tech-06"
     ],
     "displayOrder": 12,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:14.434Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-01-a",
@@ -175,8 +164,7 @@
       "nontech-01"
     ],
     "displayOrder": 13,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:23.710Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-02-a",
@@ -191,8 +179,7 @@
       "nontech-02"
     ],
     "displayOrder": 14,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:43.168Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-02-b",
@@ -207,8 +194,7 @@
       "nontech-02"
     ],
     "displayOrder": 15,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:52.325Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-03-a",
@@ -223,8 +209,7 @@
       "nontech-03"
     ],
     "displayOrder": 16,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:03.107Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-04-a",
@@ -239,8 +224,7 @@
       "nontech-04"
     ],
     "displayOrder": 17,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:17.511Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-04-b",
@@ -255,8 +239,7 @@
       "nontech-04"
     ],
     "displayOrder": 18,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:25.761Z"
+    "isActive": true
   },
   {
     "id": "coord-nontech-05-a",
@@ -271,8 +254,22 @@
       "nontech-05"
     ],
     "displayOrder": 19,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:34.686Z"
+    "isActive": true
+  },
+  {
+    "id": "coord-nontech-05-b",
+    "name": "Suresh V",
+    "phone": "6379464434",
+    "whatsapp": "6379464434",
+    "email": "",
+    "department": "CSE",
+    "year": "4th Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-05"
+    ],
+    "displayOrder": 20,
+    "isActive": true
   },
   {
     "id": "coord-nontech-06-a",
@@ -287,24 +284,7 @@
       "nontech-06"
     ],
     "displayOrder": 21,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:23:29.196Z"
-  },
-  {
-    "id": "coord-nontech-06-b",
-    "name": "Mohammed Sharuk I.",
-    "phone": "9994580064",
-    "whatsapp": "9994580064",
-    "email": "",
-    "department": "CSE",
-    "year": "4th Year",
-    "role": "Lead Coordinator",
-    "assignedEvents": [
-      "nontech-06"
-    ],
-    "displayOrder": 22,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:23:39.887Z"
+    "isActive": true
   },
   {
     "id": "coord-1789554297407",
@@ -319,9 +299,52 @@
       "nontech-01"
     ],
     "displayOrder": 22,
-    "isActive": true,
-    "createdAt": "2026-09-16T10:24:57.407Z",
-    "updatedAt": "2026-09-16T10:24:57.407Z"
+    "isActive": true
+  },
+  {
+    "id": "coord-nontech-06-b",
+    "name": "Mohammed Sharuk I.",
+    "phone": "9994580064",
+    "whatsapp": "9994580064",
+    "email": "",
+    "department": "CSE",
+    "year": "4th Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-06"
+    ],
+    "displayOrder": 22,
+    "isActive": true
+  },
+  {
+    "id": "coord-1789651271488",
+    "name": "Mohamed Adnan F",
+    "phone": "9080969891",
+    "whatsapp": "9080969891",
+    "email": "",
+    "department": "CSE",
+    "year": "4th Year",
+    "role": "Lead Coordinator",
+    "assignedEvents": [
+      "nontech-05"
+    ],
+    "displayOrder": 25,
+    "isActive": true
+  },
+  {
+    "id": "coord-1789229485490",
+    "name": "shahid Ahamed",
+    "phone": "9876543210",
+    "whatsapp": "9876543210",
+    "email": "shahid@gmail.com",
+    "department": "CSE",
+    "year": "3rd Year",
+    "role": "Coordinator",
+    "assignedEvents": [
+      "tech-06"
+    ],
+    "displayOrder": 31,
+    "isActive": true
   },
   {
     "id": "coord-1789540820936",
@@ -336,9 +359,7 @@
       "nontech-03"
     ],
     "displayOrder": 33,
-    "isActive": true,
-    "createdAt": "2026-09-16T06:40:20.936Z",
-    "updatedAt": "2026-09-16T06:40:20.936Z"
+    "isActive": true
   },
   {
     "id": "coord-1789540349076",
@@ -353,8 +374,6 @@
       "nontech-07"
     ],
     "displayOrder": 34,
-    "isActive": true,
-    "createdAt": "2026-09-16T06:32:29.076Z",
-    "updatedAt": "2026-09-16T06:32:29.076Z"
+    "isActive": true
   }
 ]
