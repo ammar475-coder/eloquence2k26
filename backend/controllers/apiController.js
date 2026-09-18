@@ -196,13 +196,29 @@ const dbToHomepageTeam = (t) => {
     };
   });
 
+  let resolvedTier = t.tier;
+  if (!resolvedTier || resolvedTier === 'emerald') {
+    try {
+      const localTeams = readHomepageCoordinators();
+      const localMatch = localTeams.find(lt => lt.id === t.id);
+      if (localMatch && localMatch.tier) {
+        resolvedTier = localMatch.tier;
+      }
+    } catch (_) {}
+  }
+  if (!resolvedTier) {
+    if (t.id === 'web-team') resolvedTier = 'cyan';
+    else if (t.color && ['cyan', 'emerald', 'gold', 'purple', 'crimson', 'orange'].includes(t.color)) resolvedTier = t.color;
+    else resolvedTier = 'emerald';
+  }
+
   return {
     id: t.id,
     role: t.role || '',
     tag: t.tag || 'TEAM',
-    iconName: t.icon_name || t.iconName || 'Users',
-    tier: t.tier || 'emerald',
-    desc: t.description || t.desc || '',
+    iconName: t.icon_name || t.iconName || t.icon || 'Users',
+    tier: resolvedTier,
+    desc: t.description || t.desc || t.desc_text || '',
     members: normalizedMembers,
     names: normalizedMembers.map(m => m.name),
     displayOrder: Number(t.display_order ?? t.displayOrder ?? 999),
@@ -1374,11 +1390,14 @@ exports.getCoordinatorsByEvent = async (req, res) => {
 // ==================== PUBLIC STUDENT COORDINATORS (LEADERSHIP) ====================
 exports.getStudentCoordinators = async (req, res) => {
   try {
-    // Check fallback file or default
     const fallbackPath = path.join(DATA_DIR, 'studentCoordinators.json');
     if (fs.existsSync(fallbackPath)) {
       const raw = fs.readFileSync(fallbackPath, 'utf-8');
       return res.json({ success: true, data: JSON.parse(raw) });
+    }
+    const hpTeams = readHomepageCoordinators();
+    if (hpTeams && hpTeams.length > 0) {
+      return res.json({ success: true, data: hpTeams.filter(t => t.isActive !== false) });
     }
   } catch (err) {}
 

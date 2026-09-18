@@ -104,6 +104,132 @@ const EXISTING_POSTER_PRESETS = [
   { id: 'nontech-06', label: '64 Squares (Chess)', img: defaultEventImages['nontech-06'] },
 ];
 
+export const COORDINATOR_THEMES = [
+  {
+    id: 'emerald',
+    name: 'Emerald Green',
+    roleHint: 'Default for Coordinators',
+    primaryColor: '#39ff88',
+    secondaryColor: '#00a83b',
+    bgColor: '#040a06',
+    borderGlow: 'rgba(57, 255, 136, 0.4)',
+    badgeBg: 'rgba(16, 185, 129, 0.15)',
+    badgeBorder: 'rgba(16, 185, 129, 0.35)',
+    badgeText: '#10b981',
+    description: 'Electric emerald green - standard sympo leadership theme'
+  },
+  {
+    id: 'cyan',
+    name: 'Sky Blue',
+    roleHint: 'Default for Website & Tech Team',
+    primaryColor: '#00f0ff',
+    secondaryColor: '#0077b6',
+    bgColor: '#020e18',
+    borderGlow: 'rgba(0, 240, 255, 0.4)',
+    badgeBg: 'rgba(56, 189, 248, 0.15)',
+    badgeBorder: 'rgba(56, 189, 248, 0.35)',
+    badgeText: '#38bdf8',
+    description: 'Electric sky blue cyber glow - perfect for web & technical crew'
+  },
+  {
+    id: 'gold',
+    name: 'Royal Gold',
+    roleHint: 'Core Leadership / Executive',
+    primaryColor: '#ffd700',
+    secondaryColor: '#b99358',
+    bgColor: '#0a0804',
+    borderGlow: 'rgba(245, 228, 184, 0.4)',
+    badgeBg: 'rgba(245, 158, 11, 0.15)',
+    badgeBorder: 'rgba(245, 158, 11, 0.35)',
+    badgeText: '#fbbf24',
+    description: 'Luxurious prestige amber gold - presidential & core committee'
+  },
+  {
+    id: 'purple',
+    name: 'Neon Purple',
+    roleHint: 'Creative & Media Crew',
+    primaryColor: '#d946ef',
+    secondaryColor: '#7928ca',
+    bgColor: '#0d0216',
+    borderGlow: 'rgba(217, 70, 239, 0.4)',
+    badgeBg: 'rgba(217, 70, 239, 0.15)',
+    badgeBorder: 'rgba(217, 70, 239, 0.35)',
+    badgeText: '#f472b6',
+    description: 'Cyberpunk neon violet - ideal for design, media & visual arts'
+  },
+  {
+    id: 'crimson',
+    name: 'Cyber Crimson',
+    roleHint: 'Operations & Disciplinary',
+    primaryColor: '#ff3b5c',
+    secondaryColor: '#be123c',
+    bgColor: '#140306',
+    borderGlow: 'rgba(255, 59, 92, 0.4)',
+    badgeBg: 'rgba(244, 63, 94, 0.15)',
+    badgeBorder: 'rgba(244, 63, 94, 0.35)',
+    badgeText: '#fb7185',
+    description: 'High-intensity neon crimson - discipline, logistics & security'
+  },
+  {
+    id: 'orange',
+    name: 'Radiant Orange',
+    roleHint: 'Publicity & Outreach',
+    primaryColor: '#ff9100',
+    secondaryColor: '#c2410c',
+    bgColor: '#140802',
+    borderGlow: 'rgba(255, 145, 0, 0.4)',
+    badgeBg: 'rgba(251, 146, 60, 0.15)',
+    badgeBorder: 'rgba(251, 146, 60, 0.35)',
+    badgeText: '#fb923c',
+    description: 'Dynamic fiery orange - sponsorship, publicity & marketing'
+  }
+];
+
+export const suggestCoordinatorTheme = (roleText = '', tagText = '') => {
+  const combined = `${roleText || ''} ${tagText || ''}`.toLowerCase();
+  if (/(web|website|tech|code|developer|software|site|cyber|portal|app|dev)/i.test(combined)) {
+    return {
+      tier: 'cyan',
+      reason: 'Recommended for Website & Tech Crew',
+      name: 'Sky Blue'
+    };
+  }
+  if (/(design|media|creative|art|photo|video|promo|poster|reel)/i.test(combined)) {
+    return {
+      tier: 'purple',
+      reason: 'Recommended for Design & Media Team',
+      name: 'Neon Purple'
+    };
+  }
+  if (/(exec|president|chair|patron|honor|secretar)/i.test(combined)) {
+    return {
+      tier: 'gold',
+      reason: 'Recommended for Executive Leadership',
+      name: 'Royal Gold'
+    };
+  }
+  if (/(operation|logistics|discipline|stage|venue|security|crowd)/i.test(combined)) {
+    return {
+      tier: 'crimson',
+      reason: 'Recommended for Operations & Logistics',
+      name: 'Cyber Crimson'
+    };
+  }
+  if (/(sponsor|pr|publicity|marketing|outreach|finance)/i.test(combined)) {
+    return {
+      tier: 'orange',
+      reason: 'Recommended for Publicity & Sponsorship',
+      name: 'Radiant Orange'
+    };
+  }
+  // Default for coordinator / leadership
+  return {
+    tier: 'emerald',
+    reason: 'Default for Student Coordinators & Leadership',
+    name: 'Emerald Green'
+  };
+};
+
 export default function AdminDashboard({ token, user, onLogout }) {
   const loggedRole = String(user?.role || 'admin').toLowerCase();
   const isVerificationRole = loggedRole === 'verification' || loggedRole.includes('verify') || loggedRole.includes('verification');
@@ -1378,7 +1504,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [hpTeamRole, setHpTeamRole] = useState('');
   const [hpTeamTag, setHpTeamTag] = useState('TEAM');
   const [hpTeamIcon, setHpTeamIcon] = useState('Users');
-  const [hpTeamTier, setHpTeamTier] = useState('cyan');
+  const [hpTeamTier, setHpTeamTier] = useState('emerald');
+  const [hpTeamTierManuallySelected, setHpTeamTierManuallySelected] = useState(false);
   const [hpTeamDesc, setHpTeamDesc] = useState('');
   const [hpTeamOrder, setHpTeamOrder] = useState('1');
   const [hpTeamIsActive, setHpTeamIsActive] = useState(true);
@@ -2680,7 +2807,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setHpTeamRole('');
     setHpTeamTag('TEAM');
     setHpTeamIcon('Users');
-    setHpTeamTier('cyan');
+    setHpTeamTier('emerald');
+    setHpTeamTierManuallySelected(false);
     setHpTeamDesc('');
     setHpTeamOrder(String(homepageTeams.length + 1));
     setHpTeamIsActive(true);
@@ -2694,6 +2822,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const openCreateHpTeamModal = () => {
     resetHpTeamForm();
+    setHpTeamTier('emerald');
+    setHpTeamTierManuallySelected(false);
     setHpTeamOrder(String(homepageTeams.length + 1));
     setIsHpTeamModalOpen(true);
   };
@@ -2703,7 +2833,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setHpTeamRole(team.role || '');
     setHpTeamTag(team.tag || 'TEAM');
     setHpTeamIcon(team.iconName || 'Users');
-    setHpTeamTier(team.tier || 'cyan');
+    setHpTeamTier(team.tier || 'emerald');
+    setHpTeamTierManuallySelected(true);
     setHpTeamDesc(team.desc || '');
     setHpTeamOrder(String(team.displayOrder ?? 1));
     setHpTeamIsActive(team.isActive !== false);
@@ -2846,10 +2977,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const renderHpCoordinatorIcon = (iconName, tier = 'emerald', size = 20) => {
-    const strokeColor =
-      tier === 'cyan' ? '#00f0ff' :
-      tier === 'gold' ? '#f5e4b8' :
-      tier === 'purple' ? '#d946ef' : '#39ff88';
+    const t = String(tier).toLowerCase();
+    const foundTheme = COORDINATOR_THEMES.find(ct => ct.id === t);
+    const strokeColor = foundTheme ? foundTheme.primaryColor : '#39ff88';
 
     switch (iconName) {
       case 'Code':
@@ -6076,20 +6206,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 }}>
                   {filteredHpTeams.map((team) => {
                     const tier = team.tier || 'emerald';
-                    const tierBorderColor =
-                      tier === 'cyan' ? '#00f0ff' :
-                      tier === 'gold' ? '#f5e4b8' :
-                      tier === 'purple' ? '#d946ef' : '#39ff88';
-
-                    const tierBgTint =
-                      tier === 'cyan' ? 'rgba(0, 240, 255, 0.04)' :
-                      tier === 'gold' ? 'rgba(245, 228, 184, 0.04)' :
-                      tier === 'purple' ? 'rgba(217, 70, 239, 0.04)' : 'rgba(57, 255, 136, 0.04)';
-
-                    const tierBadgeText =
-                      tier === 'cyan' ? '#38bdf8' :
-                      tier === 'gold' ? '#fcd34d' :
-                      tier === 'purple' ? '#f472b6' : '#4ade80';
+                    const tierTheme = COORDINATOR_THEMES.find(ct => ct.id === tier) || COORDINATOR_THEMES[0];
+                    const tierBorderColor = tierTheme.primaryColor;
+                    const tierBgTint = `${tierTheme.primaryColor}0d`;
+                    const tierBadgeText = tierTheme.primaryColor;
 
                     const rawMembers = (team.members && team.members.length > 0)
                       ? team.members
@@ -6141,6 +6261,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 border: '1px solid rgba(37, 99, 235, 0.3)'
                               }}>
                                 {team.tag || 'TEAM'}
+                              </span>
+                              <span style={{
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase',
+                                background: tierTheme.badgeBg,
+                                color: tierTheme.badgeText,
+                                border: `1px solid ${tierTheme.badgeBorder}`,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: tierTheme.primaryColor }} />
+                                {tierTheme.name}
                               </span>
                             </div>
 
@@ -9821,7 +9958,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       readOnly={isLeadCoordinator}
                       placeholder="e.g. MAIN COORDINATOR TEAM, WEBSITE DEVELOPMENT TEAM, MEDIA & PROMOTIONS TEAM"
                       value={hpTeamRole}
-                      onChange={(e) => setHpTeamRole(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setHpTeamRole(val);
+                        if (!editingHpTeamId && !hpTeamTierManuallySelected) {
+                          const suggested = suggestCoordinatorTheme(val, hpTeamTag);
+                          setHpTeamTier(suggested.tier);
+                        }
+                      }}
                       style={S.input}
                     />
                     <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
@@ -9839,7 +9983,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         readOnly={isLeadCoordinator}
                         placeholder="e.g. STUDENT LEADERSHIP, WEB & TECH CREW, CREATIVE TEAM"
                         value={hpTeamTag}
-                        onChange={(e) => setHpTeamTag(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setHpTeamTag(val);
+                          if (!editingHpTeamId && !hpTeamTierManuallySelected) {
+                            const suggested = suggestCoordinatorTheme(hpTeamRole, val);
+                            setHpTeamTier(suggested.tier);
+                          }
+                        }}
                         style={S.input}
                       />
                     </div>
@@ -9857,6 +10008,145 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       />
                     </div>
                   </div>
+
+                  {/* Card Theme & Color Selector with Smart Suggestion */}
+                  {(() => {
+                    const smartThemeSuggestion = suggestCoordinatorTheme(hpTeamRole, hpTeamTag);
+                    const isSuggestedSelected = hpTeamTier === smartThemeSuggestion.tier;
+
+                    return (
+                      <div style={S.modalInputGroup}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                          <label style={{ ...S.label, marginBottom: 0 }}>
+                            Card Color Theme {!isLeadCoordinator && <span style={{ color: '#ef4444' }}>*</span>}
+                          </label>
+                          {smartThemeSuggestion && (
+                            <div style={{
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '999px',
+                              background: isSuggestedSelected
+                                ? (isDark ? 'rgba(16, 185, 129, 0.16)' : '#ecfdf5')
+                                : (isDark ? 'rgba(59, 130, 246, 0.16)' : '#eff6ff'),
+                              color: isSuggestedSelected ? '#10b981' : '#3b82f6',
+                              border: `1px solid ${isSuggestedSelected ? 'rgba(16, 185, 129, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}>
+                              <span>✨ Suggested: <strong>{smartThemeSuggestion.name}</strong></span>
+                              {!isSuggestedSelected && !isLeadCoordinator && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHpTeamTier(smartThemeSuggestion.tier);
+                                    setHpTeamTierManuallySelected(true);
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#2563eb',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    padding: 0,
+                                    marginLeft: '2px'
+                                  }}
+                                >
+                                  Apply
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                          gap: '8px'
+                        }}>
+                          {COORDINATOR_THEMES.map((theme) => {
+                            const isSelected = hpTeamTier === theme.id;
+                            return (
+                              <button
+                                key={theme.id}
+                                type="button"
+                                disabled={isLeadCoordinator}
+                                onClick={() => {
+                                  if (!isLeadCoordinator) {
+                                    setHpTeamTier(theme.id);
+                                    setHpTeamTierManuallySelected(true);
+                                  }
+                                }}
+                                style={{
+                                  padding: '0.7rem 0.8rem',
+                                  borderRadius: '12px',
+                                  border: isSelected
+                                    ? `2px solid ${theme.primaryColor}`
+                                    : (isDark ? '1px solid #374151' : '1px solid #e2e8f0'),
+                                  background: isSelected
+                                    ? (isDark ? `linear-gradient(135deg, ${theme.bgColor}, rgba(255,255,255,0.03))` : '#ffffff')
+                                    : (isDark ? '#161e2e' : '#f8fafc'),
+                                  boxShadow: isSelected
+                                    ? `0 0 16px ${theme.borderGlow}`
+                                    : 'none',
+                                  cursor: isLeadCoordinator ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-start',
+                                  gap: '4px',
+                                  textAlign: 'left',
+                                  transition: 'all 0.18s ease',
+                                  position: 'relative',
+                                  opacity: isLeadCoordinator && !isSelected ? 0.6 : 1
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{
+                                      width: '12px',
+                                      height: '12px',
+                                      borderRadius: '50%',
+                                      background: theme.primaryColor,
+                                      boxShadow: `0 0 8px ${theme.primaryColor}`,
+                                      display: 'inline-block',
+                                      flexShrink: 0
+                                    }} />
+                                    <span style={{
+                                      fontSize: '0.8rem',
+                                      fontWeight: isSelected ? '800' : '700',
+                                      color: isSelected ? (isDark ? '#f9fafb' : '#0f172a') : (isDark ? '#d1d5db' : '#334155')
+                                    }}>
+                                      {theme.name}
+                                    </span>
+                                  </div>
+                                  {isSelected && (
+                                    <span style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: '800',
+                                      color: theme.primaryColor
+                                    }}>
+                                      ✓
+                                    </span>
+                                  )}
+                                </div>
+
+                                <span style={{
+                                  fontSize: '0.67rem',
+                                  color: isSelected ? theme.primaryColor : (isDark ? '#9ca3af' : '#64748b'),
+                                  fontWeight: '600',
+                                  lineHeight: '1.2'
+                                }}>
+                                  {theme.roleHint}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Icon Selector */}
                   <div style={S.modalInputGroup}>
@@ -10141,28 +10431,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   {/* Cyber Slide Card Preview */}
                   {(() => {
                     const tier = hpTeamTier || 'emerald';
-                    const strokeColor =
-                      tier === 'cyan' ? '#00f0ff' :
-                      tier === 'gold' ? '#f5e4b8' :
-                      tier === 'purple' ? '#d946ef' : '#39ff88';
-
-                    let color1 = '#00a83b';
-                    let color2 = '#39ff88';
-                    let color3 = '#040a06';
-
-                    if (tier === 'cyan') {
-                      color1 = '#0077b6';
-                      color2 = '#00f0ff';
-                      color3 = '#020e18';
-                    } else if (tier === 'gold') {
-                      color1 = '#b99358';
-                      color2 = '#f5e4b8';
-                      color3 = '#0a0804';
-                    } else if (tier === 'purple') {
-                      color1 = '#7928ca';
-                      color2 = '#d946ef';
-                      color3 = '#0d0216';
-                    }
+                    const currentTheme = COORDINATOR_THEMES.find(ct => ct.id === tier) || COORDINATOR_THEMES[0];
+                    const strokeColor = currentTheme.primaryColor;
+                    const color1 = currentTheme.secondaryColor;
+                    const color2 = currentTheme.primaryColor;
+                    const color3 = currentTheme.bgColor;
 
                     return (
                       <div style={{
