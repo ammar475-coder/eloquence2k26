@@ -27,7 +27,7 @@ const patrons = [
     role: 'PRINCIPAL',
     iconName: 'GraduationCap',
     tag: 'ORGANIZING PATRON',
-    names: ['Dr. M. Sasi Kumar'],
+    names: ['Dr. M. SasiKumar'],
     tier: 'gold',
     desc: 'Academic leadership and mentorship driving national competition.',
   },

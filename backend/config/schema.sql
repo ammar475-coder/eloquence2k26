@@ -240,6 +240,7 @@ CREATE TABLE IF NOT EXISTS public.homepage_coordinators (
 
 ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS icon TEXT DEFAULT 'Users';
 ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS color TEXT DEFAULT 'from-blue-500 to-cyan-500';
+ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'emerald';
 ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS desc_text TEXT;
 
 -- ------------------------------------------------------------------------------
