@@ -220,7 +220,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
 
   useEffect(() => {
     let isMounted = true;
-    fetchEventsData(true)
+    fetchEventsData(false)
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setEventsList(data);

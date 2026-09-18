@@ -14,7 +14,7 @@
     "is_active": true,
     "created_at": "2026-09-16T18:03:23.205688+00:00",
     "updated_at": "2026-09-17T04:07:35.77+00:00",
-    "location_url": null
+    "location_url": ""
   },
   {
     "id": "sponsor-elite-01",
@@ -23,37 +23,37 @@
     "logo": "/sponsors/sponsor-1789625252690-2603.jpg",
     "description": "CHATS FOOD SHOP",
     "website": "",
-    "contact_name": "SIYA",
+    "contact_name": "",
     "contact_email": "",
-    "contact_phone": "8667329339",
+    "contact_phone": "",
     "category": "Elite",
     "display_order": 1,
     "is_active": true,
     "created_at": "2026-09-16T10:16:18.441858+00:00",
     "updated_at": "2026-09-17T06:07:33.819+00:00",
-    "location_url": "https://maps.google.com/?q=Ridhi+Chats"
+    "location_url": ""
   },
   {
     "id": "sponsor-premium-02",
     "name": "LITTLE PIRATE",
-    "company_name": "SHOP",
+    "company_name": "LITTLE PIRATE",
     "logo": "/sponsors/sponsor-premium-02.jpg",
     "description": "Shawarma & BBQ - Vellore's premium street food crew.\nFlame-grilled, rolled to perfection, delivered with pirate pride.",
     "website": "https://littlepiratevellore.com/",
-    "contact_name": "Deepak Nair",
-    "contact_email": "events@stratuscloud.net",
-    "contact_phone": "9876543215",
+    "contact_name": "",
+    "contact_email": "",
+    "contact_phone": "",
     "category": "Premium",
     "display_order": 1,
     "is_active": true,
     "created_at": "2026-09-16T10:16:19.394851+00:00",
     "updated_at": "2026-09-16T10:16:19.394851+00:00",
-    "location_url": "https://share.google/LeD6oLe3gbp6CpOha"
+    "location_url": ""
   },
   {
     "id": "sponsor-1789582885028",
     "name": "12 TWIN",
-    "company_name": "Bike Accessories",
+    "company_name": "12 TWIN",
     "logo": "/sponsors/sponsor-1789618040664-1060.jpg",
     "description": "",
     "website": "",
@@ -65,46 +65,46 @@
     "is_active": true,
     "created_at": "2026-09-16T18:21:25.171691+00:00",
     "updated_at": "2026-09-17T04:07:23.006+00:00",
-    "location_url": null
+    "location_url": ""
   },
   {
     "id": "sponsor-1789582643130",
     "name": "Papinoice",
-    "company_name": "Ice Dealer",
+    "company_name": "Papinoice",
     "logo": "/sponsors/sponsor-1789618064240-1224.jpg",
     "description": "Ice directly to everyday consumers.",
     "website": "",
     "contact_name": "",
     "contact_email": "",
-    "contact_phone": "93454 75119",
+    "contact_phone": "",
     "category": "Standard",
-    "display_order": 2,
+    "display_order": 1,
     "is_active": true,
     "created_at": "2026-09-16T18:17:23.569827+00:00",
     "updated_at": "2026-09-17T04:07:46.151+00:00",
-    "location_url": null
+    "location_url": ""
   },
   {
     "id": "sponsor-1789582189175",
     "name": "YARN MAGIC",
-    "company_name": "Crafts products",
+    "company_name": "YARN MAGIC",
     "logo": "/sponsors/sponsor-1789618008922-3105.jpg",
     "description": "",
     "website": "",
-    "contact_name": "Vidhya Ranjith",
+    "contact_name": "",
     "contact_email": "",
-    "contact_phone": "63821 29627",
+    "contact_phone": "",
     "category": "Premium",
-    "display_order": 2,
+    "display_order": 1,
     "is_active": true,
     "created_at": "2026-09-16T18:09:49.581754+00:00",
     "updated_at": "2026-09-17T04:06:51.539+00:00",
-    "location_url": null
+    "location_url": ""
   },
   {
     "id": "sponsor-1789582814717",
     "name": "SA ENTERPRISES",
-    "company_name": "",
+    "company_name": "SA ENTERPRISES",
     "logo": "/sponsors/sponsor-1789618080059-6784.jpg",
     "description": "",
     "website": "",
@@ -112,10 +112,10 @@
     "contact_email": "",
     "contact_phone": "",
     "category": "Standard",
-    "display_order": 2,
+    "display_order": 1,
     "is_active": true,
     "created_at": "2026-09-16T18:20:15.087589+00:00",
     "updated_at": "2026-09-17T04:08:14.504+00:00",
-    "location_url": null
+    "location_url": ""
   }
 ]

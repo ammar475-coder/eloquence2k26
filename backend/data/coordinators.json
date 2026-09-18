@@ -8,12 +8,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-01"
     ],
-    "displayOrder": 1,
-    "isActive": true,
-    "updatedAt": "2026-09-16T16:31:44.976Z"
+    "is_active": true,
+    "display_order": 1,
+    "created_at": "2026-09-16T10:16:15.977649+00:00",
+    "updated_at": "2026-09-16T16:31:44.882+00:00"
   },
   {
     "id": "coord-tech-01-b",
@@ -24,14 +25,14 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "game": "BGMI",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-01",
       "nontech-05"
     ],
-    "displayOrder": 2,
-    "isActive": true,
-    "updatedAt": "2026-09-17T13:12:24.482Z"
+    "is_active": true,
+    "display_order": 2,
+    "created_at": "2026-09-16T10:16:16.057215+00:00",
+    "updated_at": "2026-09-17T13:12:24.483+00:00"
   },
   {
     "id": "coord-tech-02-a",
@@ -42,13 +43,14 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-02",
       "nontech-07"
     ],
-    "displayOrder": 3,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:35:06.991Z"
+    "is_active": true,
+    "display_order": 3,
+    "created_at": "2026-09-16T10:16:16.144833+00:00",
+    "updated_at": "2026-09-16T10:16:16.144833+00:00"
   },
   {
     "id": "coord-tech-02-b",
@@ -59,13 +61,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-02"
     ],
-    "displayOrder": 4,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:22:31.077Z",
-    "createdAt": "2026-09-01T00:00:00.000Z"
+    "is_active": true,
+    "display_order": 4,
+    "created_at": "2026-09-16T10:16:16.218819+00:00",
+    "updated_at": "2026-09-16T10:22:30.681+00:00"
   },
   {
     "id": "coord-tech-03-a",
@@ -76,12 +78,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-03"
     ],
-    "displayOrder": 5,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:16.219Z"
+    "is_active": true,
+    "display_order": 5,
+    "created_at": "2026-09-16T10:16:16.304122+00:00",
+    "updated_at": "2026-09-16T10:16:16.304122+00:00"
   },
   {
     "id": "coord-tech-03-b",
@@ -92,12 +95,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-03"
     ],
-    "displayOrder": 6,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:26.736Z"
+    "is_active": true,
+    "display_order": 6,
+    "created_at": "2026-09-16T10:16:16.40108+00:00",
+    "updated_at": "2026-09-16T10:16:16.40108+00:00"
   },
   {
     "id": "coord-tech-04-a",
@@ -108,12 +112,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-04"
     ],
-    "displayOrder": 7,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:36.958Z"
+    "is_active": true,
+    "display_order": 7,
+    "created_at": "2026-09-16T10:16:16.487902+00:00",
+    "updated_at": "2026-09-16T10:16:16.487902+00:00"
   },
   {
     "id": "coord-tech-04-b",
@@ -124,12 +129,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-04"
     ],
-    "displayOrder": 8,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:36:44.689Z"
+    "is_active": true,
+    "display_order": 8,
+    "created_at": "2026-09-16T10:16:16.561202+00:00",
+    "updated_at": "2026-09-16T10:16:16.561202+00:00"
   },
   {
     "id": "coord-tech-06-a",
@@ -140,12 +146,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-06"
     ],
-    "displayOrder": 11,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:22:55.182Z"
+    "is_active": true,
+    "display_order": 11,
+    "created_at": "2026-09-16T10:16:16.707865+00:00",
+    "updated_at": "2026-09-16T10:22:55.182+00:00"
   },
   {
     "id": "coord-tech-06-b",
@@ -156,12 +163,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-06"
     ],
-    "displayOrder": 12,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:14.434Z"
+    "is_active": true,
+    "display_order": 12,
+    "created_at": "2026-09-16T10:16:16.790034+00:00",
+    "updated_at": "2026-09-16T10:16:16.790034+00:00"
   },
   {
     "id": "coord-nontech-01-a",
@@ -172,12 +180,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-01"
     ],
-    "displayOrder": 13,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:23.710Z"
+    "is_active": true,
+    "display_order": 13,
+    "created_at": "2026-09-16T10:16:16.888953+00:00",
+    "updated_at": "2026-09-16T10:16:16.888953+00:00"
   },
   {
     "id": "coord-nontech-02-a",
@@ -188,12 +197,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-02"
     ],
-    "displayOrder": 14,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:43.168Z"
+    "is_active": true,
+    "display_order": 14,
+    "created_at": "2026-09-16T10:16:16.979422+00:00",
+    "updated_at": "2026-09-16T10:16:16.979422+00:00"
   },
   {
     "id": "coord-nontech-02-b",
@@ -204,12 +214,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-02"
     ],
-    "displayOrder": 15,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:37:52.325Z"
+    "is_active": true,
+    "display_order": 15,
+    "created_at": "2026-09-16T10:16:17.05716+00:00",
+    "updated_at": "2026-09-16T10:16:17.05716+00:00"
   },
   {
     "id": "coord-nontech-03-a",
@@ -220,12 +231,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-03"
     ],
-    "displayOrder": 16,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:03.107Z"
+    "is_active": true,
+    "display_order": 16,
+    "created_at": "2026-09-16T10:16:17.174355+00:00",
+    "updated_at": "2026-09-16T10:16:17.174355+00:00"
   },
   {
     "id": "coord-nontech-04-a",
@@ -236,12 +248,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-04"
     ],
-    "displayOrder": 17,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:17.511Z"
+    "is_active": true,
+    "display_order": 17,
+    "created_at": "2026-09-16T10:16:17.243603+00:00",
+    "updated_at": "2026-09-16T10:16:17.243603+00:00"
   },
   {
     "id": "coord-nontech-04-b",
@@ -252,12 +265,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-04"
     ],
-    "displayOrder": 18,
-    "isActive": true,
-    "updatedAt": "2026-09-16T06:38:25.761Z"
+    "is_active": true,
+    "display_order": 18,
+    "created_at": "2026-09-16T10:16:17.330284+00:00",
+    "updated_at": "2026-09-16T10:16:17.330284+00:00"
   },
   {
     "id": "coord-nontech-05-a",
@@ -268,13 +282,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "game": "Free Fire",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-05"
     ],
-    "displayOrder": 19,
-    "isActive": true,
-    "updatedAt": "2026-09-17T13:12:38.604Z"
+    "is_active": true,
+    "display_order": 19,
+    "created_at": "2026-09-16T10:16:17.452911+00:00",
+    "updated_at": "2026-09-17T13:12:38.604+00:00"
   },
   {
     "id": "coord-nontech-05-b",
@@ -285,13 +299,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "game": "Free Fire",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-05"
     ],
-    "displayOrder": 20,
-    "isActive": true,
-    "updatedAt": "2026-09-17T13:52:03.006Z"
+    "is_active": true,
+    "display_order": 20,
+    "created_at": "2026-09-16T10:16:17.564049+00:00",
+    "updated_at": "2026-09-17T13:52:03.007+00:00"
   },
   {
     "id": "coord-nontech-06-a",
@@ -302,12 +316,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-06"
     ],
-    "displayOrder": 21,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:23:29.196Z"
+    "is_active": true,
+    "display_order": 21,
+    "created_at": "2026-09-16T10:16:17.652357+00:00",
+    "updated_at": "2026-09-16T10:23:29.196+00:00"
   },
   {
     "id": "coord-1789554297407",
@@ -318,13 +333,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-01"
     ],
-    "displayOrder": 22,
-    "isActive": true,
-    "createdAt": "2026-09-16T10:24:57.407Z",
-    "updatedAt": "2026-09-16T10:24:57.407Z"
+    "is_active": true,
+    "display_order": 22,
+    "created_at": "2026-09-16T10:24:58.282384+00:00",
+    "updated_at": "2026-09-16T10:24:57.407+00:00"
   },
   {
     "id": "coord-nontech-06-b",
@@ -335,12 +350,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-06"
     ],
-    "displayOrder": 22,
-    "isActive": true,
-    "updatedAt": "2026-09-16T10:23:39.887Z"
+    "is_active": true,
+    "display_order": 22,
+    "created_at": "2026-09-16T10:16:17.730142+00:00",
+    "updated_at": "2026-09-16T10:23:39.887+00:00"
   },
   {
     "id": "coord-1789651271488",
@@ -351,14 +367,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "game": "BGMI",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-05"
     ],
-    "displayOrder": 25,
-    "isActive": true,
-    "createdAt": "2026-09-17T13:21:11.487Z",
-    "updatedAt": "2026-09-17T13:21:11.487Z"
+    "is_active": true,
+    "display_order": 25,
+    "created_at": "2026-09-17T13:21:14.64044+00:00",
+    "updated_at": "2026-09-17T13:21:11.488+00:00"
   },
   {
     "id": "coord-1789229485490",
@@ -369,11 +384,13 @@
     "department": "CSE",
     "year": "3rd Year",
     "role": "Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "tech-06"
     ],
-    "displayOrder": 31,
-    "isActive": true
+    "is_active": true,
+    "display_order": 31,
+    "created_at": "2026-09-16T16:44:35.232248+00:00",
+    "updated_at": "2026-09-16T16:44:35.232248+00:00"
   },
   {
     "id": "coord-1789540820936",
@@ -384,13 +401,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-03"
     ],
-    "displayOrder": 33,
-    "isActive": true,
-    "createdAt": "2026-09-16T06:40:20.936Z",
-    "updatedAt": "2026-09-16T06:40:20.936Z"
+    "is_active": true,
+    "display_order": 33,
+    "created_at": "2026-09-16T10:36:51.626052+00:00",
+    "updated_at": "2026-09-16T10:36:51.626052+00:00"
   },
   {
     "id": "coord-1789540349076",
@@ -401,12 +418,12 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
-    "assignedEvents": [
+    "assigned_events": [
       "nontech-07"
     ],
-    "displayOrder": 34,
-    "isActive": true,
-    "createdAt": "2026-09-16T06:32:29.076Z",
-    "updatedAt": "2026-09-16T06:32:29.076Z"
+    "is_active": true,
+    "display_order": 34,
+    "created_at": "2026-09-16T10:36:51.535973+00:00",
+    "updated_at": "2026-09-16T10:36:51.535973+00:00"
   }
 ]

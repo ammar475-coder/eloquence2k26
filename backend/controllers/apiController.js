@@ -259,20 +259,35 @@ const dbToEvent = (e) => ({
 // ── Ultra-Fast Server In-Memory Cache with Background Sync ────────────────
 let inMemoryEvents = null;
 let lastEventsSyncTime = 0;
+let inFlightEventsPromise = null;
+
 let inMemorySponsors = null;
 let lastSponsorsSyncTime = 0;
+let inFlightSponsorsPromise = null;
+
 let inMemoryCoordinators = null;
 let lastCoordinatorsSyncTime = 0;
+let inFlightCoordinatorsPromise = null;
+
 let inMemoryHomepageTeams = null;
 let lastHomepageTeamsSyncTime = 0;
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL
+let inFlightHomepageTeamsPromise = null;
+
+let inMemorySettings = null;
+let lastSettingsSyncTime = 0;
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes TTL for public read-only static data
+const SETTINGS_CACHE_TTL_MS = 60 * 1000; // 60 seconds TTL for registration status
 
 function initServerMemoryCache() {
   try {
     const eventsFile = path.join(DATA_DIR, 'events.json');
     if (fs.existsSync(eventsFile)) {
       const parsed = JSON.parse(fs.readFileSync(eventsFile, 'utf-8') || '[]');
-      if (Array.isArray(parsed) && parsed.length > 0) inMemoryEvents = parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        inMemoryEvents = parsed;
+        lastEventsSyncTime = Date.now();
+      }
     }
   } catch (_) {}
 
@@ -280,21 +295,38 @@ function initServerMemoryCache() {
     const sponsors = readSponsors();
     const active = sponsors.filter(s => s.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    if (active.length > 0) inMemorySponsors = active;
+    if (active.length > 0) {
+      inMemorySponsors = active;
+      lastSponsorsSyncTime = Date.now();
+    }
   } catch (_) {}
 
   try {
     const coords = readCoordinators();
     const active = coords.filter(c => c.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    if (active.length > 0) inMemoryCoordinators = active;
+    if (active.length > 0) {
+      inMemoryCoordinators = active;
+      lastCoordinatorsSyncTime = Date.now();
+    }
   } catch (_) {}
 
   try {
     const hp = readHomepageCoordinators();
     const active = hp.filter(t => t.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    if (active.length > 0) inMemoryHomepageTeams = active;
+    if (active.length > 0) {
+      inMemoryHomepageTeams = active;
+      lastHomepageTeamsSyncTime = Date.now();
+    }
+  } catch (_) {}
+
+  try {
+    const st = readSettings();
+    if (st) {
+      inMemorySettings = st;
+      lastSettingsSyncTime = Date.now();
+    }
   } catch (_) {}
 }
 
@@ -303,18 +335,26 @@ initServerMemoryCache();
 exports.invalidateEventsCache = () => {
   inMemoryEvents = null;
   lastEventsSyncTime = 0;
+  inFlightEventsPromise = null;
 };
 exports.invalidateSponsorsCache = () => {
   inMemorySponsors = null;
   lastSponsorsSyncTime = 0;
+  inFlightSponsorsPromise = null;
 };
 exports.invalidateCoordinatorsCache = () => {
   inMemoryCoordinators = null;
   lastCoordinatorsSyncTime = 0;
+  inFlightCoordinatorsPromise = null;
 };
 exports.invalidateHomepageTeamsCache = () => {
   inMemoryHomepageTeams = null;
   lastHomepageTeamsSyncTime = 0;
+  inFlightHomepageTeamsPromise = null;
+};
+exports.invalidateSettingsCache = () => {
+  inMemorySettings = null;
+  lastSettingsSyncTime = 0;
 };
 
 exports.getStatus = (req, res) => {
@@ -325,12 +365,24 @@ exports.getStatus = (req, res) => {
 };
 
 exports.getRegistrationStatus = async (req, res) => {
+  const now = Date.now();
+  if (inMemorySettings && (now - lastSettingsSyncTime < SETTINGS_CACHE_TTL_MS)) {
+    return res.json({
+      success: true,
+      data: inMemorySettings,
+      isRegistrationClosed: Boolean(inMemorySettings.isRegistrationClosed),
+      closedReason: inMemorySettings.closedReason || 'ONLINE REGISTRATIONS ARE CLOSED',
+      onSpotNotice: inMemorySettings.onSpotNotice || 'ON SPOT REGISTRATIONS WILL BE OPENED TOMORROW ON 9:00 AM',
+      closedAt: inMemorySettings.closedAt || null
+    });
+  }
+
   try {
-    let settings = readSettings();
+    let settings = inMemorySettings || readSettings();
     try {
       const { data: dbSettings, error } = await supabase
         .from('settings')
-        .select('*')
+        .select('id, is_registration_closed, closed_reason, closed_at, closed_by, on_spot_notice, updated_at')
         .eq('id', 'general')
         .maybeSingle();
 
@@ -349,6 +401,9 @@ exports.getRegistrationStatus = async (req, res) => {
       // Non-blocking fallback to local settings
     }
 
+    inMemorySettings = settings;
+    lastSettingsSyncTime = Date.now();
+
     res.json({
       success: true,
       data: settings,
@@ -362,6 +417,8 @@ exports.getRegistrationStatus = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to read registration status' });
   }
 };
+
+
 
 // ── Razorpay Payment Gateway Integration ──────────────────────────────────────
 
@@ -860,15 +917,17 @@ exports.getHealth = (req, res) => {
   });
 };
 
+const EVENT_SELECT_COLUMNS = 'id, number, name, alias, subtitle, category, team_size, min_members, max_members, fee, fee_per_head, fee_type, is_team, tag, venue, venue_image, timing, description, image, rules, rounds, guidelines, highlights, created_at, updated_at';
+
 exports.getPublicEvents = async (req, res) => {
   const now = Date.now();
 
-  // If in-memory cache is available and fresh, serve instantly (< 1ms)
+  // 1. If in-memory cache is available and fresh, serve instantly (< 1ms, 0 DB egress)
   if (inMemoryEvents && inMemoryEvents.length > 0 && (now - lastEventsSyncTime < CACHE_TTL_MS)) {
     return res.json({ success: true, data: inMemoryEvents });
   }
 
-  // Load from local file if memory cache is not yet set
+  // 2. Load from local file if memory cache is not yet set
   let localEvents = inMemoryEvents || [];
   if (localEvents.length === 0) {
     try {
@@ -879,34 +938,48 @@ exports.getPublicEvents = async (req, res) => {
     } catch (e) {}
   }
 
-  // If we have cached/local data, return immediately and sync in background
+  // 3. Serve local/cached data immediately to ensure zero UI latency
   if (localEvents.length > 0) {
     inMemoryEvents = localEvents;
     res.json({ success: true, data: localEvents });
 
-    // Background sync with Supabase
-    (async () => {
-      try {
-        const { data: dbEvents, error } = await supabase.from('events').select('*').order('id', { ascending: true });
-        if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
-          const merged = dbEvents.map(dbToEvent).map(e => {
-            const local = localEvents.find(l => l.id === e.id);
-            return {
-              ...e,
-              venueImage: e.venueImage || (local ? (local.venueImage || local.venue_image) : '') || ''
-            };
-          });
-          inMemoryEvents = merged;
-          lastEventsSyncTime = Date.now();
+    // Deduplicated background sync with Supabase only if cache expired
+    if (!inFlightEventsPromise && (now - lastEventsSyncTime >= CACHE_TTL_MS)) {
+      inFlightEventsPromise = (async () => {
+        try {
+          const { data: dbEvents, error } = await supabase
+            .from('events')
+            .select(EVENT_SELECT_COLUMNS)
+            .order('id', { ascending: true });
+
+          if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
+            const merged = dbEvents.map(dbToEvent).map(e => {
+              const local = localEvents.find(l => l.id === e.id);
+              return {
+                ...e,
+                venueImage: e.venueImage || (local ? (local.venueImage || local.venue_image) : '') || ''
+              };
+            });
+            inMemoryEvents = merged;
+            lastEventsSyncTime = Date.now();
+          }
+        } catch (err) {
+          // Keep current in-memory cache on network hiccups
+        } finally {
+          inFlightEventsPromise = null;
         }
-      } catch (err) {}
-    })();
+      })();
+    }
     return;
   }
 
-  // Cold start fallback
+  // 4. Cold start fallback if no local file exists
   try {
-    const { data: dbEvents, error } = await supabase.from('events').select('*').order('id', { ascending: true });
+    const { data: dbEvents, error } = await supabase
+      .from('events')
+      .select(EVENT_SELECT_COLUMNS)
+      .order('id', { ascending: true });
+
     if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
       const merged = dbEvents.map(dbToEvent);
       inMemoryEvents = merged;
@@ -1092,13 +1165,18 @@ const enrichRegistrationRecord = (r) => {
   return copy;
 };
 
+const SPONSOR_SELECT_COLUMNS = 'id, name, company_name, logo, description, website, location_url, contact_name, contact_email, contact_phone, category, display_order, is_active, created_at, updated_at';
+const COORDINATOR_SELECT_COLUMNS = 'id, name, phone, whatsapp, email, role, department, year, assigned_events, is_active, display_order, game, created_at, updated_at';
+const HP_COORDINATOR_SELECT_COLUMNS = 'id, role, tag, icon, color, tier, desc_text, members, display_order, is_active, created_at, updated_at';
+const REGISTRATION_EVENT_FIELDS = 'events(id, name, alias, category, fee, fee_per_head, fee_type, venue, timing)';
+
 exports.getRegistrations = async (req, res) => {
   try {
     const { eventId, category, status } = req.query;
 
     let query = supabase
       .from('registrations')
-      .select('*, events(*), registration_members(*)')
+      .select(`*, ${REGISTRATION_EVENT_FIELDS}, registration_members(*)`)
       .order('created_at', { ascending: false });
 
     if (eventId) {
@@ -1145,8 +1223,8 @@ exports.getRegistrationById = async (req, res) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
 
     const query = isUUID
-      ? supabase.from('registrations').select('*, events(*), registration_members(*)').eq('id', normId).maybeSingle()
-      : supabase.from('registrations').select('*, events(*), registration_members(*)').ilike('ticket_code', normId).maybeSingle();
+      ? supabase.from('registrations').select(`*, ${REGISTRATION_EVENT_FIELDS}, registration_members(*)`).eq('id', normId).maybeSingle()
+      : supabase.from('registrations').select(`*, ${REGISTRATION_EVENT_FIELDS}, registration_members(*)`).ilike('ticket_code', normId).maybeSingle();
 
     const { data, error } = await query;
 
@@ -1184,28 +1262,32 @@ exports.getActiveSponsors = async (req, res) => {
     inMemorySponsors = localSponsors;
     res.json({ success: true, count: localSponsors.length, data: localSponsors });
 
-    // Background sync
-    (async () => {
-      try {
-        const { data: dbSponsors, error } = await supabase
-          .from('sponsors')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
+    // Deduplicated background sync
+    if (!inFlightSponsorsPromise && (now - lastSponsorsSyncTime >= CACHE_TTL_MS)) {
+      inFlightSponsorsPromise = (async () => {
+        try {
+          const { data: dbSponsors, error } = await supabase
+            .from('sponsors')
+            .select(SPONSOR_SELECT_COLUMNS)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
 
-        if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
-          inMemorySponsors = dbSponsors.map(dbToSponsor);
-          lastSponsorsSyncTime = Date.now();
+          if (!error && Array.isArray(dbSponsors) && dbSponsors.length > 0) {
+            inMemorySponsors = dbSponsors.map(dbToSponsor);
+            lastSponsorsSyncTime = Date.now();
+          }
+        } catch (_) {} finally {
+          inFlightSponsorsPromise = null;
         }
-      } catch (_) {}
-    })();
+      })();
+    }
     return;
   }
 
   try {
     const { data: dbSponsors, error } = await supabase
       .from('sponsors')
-      .select('*')
+      .select(SPONSOR_SELECT_COLUMNS)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 
@@ -1230,13 +1312,19 @@ exports.getPublicSponsorById = async (req, res) => {
       if (found) return res.json({ success: true, data: found });
     }
 
+    const sponsors = readSponsors();
+    const sponsor = sponsors.find(s => s.id === req.params.id && s.isActive !== false);
+    if (sponsor) {
+      return res.json({ success: true, data: sponsor });
+    }
+
     try {
       const { data: dbSponsor, error } = await supabase
         .from('sponsors')
-        .select('*')
+        .select(SPONSOR_SELECT_COLUMNS)
         .eq('id', req.params.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (!error && dbSponsor) {
         return res.json({ success: true, data: dbToSponsor(dbSponsor) });
@@ -1245,12 +1333,7 @@ exports.getPublicSponsorById = async (req, res) => {
       console.warn('Supabase getPublicSponsorById fallback:', e.message);
     }
 
-    const sponsors = readSponsors();
-    const sponsor = sponsors.find(s => s.id === req.params.id && s.isActive !== false);
-    if (!sponsor) {
-      return res.status(404).json({ success: false, message: 'Sponsor not found' });
-    }
-    res.json({ success: true, data: sponsor });
+    return res.status(404).json({ success: false, message: 'Sponsor not found' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Error fetching sponsor' });
   }
@@ -1274,28 +1357,32 @@ exports.getActiveCoordinators = async (req, res) => {
     inMemoryCoordinators = localCoords;
     res.json({ success: true, count: localCoords.length, data: localCoords });
 
-    // Background sync
-    (async () => {
-      try {
-        const { data: dbCoords, error } = await supabase
-          .from('coordinators')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
+    // Deduplicated background sync
+    if (!inFlightCoordinatorsPromise && (now - lastCoordinatorsSyncTime >= CACHE_TTL_MS)) {
+      inFlightCoordinatorsPromise = (async () => {
+        try {
+          const { data: dbCoords, error } = await supabase
+            .from('coordinators')
+            .select(COORDINATOR_SELECT_COLUMNS)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
 
-        if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-          inMemoryCoordinators = dbCoords.map(dbToCoordinator);
-          lastCoordinatorsSyncTime = Date.now();
+          if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+            inMemoryCoordinators = dbCoords.map(dbToCoordinator);
+            lastCoordinatorsSyncTime = Date.now();
+          }
+        } catch (_) {} finally {
+          inFlightCoordinatorsPromise = null;
         }
-      } catch (_) {}
-    })();
+      })();
+    }
     return;
   }
 
   try {
     const { data: dbCoords, error } = await supabase
       .from('coordinators')
-      .select('*')
+      .select(COORDINATOR_SELECT_COLUMNS)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 
@@ -1321,27 +1408,9 @@ exports.getCoordinatorsByEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    let allCoords = [];
-    try {
-      const { data: dbCoords, error } = await supabase
-        .from('coordinators')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
-        allCoords = dbCoords.map(dbToCoordinator);
-        inMemoryCoordinators = allCoords;
-      }
-    } catch (e) {
-      console.warn('Supabase getCoordinatorsByEvent fallback:', e.message);
-    }
-
-    if (!allCoords || allCoords.length === 0) {
-      allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
-        ? inMemoryCoordinators
-        : readCoordinators().map(dbToCoordinator).filter(c => c.isActive !== false);
-    }
+    let allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
+      ? inMemoryCoordinators
+      : readCoordinators().map(dbToCoordinator).filter(c => c.isActive !== false);
 
     let matching = allCoords.filter(c => 
       c.isActive !== false && 
@@ -1422,28 +1491,32 @@ exports.getPublicHomepageCoordinators = async (req, res) => {
     inMemoryHomepageTeams = localTeams;
     res.json({ success: true, count: localTeams.length, data: localTeams });
 
-    // Background sync
-    (async () => {
-      try {
-        const { data: dbTeams, error } = await supabase
-          .from('homepage_coordinators')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
+    // Deduplicated background sync
+    if (!inFlightHomepageTeamsPromise && (now - lastHomepageTeamsSyncTime >= CACHE_TTL_MS)) {
+      inFlightHomepageTeamsPromise = (async () => {
+        try {
+          const { data: dbTeams, error } = await supabase
+            .from('homepage_coordinators')
+            .select(HP_COORDINATOR_SELECT_COLUMNS)
+            .eq('is_active', true)
+            .order('display_order', { ascending: true });
 
-        if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
-          inMemoryHomepageTeams = dbTeams.map(dbToHomepageTeam);
-          lastHomepageTeamsSyncTime = Date.now();
+          if (!error && Array.isArray(dbTeams) && dbTeams.length > 0) {
+            inMemoryHomepageTeams = dbTeams.map(dbToHomepageTeam);
+            lastHomepageTeamsSyncTime = Date.now();
+          }
+        } catch (_) {} finally {
+          inFlightHomepageTeamsPromise = null;
         }
-      } catch (_) {}
-    })();
+      })();
+    }
     return;
   }
 
   try {
     const { data: dbTeams, error } = await supabase
       .from('homepage_coordinators')
-      .select('*')
+      .select(HP_COORDINATOR_SELECT_COLUMNS)
       .eq('is_active', true)
       .order('display_order', { ascending: true });
 

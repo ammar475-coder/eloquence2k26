@@ -458,7 +458,9 @@ function getStoredEventsCache() {
 }
 
 let inMemoryEventsCache = getStoredEventsCache();
+let lastEventsFetchTime = inMemoryEventsCache && inMemoryEventsCache.length > 0 ? Date.now() : 0;
 let pendingEventsPromise = null;
+const CLIENT_EVENTS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes client freshness
 
 export function getCachedEvents() {
   if (inMemoryEventsCache && Array.isArray(inMemoryEventsCache) && inMemoryEventsCache.length > 0) {
@@ -471,6 +473,7 @@ export function getCachedEvents() {
 export function setCachedEvents(events) {
   if (Array.isArray(events) && events.length > 0) {
     inMemoryEventsCache = events;
+    lastEventsFetchTime = Date.now();
     try {
       localStorage.setItem('eloquence_db_events_v3', JSON.stringify(events));
       sessionStorage.setItem('eloquence_db_events_v3', JSON.stringify(events));
@@ -481,12 +484,17 @@ export function setCachedEvents(events) {
 }
 
 export async function fetchEventsData(force = false) {
+  // If data is in memory and fresh, return immediately without duplicate HTTP calls
+  if (!force && inMemoryEventsCache && inMemoryEventsCache.length > 0 && (Date.now() - lastEventsFetchTime < CLIENT_EVENTS_CACHE_TTL_MS)) {
+    return inMemoryEventsCache;
+  }
+
   if (pendingEventsPromise && !force) return pendingEventsPromise;
 
   pendingEventsPromise = (async () => {
     try {
       const res = await fetch(getApiUrl('/api/events'), {
-        cache: 'no-store'
+        cache: force ? 'no-store' : 'default'
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();

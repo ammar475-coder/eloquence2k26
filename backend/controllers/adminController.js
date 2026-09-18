@@ -43,6 +43,10 @@ function getSettingsData() {
 function saveSettingsData(data) {
   try {
     fs.writeFileSync(settingsFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    try {
+      const apiCtrl = require('./apiController');
+      if (apiCtrl && apiCtrl.invalidateSettingsCache) apiCtrl.invalidateSettingsCache();
+    } catch (_) {}
     return true;
   } catch (err) {
     return false;
@@ -570,16 +574,13 @@ exports.getDashboardData = async (req, res) => {
     let events = getEventsData();
 
     try {
-      const [regRes, spRes, coRes, evRes, hpRes] = await Promise.all([
-        supabase.from('registrations').select('*, registration_members(*)').order('created_at', { ascending: false }),
-        supabase.from('sponsors').select('*'),
-        supabase.from('coordinators').select('*'),
-        supabase.from('events').select('*'),
-        supabase.from('homepage_coordinators').select('*')
-      ]);
+      const { data: regData, error: regError } = await supabase
+        .from('registrations')
+        .select('*, registration_members(*)')
+        .order('created_at', { ascending: false });
 
-      if (regRes.data && Array.isArray(regRes.data)) {
-        registrations = regRes.data.map(r => {
+      if (regData && Array.isArray(regData)) {
+        registrations = regData.map(r => {
           const copy = { ...r };
           if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
             try {
@@ -613,7 +614,7 @@ exports.getDashboardData = async (req, res) => {
                 copy.teamMembers = parsed.team_members;
                 copy.teamMembersList = parsed.team_members.map(m => typeof m === 'string' ? m : (m.fullName || m.name || ''));
               }
-            } catch (e) {}
+            } catch (_) {}
           }
           if (Array.isArray(copy.registration_members) && copy.registration_members.length > 0 && (!copy.teamMembers || copy.teamMembers.length === 0)) {
             copy.teamMembers = copy.registration_members.map((m, idx) => ({
