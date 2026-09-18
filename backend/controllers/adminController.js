@@ -110,36 +110,68 @@ const sponsorToDb = (s) => {
   };
 };
 
-const dbToCoordinator = (c) => ({
-  id: c.id,
-  name: c.name,
-  phone: c.phone || '',
-  whatsapp: c.whatsapp || '',
-  email: c.email || '',
-  department: c.department || '',
-  year: c.year || '',
-  role: c.role || 'Lead Coordinator',
-  assignedEvents: Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []),
-  displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
-  isActive: c.is_active !== false && c.isActive !== false,
-  createdAt: c.created_at || c.createdAt,
-  updatedAt: c.updated_at || c.updatedAt
-});
+const dbToCoordinator = (c) => {
+  let game = c.game || '';
+  let events = [];
+  const rawList = Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []);
+  for (const item of rawList) {
+    if (typeof item === 'string' && item.startsWith('game:')) {
+      if (!game) game = item.replace('game:', '').trim();
+    } else if (item && typeof item === 'object' && item.game) {
+      if (!game) game = item.game;
+      if (item.eventId) events.push(item.eventId);
+    } else if (item && typeof item === 'string') {
+      events.push(item.trim());
+    }
+  }
+  if (!game && c.id) {
+    try {
+      const localCoords = getCoordinatorsData();
+      const match = localCoords.find(lc => lc.id === c.id);
+      if (match && match.game) game = match.game;
+    } catch (_) {}
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone || '',
+    whatsapp: c.whatsapp || '',
+    email: c.email || '',
+    department: c.department || '',
+    year: c.year || '',
+    role: c.role || 'Lead Coordinator',
+    game: game || c.game || '',
+    assignedEvents: events,
+    displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
+    isActive: c.is_active !== false && c.isActive !== false,
+    createdAt: c.created_at || c.createdAt,
+    updatedAt: c.updated_at || c.updatedAt
+  };
+};
 
-const coordinatorToDb = (c) => ({
-  id: c.id,
-  name: c.name,
-  phone: c.phone || '',
-  whatsapp: c.whatsapp || '',
-  email: c.email || '',
-  department: c.department || '',
-  year: c.year || '',
-  role: c.role || 'Lead Coordinator',
-  assigned_events: Array.isArray(c.assignedEvents) ? c.assignedEvents : (Array.isArray(c.assigned_events) ? c.assigned_events : []),
-  display_order: Number(c.displayOrder ?? c.display_order ?? 999),
-  is_active: c.isActive !== false && c.is_active !== false,
-  updated_at: new Date().toISOString()
-});
+const coordinatorToDb = (c) => {
+  let assigned_events = Array.isArray(c.assignedEvents) ? [...c.assignedEvents] : (Array.isArray(c.assigned_events) ? [...c.assigned_events] : []);
+  // Clean existing game: tags
+  assigned_events = assigned_events.filter(e => typeof e === 'string' && !e.startsWith('game:'));
+  // If game is present, encode it safely into assigned_events array for Supabase persistence
+  if (c.game && String(c.game).trim()) {
+    assigned_events.push(`game:${String(c.game).trim()}`);
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone || '',
+    whatsapp: c.whatsapp || '',
+    email: c.email || '',
+    department: c.department || '',
+    year: c.year || '',
+    role: c.role || 'Lead Coordinator',
+    assigned_events: assigned_events,
+    display_order: Number(c.displayOrder ?? c.display_order ?? 999),
+    is_active: c.isActive !== false && c.is_active !== false,
+    updated_at: new Date().toISOString()
+  };
+};
 
 const dbToEvent = (e) => ({
   id: e.id,
@@ -213,8 +245,11 @@ const homepageTeamToDb = (t) => {
     id: t.id,
     role: t.role,
     tag: t.tag || 'TEAM',
+    icon: t.iconName || 'Users',
     icon_name: t.iconName || 'Users',
     tier: t.tier || 'emerald',
+    color: t.tier || 'emerald',
+    desc_text: t.desc || '',
     description: t.desc || '',
     members: t.members || [],
     display_order: Number(t.displayOrder ?? 999),
@@ -1232,8 +1267,15 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.updateEvent = async (req, res) => {
-  if (req.user.role !== 'superadmin' && req.user.role !== 'admin') {
-    return res.status(403).json({ success: false, message: 'Forbidden' });
+  const userRole = String(req.user?.role || '').toLowerCase();
+  const isAdmin = userRole === 'superadmin' || userRole === 'admin';
+  const assigned = req.user?.assignedEvents || (req.user?.eventId ? [req.user.eventId] : []);
+  const isAssigned = Array.isArray(assigned) && assigned.some(
+    e => String(e || '').toLowerCase() === String(req.params.id || '').toLowerCase()
+  );
+
+  if (!isAdmin && !isAssigned) {
+    return res.status(403).json({ success: false, message: 'Forbidden: You do not have permission to edit this event' });
   }
 
   const { id } = req.params;
@@ -1370,10 +1412,17 @@ exports.updateEvent = async (req, res) => {
 
   const updatedResult = eventIndex !== -1 ? events[eventIndex] : { id, ...req.body, image: cleanImage };
 
+  try {
+    const { broadcastRegistrationUpdate } = require('../config/websocket');
+    if (broadcastRegistrationUpdate) {
+      broadcastRegistrationUpdate('EVENT_UPDATED', updatedResult);
+    }
+  } catch (_) {}
+
   res.json({ 
     success: true, 
     message: 'Event updated successfully in live database and storage', 
-    data: updatedResult
+    data: updatedResult 
   });
 };
 
@@ -1700,6 +1749,7 @@ exports.createCoordinator = async (req, res) => {
     department,
     year,
     role,
+    game,
     assignedEvents,
     displayOrder,
     isActive
@@ -1730,7 +1780,8 @@ exports.createCoordinator = async (req, res) => {
     department: department ? department.trim() : 'CSE',
     year: year ? year.trim() : '3rd Year',
     role: role || 'Lead Coordinator',
-    assignedEvents: assignedEvents.filter(e => e && e.trim()),
+    game: game ? String(game).trim() : '',
+    assignedEvents: assignedEvents.filter(e => e && typeof e === 'string' && e.trim() && !e.startsWith('game:')),
     displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : coordinators.length + 1,
     isActive: isActive !== undefined ? Boolean(isActive) : true,
     createdAt: now,
@@ -1765,6 +1816,7 @@ exports.updateCoordinator = async (req, res) => {
     department,
     year,
     role,
+    game,
     assignedEvents,
     displayOrder,
     isActive
@@ -1787,7 +1839,8 @@ exports.updateCoordinator = async (req, res) => {
     department: department !== undefined ? department.trim() : (coordinators[index]?.department || 'CSE'),
     year: year !== undefined ? year.trim() : (coordinators[index]?.year || '3rd Year'),
     role: role || (coordinators[index]?.role || 'Lead Coordinator'),
-    assignedEvents: Array.isArray(assignedEvents) ? assignedEvents.filter(e => e && e.trim()) : (coordinators[index]?.assignedEvents || []),
+    game: game !== undefined ? (game ? String(game).trim() : '') : (coordinators[index]?.game || ''),
+    assignedEvents: Array.isArray(assignedEvents) ? assignedEvents.filter(e => e && typeof e === 'string' && e.trim() && !e.startsWith('game:')) : (coordinators[index]?.assignedEvents || []),
     displayOrder: displayOrder !== undefined && displayOrder !== '' ? Number(displayOrder) : (coordinators[index]?.displayOrder || 1),
     isActive: isActive !== undefined ? Boolean(isActive) : (coordinators[index]?.isActive !== false),
     updatedAt: new Date().toISOString()
@@ -1977,12 +2030,34 @@ exports.verifyRegistration = async (req, res) => {
 
   // Determine target state
   let newStatus = 'pending';
-  if (status === 'verified' || action === 'verify' || isVerified === true) {
+  if (action === 'admit') {
+    newStatus = 'verified';
+  } else if (action === 'unadmit') {
+    newStatus = 'verified'; // keeps registration verified
+  } else if (status === 'verified' || action === 'verify' || isVerified === true) {
     newStatus = 'verified';
   } else if (status === 'flagged' || action === 'flag' || req.body.isFlagged === true) {
     newStatus = 'flagged';
   } else if (status === 'pending' || action === 'unverify' || action === 'unflag' || isVerified === false) {
     newStatus = 'pending';
+  }
+
+  // Guard against admitting or verifying a flagged registration
+  if ((action === 'admit' || action === 'verify' || isVerified === true) && action !== 'unflag' && status !== 'flagged') {
+    try {
+      const chkQuery = isUUID
+        ? supabase.from('registrations').select('is_flagged, flag_reason, verification_status').eq('id', normId).maybeSingle()
+        : supabase.from('registrations').select('is_flagged, flag_reason, verification_status').ilike('ticket_code', normId).maybeSingle();
+      const { data: chkData } = await chkQuery;
+      if (chkData && (chkData.is_flagged === true || chkData.verification_status === 'flagged')) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot admit participant. Ticket is FLAGGED in Registration Verification: "${chkData.flag_reason || 'Flagged for investigation'}"`
+        });
+      }
+    } catch (chkErr) {
+      console.warn('Flag check warning:', chkErr.message);
+    }
   }
 
   const isNowVerified = newStatus === 'verified';
@@ -1995,13 +2070,14 @@ exports.verifyRegistration = async (req, res) => {
   const flaggedAt = isNowFlagged ? nowIso : null;
   const flaggedBy = isNowFlagged ? operatorName : null;
   const finalFlagReason = isNowFlagged ? noteReason : null;
+  const targetAttendance = req.body.attendance_status || (action === 'unadmit' ? 'pending' : (isNowVerified ? 'verified' : 'pending'));
 
   try {
     const updatePayload = {
       is_verified: isNowVerified,
       verified_at: verifiedAt,
       verified_by: verifiedBy,
-      attendance_status: isNowVerified ? 'verified' : 'pending',
+      attendance_status: targetAttendance,
       verification_status: newStatus,
       is_flagged: isNowFlagged,
       flag_reason: finalFlagReason,
@@ -2042,8 +2118,8 @@ exports.verifyRegistration = async (req, res) => {
         isFlagged: isNowFlagged,
         verification_status: newStatus,
         verificationStatus: newStatus,
-        attendance_status: isNowVerified ? 'verified' : 'pending',
-        attendanceStatus: isNowVerified ? 'verified' : 'pending',
+        attendance_status: targetAttendance,
+        attendanceStatus: targetAttendance,
         verified_at: verifiedAt,
         verified_by: verifiedBy,
         flagged_at: flaggedAt,
@@ -2061,6 +2137,8 @@ exports.verifyRegistration = async (req, res) => {
 
     let statusMsg = 'Participant verified and payment confirmed successfully!';
     if (isNowFlagged) statusMsg = 'Registration flagged for UTR / payment investigation.';
+    else if (action === 'admit') statusMsg = 'Participant successfully admitted to event!';
+    else if (action === 'unadmit') statusMsg = 'Participant admission reset to pending.';
     else if (!isNowVerified) statusMsg = 'Registration verification status reset to pending.';
 
     return res.json({

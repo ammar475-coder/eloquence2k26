@@ -2434,7 +2434,7 @@ export default function RegistrationCoordinatorDashboard({ token, user, onLogout
                       >
                         {coordinatorsList.map((c, i) => (
                           <option key={c.id || i} value={c.name}>
-                            {c.name} {c.assignedEvents?.length ? `(${c.assignedEvents.join(', ')})` : ''}
+                            {c.name} {c.game ? `[${c.game}] ` : ''}{c.assignedEvents?.length ? `(${c.assignedEvents.join(', ')})` : ''}
                           </option>
                         ))}
                       </select>

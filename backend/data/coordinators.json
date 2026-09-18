@@ -12,7 +12,8 @@
       "tech-01"
     ],
     "displayOrder": 1,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T16:31:44.976Z"
   },
   {
     "id": "coord-tech-01-b",
@@ -23,12 +24,14 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
+    "game": "BGMI",
     "assignedEvents": [
       "tech-01",
       "nontech-05"
     ],
     "displayOrder": 2,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-17T13:12:24.482Z"
   },
   {
     "id": "coord-tech-02-a",
@@ -44,7 +47,8 @@
       "nontech-07"
     ],
     "displayOrder": 3,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:35:06.991Z"
   },
   {
     "id": "coord-tech-02-b",
@@ -59,7 +63,9 @@
       "tech-02"
     ],
     "displayOrder": 4,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:22:31.077Z",
+    "createdAt": "2026-09-01T00:00:00.000Z"
   },
   {
     "id": "coord-tech-03-a",
@@ -74,7 +80,8 @@
       "tech-03"
     ],
     "displayOrder": 5,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:36:16.219Z"
   },
   {
     "id": "coord-tech-03-b",
@@ -89,7 +96,8 @@
       "tech-03"
     ],
     "displayOrder": 6,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:36:26.736Z"
   },
   {
     "id": "coord-tech-04-a",
@@ -104,7 +112,8 @@
       "tech-04"
     ],
     "displayOrder": 7,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:36:36.958Z"
   },
   {
     "id": "coord-tech-04-b",
@@ -119,7 +128,8 @@
       "tech-04"
     ],
     "displayOrder": 8,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:36:44.689Z"
   },
   {
     "id": "coord-tech-06-a",
@@ -134,7 +144,8 @@
       "tech-06"
     ],
     "displayOrder": 11,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:22:55.182Z"
   },
   {
     "id": "coord-tech-06-b",
@@ -149,7 +160,8 @@
       "tech-06"
     ],
     "displayOrder": 12,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:37:14.434Z"
   },
   {
     "id": "coord-nontech-01-a",
@@ -164,7 +176,8 @@
       "nontech-01"
     ],
     "displayOrder": 13,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:37:23.710Z"
   },
   {
     "id": "coord-nontech-02-a",
@@ -179,7 +192,8 @@
       "nontech-02"
     ],
     "displayOrder": 14,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:37:43.168Z"
   },
   {
     "id": "coord-nontech-02-b",
@@ -194,7 +208,8 @@
       "nontech-02"
     ],
     "displayOrder": 15,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:37:52.325Z"
   },
   {
     "id": "coord-nontech-03-a",
@@ -209,7 +224,8 @@
       "nontech-03"
     ],
     "displayOrder": 16,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:38:03.107Z"
   },
   {
     "id": "coord-nontech-04-a",
@@ -224,7 +240,8 @@
       "nontech-04"
     ],
     "displayOrder": 17,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:38:17.511Z"
   },
   {
     "id": "coord-nontech-04-b",
@@ -239,7 +256,8 @@
       "nontech-04"
     ],
     "displayOrder": 18,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T06:38:25.761Z"
   },
   {
     "id": "coord-nontech-05-a",
@@ -250,11 +268,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
+    "game": "Free Fire",
     "assignedEvents": [
       "nontech-05"
     ],
     "displayOrder": 19,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-17T13:12:38.604Z"
   },
   {
     "id": "coord-nontech-05-b",
@@ -265,11 +285,13 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
+    "game": "Free Fire",
     "assignedEvents": [
       "nontech-05"
     ],
     "displayOrder": 20,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-17T13:52:03.006Z"
   },
   {
     "id": "coord-nontech-06-a",
@@ -284,7 +306,8 @@
       "nontech-06"
     ],
     "displayOrder": 21,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:23:29.196Z"
   },
   {
     "id": "coord-1789554297407",
@@ -299,7 +322,9 @@
       "nontech-01"
     ],
     "displayOrder": 22,
-    "isActive": true
+    "isActive": true,
+    "createdAt": "2026-09-16T10:24:57.407Z",
+    "updatedAt": "2026-09-16T10:24:57.407Z"
   },
   {
     "id": "coord-nontech-06-b",
@@ -314,7 +339,8 @@
       "nontech-06"
     ],
     "displayOrder": 22,
-    "isActive": true
+    "isActive": true,
+    "updatedAt": "2026-09-16T10:23:39.887Z"
   },
   {
     "id": "coord-1789651271488",
@@ -325,11 +351,14 @@
     "department": "CSE",
     "year": "4th Year",
     "role": "Lead Coordinator",
+    "game": "BGMI",
     "assignedEvents": [
       "nontech-05"
     ],
     "displayOrder": 25,
-    "isActive": true
+    "isActive": true,
+    "createdAt": "2026-09-17T13:21:11.487Z",
+    "updatedAt": "2026-09-17T13:21:11.487Z"
   },
   {
     "id": "coord-1789229485490",
@@ -359,7 +388,9 @@
       "nontech-03"
     ],
     "displayOrder": 33,
-    "isActive": true
+    "isActive": true,
+    "createdAt": "2026-09-16T06:40:20.936Z",
+    "updatedAt": "2026-09-16T06:40:20.936Z"
   },
   {
     "id": "coord-1789540349076",
@@ -374,6 +405,8 @@
       "nontech-07"
     ],
     "displayOrder": 34,
-    "isActive": true
+    "isActive": true,
+    "createdAt": "2026-09-16T06:32:29.076Z",
+    "updatedAt": "2026-09-16T06:32:29.076Z"
   }
 ]

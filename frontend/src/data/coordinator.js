@@ -263,14 +263,16 @@ const coordinatorsData = {
         name: 'Bala Murugan M.K.',
         phone: '8825905010',
         displayPhone: '+91 88259 05010',
-        role: 'Lead Coordinator'
+        role: 'Lead Coordinator',
+        game: 'Free Fire'
       },
       {
         slot: 'B',
         name: 'Vijaya Kumar M.',
         phone: '6382960769',
         displayPhone: '+91 63829 60769',
-        role: 'Lead Coordinator'
+        role: 'Lead Coordinator',
+        game: 'BGMI'
       }
     ]
   },

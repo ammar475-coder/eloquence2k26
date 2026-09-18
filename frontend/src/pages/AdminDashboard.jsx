@@ -76,6 +76,7 @@ import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 import RegistrationVerification from '../components/RegistrationVerification.jsx';
+import EventRegistrationCharts from '../components/EventRegistrationCharts.jsx';
 import {
   fetchAdminHomepageCoordinators,
   createHomepageCoordinatorTeam,
@@ -102,6 +103,132 @@ const EXISTING_POSTER_PRESETS = [
   { id: 'nontech-05', label: 'Battle of Champions (Gaming)', img: defaultEventImages['nontech-05'] },
   { id: 'nontech-06', label: '64 Squares (Chess)', img: defaultEventImages['nontech-06'] },
 ];
+
+export const COORDINATOR_THEMES = [
+  {
+    id: 'emerald',
+    name: 'Emerald Green',
+    roleHint: 'Default for Coordinators',
+    primaryColor: '#39ff88',
+    secondaryColor: '#00a83b',
+    bgColor: '#040a06',
+    borderGlow: 'rgba(57, 255, 136, 0.4)',
+    badgeBg: 'rgba(16, 185, 129, 0.15)',
+    badgeBorder: 'rgba(16, 185, 129, 0.35)',
+    badgeText: '#10b981',
+    description: 'Electric emerald green - standard sympo leadership theme'
+  },
+  {
+    id: 'cyan',
+    name: 'Sky Blue',
+    roleHint: 'Default for Website & Tech Team',
+    primaryColor: '#00f0ff',
+    secondaryColor: '#0077b6',
+    bgColor: '#020e18',
+    borderGlow: 'rgba(0, 240, 255, 0.4)',
+    badgeBg: 'rgba(56, 189, 248, 0.15)',
+    badgeBorder: 'rgba(56, 189, 248, 0.35)',
+    badgeText: '#38bdf8',
+    description: 'Electric sky blue cyber glow - perfect for web & technical crew'
+  },
+  {
+    id: 'gold',
+    name: 'Royal Gold',
+    roleHint: 'Core Leadership / Executive',
+    primaryColor: '#ffd700',
+    secondaryColor: '#b99358',
+    bgColor: '#0a0804',
+    borderGlow: 'rgba(245, 228, 184, 0.4)',
+    badgeBg: 'rgba(245, 158, 11, 0.15)',
+    badgeBorder: 'rgba(245, 158, 11, 0.35)',
+    badgeText: '#fbbf24',
+    description: 'Luxurious prestige amber gold - presidential & core committee'
+  },
+  {
+    id: 'purple',
+    name: 'Neon Purple',
+    roleHint: 'Creative & Media Crew',
+    primaryColor: '#d946ef',
+    secondaryColor: '#7928ca',
+    bgColor: '#0d0216',
+    borderGlow: 'rgba(217, 70, 239, 0.4)',
+    badgeBg: 'rgba(217, 70, 239, 0.15)',
+    badgeBorder: 'rgba(217, 70, 239, 0.35)',
+    badgeText: '#f472b6',
+    description: 'Cyberpunk neon violet - ideal for design, media & visual arts'
+  },
+  {
+    id: 'crimson',
+    name: 'Cyber Crimson',
+    roleHint: 'Operations & Disciplinary',
+    primaryColor: '#ff3b5c',
+    secondaryColor: '#be123c',
+    bgColor: '#140306',
+    borderGlow: 'rgba(255, 59, 92, 0.4)',
+    badgeBg: 'rgba(244, 63, 94, 0.15)',
+    badgeBorder: 'rgba(244, 63, 94, 0.35)',
+    badgeText: '#fb7185',
+    description: 'High-intensity neon crimson - discipline, logistics & security'
+  },
+  {
+    id: 'orange',
+    name: 'Radiant Orange',
+    roleHint: 'Publicity & Outreach',
+    primaryColor: '#ff9100',
+    secondaryColor: '#c2410c',
+    bgColor: '#140802',
+    borderGlow: 'rgba(255, 145, 0, 0.4)',
+    badgeBg: 'rgba(251, 146, 60, 0.15)',
+    badgeBorder: 'rgba(251, 146, 60, 0.35)',
+    badgeText: '#fb923c',
+    description: 'Dynamic fiery orange - sponsorship, publicity & marketing'
+  }
+];
+
+export const suggestCoordinatorTheme = (roleText = '', tagText = '') => {
+  const combined = `${roleText || ''} ${tagText || ''}`.toLowerCase();
+  if (/(web|website|tech|code|developer|software|site|cyber|portal|app|dev)/i.test(combined)) {
+    return {
+      tier: 'cyan',
+      reason: 'Recommended for Website & Tech Crew',
+      name: 'Sky Blue'
+    };
+  }
+  if (/(design|media|creative|art|photo|video|promo|poster|reel)/i.test(combined)) {
+    return {
+      tier: 'purple',
+      reason: 'Recommended for Design & Media Team',
+      name: 'Neon Purple'
+    };
+  }
+  if (/(exec|president|chair|patron|honor|secretar)/i.test(combined)) {
+    return {
+      tier: 'gold',
+      reason: 'Recommended for Executive Leadership',
+      name: 'Royal Gold'
+    };
+  }
+  if (/(operation|logistics|discipline|stage|venue|security|crowd)/i.test(combined)) {
+    return {
+      tier: 'crimson',
+      reason: 'Recommended for Operations & Logistics',
+      name: 'Cyber Crimson'
+    };
+  }
+  if (/(sponsor|pr|publicity|marketing|outreach|finance)/i.test(combined)) {
+    return {
+      tier: 'orange',
+      reason: 'Recommended for Publicity & Sponsorship',
+      name: 'Radiant Orange'
+    };
+  }
+  // Default for coordinator / leadership
+  return {
+    tier: 'emerald',
+    reason: 'Default for Student Coordinators & Leadership',
+    name: 'Emerald Green'
+  };
+};
 
 export default function AdminDashboard({ token, user, onLogout }) {
   const loggedRole = String(user?.role || 'admin').toLowerCase();
@@ -273,8 +400,21 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const isOnlineRecord = (r) => (r.payment_method || r.paymentMethod) !== 'ON_SITE_DESK';
 
   const getEventName = (r) => {
-    const evt = eventsList.find(e => e.id === (r.event_id || r.eventId));
-    return evt ? evt.name : (r.eventName || r.event_id || r.eventId || 'General Registration');
+    if (!r) return 'General Registration';
+    const all = (Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents;
+    const evId = String(r.event_id || r.eventId || '').trim().toLowerCase();
+    const directName = r.eventName || r.event_name;
+    const evt = all.find(e => {
+      const eId = String(e.id || '').toLowerCase();
+      const eNum = String(e.number || '').toLowerCase();
+      const eName = String(e.name || '').toLowerCase();
+      const eAlias = String(e.alias || '').toLowerCase();
+      return (
+        (evId && (eId === evId || eNum === evId || eName === evId || eAlias === evId)) ||
+        (directName && directName !== '-' && (eName === directName.toLowerCase() || eAlias === directName.toLowerCase()))
+      );
+    });
+    return evt ? evt.name : ((directName && directName !== '-') ? directName : (evId ? `Event (${evId})` : 'General Registration'));
   };
 
   const getDetailedTeamMembers = (r) => {
@@ -343,14 +483,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const getEventCategory = (r) => {
-    if (!r) return 'non-technical';
-    const evtId = r.event_id || r.eventId;
-    if (eventsList && Array.isArray(eventsList)) {
-      const evt = eventsList.find(e => e.id === evtId);
-      if (evt && evt.category) return evt.category;
-    }
-    const id = String(evtId || '').toLowerCase();
-    return id.startsWith('tech') ? 'technical' : 'non-technical';
+    if (!r) return 'technical';
+    const all = (Array.isArray(eventsList) && eventsList.length > 0) ? eventsList : defaultEvents;
+    const evtId = String(r.event_id || r.eventId || '').trim().toLowerCase();
+    const evt = all.find(e => String(e.id || '').toLowerCase() === evtId);
+    if (evt && evt.category) return evt.category;
+    if (r.category || r.eventCategory) return r.category || r.eventCategory;
+    const ticket = String(r.ticket_code || r.ticketCode || '').toUpperCase();
+    if (ticket.includes('TCH')) return 'technical';
+    if (ticket.includes('NTC') || ticket.includes('NT-') || ticket.includes('-NT')) return 'non-technical';
+    return evtId.startsWith('tech') ? 'technical' : 'non-technical';
   };
 
   const isVerifiedRecord = (r) => {
@@ -474,6 +616,392 @@ export default function AdminDashboard({ token, user, onLogout }) {
     link.click();
     document.body.removeChild(link);
     toast.success(`Exported ${filteredRegistrations.length} registrations to CSV`);
+  };
+
+  // PDF Export Handler for Filtered Registrations
+  const handleExportRegistrationsPDF = () => {
+    if (filteredRegistrations.length === 0) {
+      return toast.error('No registrations found to export');
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) return toast.error('Please allow popups to export PDF');
+
+    const activeEventObj = eventsList.find(e => (e.id || e._id) === regEventFilter);
+    const eventFilterLabel = regEventFilter === 'all' 
+      ? `All Symposium Events (${eventsList.length})` 
+      : (activeEventObj ? `[${(activeEventObj.category || '').toUpperCase()}] ${activeEventObj.name}` : regEventFilter);
+    
+    const modeLabel = regModeFilter === 'online' 
+      ? 'Online Portal Only' 
+      : regModeFilter === 'offline' 
+        ? 'Offline Desk Only' 
+        : 'All Modes (Online & Offline)';
+
+    const categoryLabel = regCategoryFilter === 'technical'
+      ? 'Technical Events Only'
+      : regCategoryFilter === 'non-technical'
+        ? 'Non-Technical Events Only'
+        : 'All Categories';
+
+    const totalFeeSum = filteredRegistrations.reduce((sum, r) => sum + getFee(r), 0);
+    const verifiedCount = filteredRegistrations.filter(isVerifiedRecord).length;
+    const generatedDateStr = new Date().toLocaleString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const rowsHtml = filteredRegistrations.map((reg, idx) => {
+      const isOnline = isOnlineRecord(reg);
+      const isVerified = isVerifiedRecord(reg);
+      const ticketId = reg.ticket_code || reg.registrationId || reg.id || '-';
+      const pName = reg.full_name || reg.fullName || 'Anonymous';
+      const evtName = getEventName(reg);
+      const category = getEventCategory(reg);
+      const isTech = category === 'technical';
+      const feeAmt = getFee(reg);
+      const members = getTeamMembers(reg);
+      const isTeam = Boolean(members.length > 0 || reg.team_name || reg.teamName);
+      const teamName = reg.team_name || reg.teamName || '';
+
+      const rawTimestamp = reg.created_at || reg.createdAt;
+      let dateStr = '';
+      if (rawTimestamp) {
+        try {
+          const d = new Date(rawTimestamp);
+          if (!isNaN(d.getTime())) {
+            dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + '<br/><span style="color:#64748b;font-size:9px;">' +
+                      d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) + '</span>';
+          }
+        } catch (e) {}
+      }
+      if (!dateStr && (reg.timestamp || reg.createdAtFormatted)) {
+        dateStr = reg.timestamp || reg.createdAtFormatted;
+      }
+      if (!dateStr) dateStr = 'N/A';
+
+      const paymentMethod = reg.payment_method || reg.paymentMethod || (isOnline ? 'Online' : 'Cash');
+      const utrNo = reg.utr_number || reg.utrNumber || reg.utr || '';
+
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 700; color: #475569;">${idx + 1}</td>
+          <td>
+            <div style="font-weight: 800; color: #1e3a8a; font-family: monospace; font-size: 11px;">#${ticketId}</div>
+            ${utrNo ? `<div style="font-size: 9px; color: #0284c7; font-weight: 600;">UTR: ${utrNo}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${pName}</div>
+            <div style="font-size: 10px; color: #475569;">${reg.college || 'CAHCET'}</div>
+            ${reg.department ? `<div style="font-size: 9px; color: #64748b;">${reg.department} ${reg.year ? `(${reg.year})` : ''}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-size: 10.5px; color: #0f172a; font-weight: 600;">${reg.phone || '-'}</div>
+            <div style="font-size: 9.5px; color: #475569;">${reg.email || '-'}</div>
+            ${reg.whatsapp && reg.whatsapp !== reg.phone ? `<div style="font-size: 9px; color: #059669; font-weight: 600;">WA: ${reg.whatsapp}</div>` : ''}
+          </td>
+          <td>
+            <div style="font-weight: 700; color: #0f172a; font-size: 11px;">${evtName}</div>
+            <span class="badge ${isTech ? 'badge-tech' : 'badge-nontech'}">${category ? category.toUpperCase() : 'EVENT'}</span>
+          </td>
+          <td>
+            <div><span class="badge ${isOnline ? 'badge-online' : 'badge-offline'}">${isOnline ? 'ONLINE' : 'OFFLINE DESK'}</span></div>
+            ${isTeam ? `
+              <div style="margin-top: 3px; font-size: 9.5px; color: #334155;">
+                <span class="badge-team">Team: ${teamName || 'Yes'}</span>
+                ${members.length > 0 ? `<div style="color: #64748b; font-size: 9px; margin-top: 2px;">+${members.length} members: ${members.join(', ')}</div>` : ''}
+              </div>
+            ` : '<div style="font-size: 9.5px; color: #64748b; margin-top: 2px;">Individual</div>'}
+          </td>
+          <td>
+            <div style="font-weight: 800; color: #0f172a; font-size: 11px;">₹${feeAmt}</div>
+            <div style="font-size: 9px; color: #64748b;">${paymentMethod}</div>
+            <span class="badge ${isVerified ? 'badge-verified' : 'badge-pending'}">${isVerified ? 'VERIFIED' : 'CONFIRMED'}</span>
+          </td>
+          <td style="font-size: 10px; color: #334155; white-space: nowrap;">
+            ${dateStr}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Eloquence 2026 - Participant Registrations Report</title>
+        <style>
+          @page {
+            size: landscape;
+            margin: 8mm;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            background: #ffffff;
+            padding: 16px;
+            font-size: 11px;
+            line-height: 1.35;
+          }
+          .no-print-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+          }
+          .no-print-bar h3 {
+            font-size: 13.5px;
+            font-weight: 700;
+          }
+          .action-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 7px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .action-btn:hover {
+            background: #1d4ed8;
+          }
+          .action-btn.btn-close {
+            background: #475569;
+            margin-left: 8px;
+          }
+          .action-btn.btn-close:hover {
+            background: #334155;
+          }
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+            body {
+              padding: 0;
+            }
+          }
+          .doc-header {
+            border-bottom: 2.5px solid #2563eb;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+          .title-area h1 {
+            font-size: 19px;
+            font-weight: 800;
+            color: #1e3a8a;
+            letter-spacing: -0.3px;
+          }
+          .title-area h2 {
+            font-size: 11.5px;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 1px;
+          }
+          .title-area p {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 2px;
+          }
+          .meta-box {
+            text-align: right;
+            font-size: 10px;
+            color: #475569;
+            line-height: 1.5;
+          }
+          .meta-box strong {
+            color: #0f172a;
+          }
+          .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+          }
+          .kpi-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 7px 10px;
+            border-radius: 6px;
+          }
+          .kpi-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .kpi-val {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-top: 2px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+          }
+          thead {
+            display: table-header-group;
+          }
+          tr {
+            page-break-inside: avoid;
+          }
+          th {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 7px 8px;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: left;
+            border: 1px solid #334155;
+          }
+          td {
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            vertical-align: top;
+          }
+          tr:nth-child(even) {
+            background: #f8fafc;
+          }
+          .badge {
+            display: inline-block;
+            font-size: 8px;
+            font-weight: 700;
+            padding: 1.5px 5px;
+            border-radius: 4px;
+            text-transform: uppercase;
+          }
+          .badge-tech { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+          .badge-nontech { background: #fce7f3; color: #9d174d; border: 1px solid #fbcfe8; }
+          .badge-online { background: #eff6ff; color: #1d4ed8; }
+          .badge-offline { background: #ecfdf5; color: #047857; }
+          .badge-verified { background: #dcfce7; color: #15803d; }
+          .badge-pending { background: #fef9c3; color: #a16207; }
+          .badge-team { background: #f1f5f9; color: #334155; font-size: 8.5px; padding: 1px 4px; border-radius: 3px; font-weight: 600; display: inline-block; }
+          .doc-footer {
+            margin-top: 18px;
+            padding-top: 8px;
+            border-top: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 9.5px;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="no-print no-print-bar">
+          <div>
+            <h3>Participant Registrations Master Sheet &bull; ${filteredRegistrations.length} Records</h3>
+            <span style="font-size: 11px; opacity: 0.85;">Ready to print or save as PDF. Click below or press Ctrl+P.</span>
+          </div>
+          <div>
+            <button class="action-btn" onclick="window.print()">
+              <span>&#128438; Print / Save as PDF</span>
+            </button>
+            <button class="action-btn btn-close" onclick="window.close()">Close</button>
+          </div>
+        </div>
+
+        <div class="doc-header">
+          <div class="title-area">
+            <h1>ELOQUENCE 2026 &mdash; PARTICIPANT REGISTRATION AUDIT SHEET</h1>
+            <h2>DEPARTMENT OF COMPUTER SCIENCE &amp; ENGINEERING &bull; C. ABDUL HAKEEM COLLEGE OF ENGG &amp; TECH</h2>
+            <p>National Level Technical Symposium &bull; Melvisharam, Ranipet &bull; Official Registry Record</p>
+          </div>
+          <div class="meta-box">
+            <div>Generated: <strong>${generatedDateStr}</strong></div>
+            <div>Mode: <strong>${modeLabel}</strong></div>
+            <div>Category: <strong>${categoryLabel}</strong></div>
+            <div>Event: <strong>${eventFilterLabel}</strong></div>
+          </div>
+        </div>
+
+        <div class="kpi-strip">
+          <div class="kpi-card">
+            <div class="kpi-label">Filtered Records</div>
+            <div class="kpi-val">${filteredRegistrations.length} / ${registrationsList.length}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Verified / Admitted</div>
+            <div class="kpi-val" style="color: #15803d;">${verifiedCount}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Fee Collection</div>
+            <div class="kpi-val" style="color: #1e40af;">&#8377;${totalFeeSum}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Event Scope</div>
+            <div class="kpi-val" style="font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${eventFilterLabel}">${eventFilterLabel}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Portal Scope</div>
+            <div class="kpi-val" style="font-size: 11px;">${regModeFilter.toUpperCase()}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 24px; text-align: center;">#</th>
+              <th style="width: 105px;">Ticket / ID</th>
+              <th>Participant &amp; College</th>
+              <th style="width: 135px;">Contact Info</th>
+              <th style="width: 135px;">Event &amp; Category</th>
+              <th style="width: 115px;">Mode &amp; Team</th>
+              <th style="width: 95px;">Fee &amp; Status</th>
+              <th style="width: 100px;">Date &amp; Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <div class="doc-footer">
+          <div>Eloquence 2026 Admin Portal &bull; Generated dynamically for Administrative Audit &bull; Page 1</div>
+          <div>Authorized Signature: ____________________________________</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    win.document.write(htmlContent);
+    win.document.close();
+    toast.success(`Generated PDF sheet for ${filteredRegistrations.length} registrations`);
   };
 
   // Print Registration Ticket / Receipt
@@ -962,6 +1490,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [coordYear, setCoordYear] = useState('3rd Year');
   const [coordRole, setCoordRole] = useState('Lead Coordinator');
   const [coordEvents, setCoordEvents] = useState([]);
+  const [coordGame, setCoordGame] = useState('');
   const [coordDisplayOrder, setCoordDisplayOrder] = useState('1');
   const [coordIsActive, setCoordIsActive] = useState(true);
 
@@ -975,7 +1504,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [hpTeamRole, setHpTeamRole] = useState('');
   const [hpTeamTag, setHpTeamTag] = useState('TEAM');
   const [hpTeamIcon, setHpTeamIcon] = useState('Users');
-  const [hpTeamTier, setHpTeamTier] = useState('cyan');
+  const [hpTeamTier, setHpTeamTier] = useState('emerald');
+  const [hpTeamTierManuallySelected, setHpTeamTierManuallySelected] = useState(false);
   const [hpTeamDesc, setHpTeamDesc] = useState('');
   const [hpTeamOrder, setHpTeamOrder] = useState('1');
   const [hpTeamIsActive, setHpTeamIsActive] = useState(true);
@@ -2114,6 +2644,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setCoordYear('3rd Year');
     setCoordRole('Lead Coordinator');
     setCoordEvents([]);
+    setCoordGame('');
     setCoordDisplayOrder(String(coordinators.length + 1));
     setCoordIsActive(true);
     setEditingCoordId(null);
@@ -2124,6 +2655,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     resetCoordForm();
     if (preselectedEventId && typeof preselectedEventId === 'string') {
       setCoordEvents([preselectedEventId]);
+      if (preselectedEventId.toLowerCase() === 'nontech-05') {
+        setCoordGame('Free Fire');
+      }
     }
     setIsCoordFormVisible(true);
   };
@@ -2136,7 +2670,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setCoordDept(coord.department || 'CSE');
     setCoordYear(coord.year || '3rd Year');
     setCoordRole(coord.role || 'Lead Coordinator');
-    setCoordEvents(Array.isArray(coord.assignedEvents) ? [...coord.assignedEvents] : []);
+    const assigned = Array.isArray(coord.assignedEvents) ? [...coord.assignedEvents] : [];
+    setCoordEvents(assigned);
+    setCoordGame(coord.game || (assigned.includes('nontech-05') ? 'Free Fire' : ''));
     setCoordDisplayOrder(String(coord.displayOrder !== undefined ? coord.displayOrder : 1));
     setCoordIsActive(coord.isActive !== false);
     setEditingCoordId(coord.id);
@@ -2145,9 +2681,17 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const toggleEventSelection = (eventId) => {
     if (coordEvents.includes(eventId)) {
-      setCoordEvents(coordEvents.filter(e => e !== eventId));
+      const nextEvents = coordEvents.filter(e => e !== eventId);
+      setCoordEvents(nextEvents);
+      if (eventId === 'nontech-05' && !nextEvents.includes('nontech-05')) {
+        setCoordGame('');
+      }
     } else {
-      setCoordEvents([...coordEvents, eventId]);
+      const nextEvents = [...coordEvents, eventId];
+      setCoordEvents(nextEvents);
+      if (eventId === 'nontech-05' && !coordGame) {
+        setCoordGame('Free Fire');
+      }
     }
   };
 
@@ -2163,6 +2707,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
     if (coordEvents.length === 0) {
       return toast.error('Please assign this coordinator to at least one event');
     }
+    if (coordEvents.includes('nontech-05') && !coordGame) {
+      return toast.error('Please select the Game Track (Free Fire or BGMI) for Battle of Champions');
+    }
 
     const payload = {
       name: coordName.trim(),
@@ -2172,6 +2719,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
       department: coordDept.trim(),
       year: coordYear.trim(),
       role: coordRole,
+      game: coordEvents.includes('nontech-05') ? coordGame : '',
       assignedEvents: coordEvents,
       displayOrder: Number(coordDisplayOrder) || 1,
       isActive: coordIsActive
@@ -2259,7 +2807,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setHpTeamRole('');
     setHpTeamTag('TEAM');
     setHpTeamIcon('Users');
-    setHpTeamTier('cyan');
+    setHpTeamTier('emerald');
+    setHpTeamTierManuallySelected(false);
     setHpTeamDesc('');
     setHpTeamOrder(String(homepageTeams.length + 1));
     setHpTeamIsActive(true);
@@ -2273,6 +2822,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const openCreateHpTeamModal = () => {
     resetHpTeamForm();
+    setHpTeamTier('emerald');
+    setHpTeamTierManuallySelected(false);
     setHpTeamOrder(String(homepageTeams.length + 1));
     setIsHpTeamModalOpen(true);
   };
@@ -2282,7 +2833,8 @@ export default function AdminDashboard({ token, user, onLogout }) {
     setHpTeamRole(team.role || '');
     setHpTeamTag(team.tag || 'TEAM');
     setHpTeamIcon(team.iconName || 'Users');
-    setHpTeamTier(team.tier || 'cyan');
+    setHpTeamTier(team.tier || 'emerald');
+    setHpTeamTierManuallySelected(true);
     setHpTeamDesc(team.desc || '');
     setHpTeamOrder(String(team.displayOrder ?? 1));
     setHpTeamIsActive(team.isActive !== false);
@@ -2425,10 +2977,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
   };
 
   const renderHpCoordinatorIcon = (iconName, tier = 'emerald', size = 20) => {
-    const strokeColor =
-      tier === 'cyan' ? '#00f0ff' :
-      tier === 'gold' ? '#f5e4b8' :
-      tier === 'purple' ? '#d946ef' : '#39ff88';
+    const t = String(tier).toLowerCase();
+    const foundTheme = COORDINATOR_THEMES.find(ct => ct.id === t);
+    const strokeColor = foundTheme ? foundTheme.primaryColor : '#39ff88';
 
     switch (iconName) {
       case 'Code':
@@ -3202,6 +3753,24 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </div>
                 </div>
               </div>
+
+              {/* ======================================================== */}
+              {/* EVENT REGISTRATION PIE CHARTS (TECHNICAL & NON-TECHNICAL) */}
+              {/* ======================================================== */}
+              <EventRegistrationCharts
+                registrationsList={registrationsList}
+                eventsList={eventsList}
+                isDark={isDark}
+                onSelectEvent={(eventId, category) => {
+                  if (isVerificationRole) {
+                    setActiveTab('registration-verification');
+                  } else {
+                    setRegEventFilter(eventId);
+                    if (category) setRegCategoryFilter(category);
+                    setActiveTab('registrations');
+                  }
+                }}
+              />
 
               {/* ======================================================== */}
               {/* NEW REGISTRATION NOTIFICATIONS (PENDING VERIFICATION)     */}
@@ -4544,6 +5113,16 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? '#1f2937' : '#f1f5f9', color: isDark ? '#9ca3af' : '#64748b', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 <FaShieldAlt style={{ color: '#a855f7' }} /> Sub-Coords: {subs.length}
                               </span>
+                              {ev.id === 'nontech-05' && (
+                                <>
+                                  <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? 'rgba(234, 88, 12, 0.2)' : '#ffedd5', color: isDark ? '#fdba74' : '#c2410c', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    🔥 FF: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('fire') || (c.game || '').toLowerCase().includes('both')).length}
+                                  </span>
+                                  <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? 'rgba(6, 182, 212, 0.2)' : '#cffafe', color: isDark ? '#67e8f9' : '#0891b2', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    🎯 BGMI: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('bgmi') || (c.game || '').toLowerCase().includes('both')).length}
+                                  </span>
+                                </>
+                              )}
                             </div>
 
                             {/* Allocated Members List */}
@@ -4608,6 +5187,40 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                           }}>
                                             {isLead ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaCrown /> Lead</span> : isSub ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaShieldAlt /> Sub-Coord</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaBolt /> Coord</span>}
                                           </span>
+
+                                          {/* Battle of Champions Game Track Badge */}
+                                          {coord.game && (
+                                            <span style={{
+                                              fontSize: '0.68rem',
+                                              fontWeight: '800',
+                                              padding: '0.1rem 0.5rem',
+                                              borderRadius: '999px',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
+                                              background: (coord.game || '').toLowerCase().includes('fire')
+                                                ? (isDark ? 'rgba(234, 88, 12, 0.25)' : '#ffedd5')
+                                                : (coord.game || '').toLowerCase().includes('bgmi')
+                                                ? (isDark ? 'rgba(6, 182, 212, 0.25)' : '#cffafe')
+                                                : (isDark ? 'rgba(124, 58, 237, 0.25)' : '#ede9fe'),
+                                              color: (coord.game || '').toLowerCase().includes('fire')
+                                                ? (isDark ? '#fdba74' : '#c2410c')
+                                                : (coord.game || '').toLowerCase().includes('bgmi')
+                                                ? (isDark ? '#67e8f9' : '#0891b2')
+                                                : (isDark ? '#d8b4fe' : '#6d28d9'),
+                                              border: `1px solid ${
+                                                (coord.game || '').toLowerCase().includes('fire')
+                                                  ? 'rgba(234, 88, 12, 0.4)'
+                                                  : (coord.game || '').toLowerCase().includes('bgmi')
+                                                  ? 'rgba(6, 182, 212, 0.4)'
+                                                  : 'rgba(124, 58, 237, 0.4)'
+                                              }`
+                                            }}>
+                                              {(coord.game || '').toLowerCase().includes('fire') && '🔥 Free Fire'}
+                                              {(coord.game || '').toLowerCase().includes('bgmi') && '🎯 BGMI'}
+                                              {!(coord.game || '').toLowerCase().includes('fire') && !(coord.game || '').toLowerCase().includes('bgmi') && '🎮 ' + coord.game}
+                                            </span>
+                                          )}
                                         </div>
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', fontSize: '0.78rem' }}>
@@ -4827,6 +5440,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '300px' }}>
                                   {Array.isArray(coord.assignedEvents) && coord.assignedEvents.map(eventId => {
                                     const ev = (eventsList || []).find(e => String(e?.id || '').toLowerCase() === String(eventId || '').toLowerCase());
+                                    const isBoC = String(eventId).toLowerCase() === 'nontech-05';
                                     return (
                                       <span key={eventId} style={{
                                         background: ev?.category === 'technical' ? (isDark ? '#1e3a8a' : '#eff6ff') : (isDark ? '#831843' : '#fdf2f8'),
@@ -4835,9 +5449,24 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                         padding: '0.15rem 0.5rem',
                                         borderRadius: '6px',
                                         fontSize: '0.72rem',
-                                        fontWeight: '600'
+                                        fontWeight: '600',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
                                       }}>
-                                        {ev ? ev.name : eventId}
+                                        <span>{ev ? ev.name : eventId}</span>
+                                        {isBoC && coord.game && (
+                                          <span style={{
+                                            padding: '0.05rem 0.35rem',
+                                            borderRadius: '4px',
+                                            fontSize: '0.65rem',
+                                            fontWeight: '800',
+                                            background: (coord.game || '').toLowerCase().includes('fire') ? '#ea580c' : (coord.game || '').toLowerCase().includes('bgmi') ? '#0891b2' : '#7c3aed',
+                                            color: '#ffffff'
+                                          }}>
+                                            {(coord.game || '').toLowerCase().includes('fire') ? '🔥 FF' : (coord.game || '').toLowerCase().includes('bgmi') ? '🎯 BGMI' : '🎮 ' + coord.game}
+                                          </span>
+                                        )}
                                       </span>
                                     );
                                   })}
@@ -5577,20 +6206,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 }}>
                   {filteredHpTeams.map((team) => {
                     const tier = team.tier || 'emerald';
-                    const tierBorderColor =
-                      tier === 'cyan' ? '#00f0ff' :
-                      tier === 'gold' ? '#f5e4b8' :
-                      tier === 'purple' ? '#d946ef' : '#39ff88';
-
-                    const tierBgTint =
-                      tier === 'cyan' ? 'rgba(0, 240, 255, 0.04)' :
-                      tier === 'gold' ? 'rgba(245, 228, 184, 0.04)' :
-                      tier === 'purple' ? 'rgba(217, 70, 239, 0.04)' : 'rgba(57, 255, 136, 0.04)';
-
-                    const tierBadgeText =
-                      tier === 'cyan' ? '#38bdf8' :
-                      tier === 'gold' ? '#fcd34d' :
-                      tier === 'purple' ? '#f472b6' : '#4ade80';
+                    const tierTheme = COORDINATOR_THEMES.find(ct => ct.id === tier) || COORDINATOR_THEMES[0];
+                    const tierBorderColor = tierTheme.primaryColor;
+                    const tierBgTint = `${tierTheme.primaryColor}0d`;
+                    const tierBadgeText = tierTheme.primaryColor;
 
                     const rawMembers = (team.members && team.members.length > 0)
                       ? team.members
@@ -5642,6 +6261,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                 border: '1px solid rgba(37, 99, 235, 0.3)'
                               }}>
                                 {team.tag || 'TEAM'}
+                              </span>
+                              <span style={{
+                                padding: '0.2rem 0.6rem',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                letterSpacing: '0.04em',
+                                textTransform: 'uppercase',
+                                background: tierTheme.badgeBg,
+                                color: tierTheme.badgeText,
+                                border: `1px solid ${tierTheme.badgeBorder}`,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
+                              }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: tierTheme.primaryColor }} />
+                                {tierTheme.name}
                               </span>
                             </div>
 
@@ -5992,6 +6628,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     >
                       <FaDownload size={11} />
                       <span>Export CSV</span>
+                    </button>
+
+                    <button
+                      onClick={handleExportRegistrationsPDF}
+                      style={{ ...S.filterBtn, background: isDark ? '#1e293b' : '#fef2f2', color: isDark ? '#f87171' : '#dc2626', borderColor: isDark ? '#991b1b' : '#fca5a5' }}
+                      title="Export filtered registrations to PDF document"
+                    >
+                      <FaFilePdf size={11} />
+                      <span>Export PDF</span>
                     </button>
 
                     {!isLeadCoordinator && (
@@ -8584,6 +9229,126 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   </div>
                 </div>
 
+                {/* Battle of Champions Game Selection Option */}
+                {coordEvents.includes('nontech-05') && (
+                  <div style={{
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    background: isDark ? 'linear-gradient(135deg, rgba(234, 88, 12, 0.12), rgba(6, 182, 212, 0.12))' : 'linear-gradient(135deg, #fff7ed, #ecfeff)',
+                    border: `1.5px solid ${isDark ? 'rgba(234, 88, 12, 0.35)' : '#fed7aa'}`,
+                    boxShadow: '0 4px 15px rgba(234, 88, 12, 0.08)',
+                    transition: 'all 0.25s ease'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                      <label style={{ ...S.label, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px', color: isDark ? '#fdba74' : '#c2410c', fontWeight: '800' }}>
+                        <span>🎮 Battle of Champions Game Track *</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isDark ? '#374151' : '#ffedd5' }}>Required</span>
+                      </label>
+                      <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
+                        Select tournament arena
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                      {/* FREE FIRE */}
+                      <button
+                        type="button"
+                        onClick={() => setCoordGame('Free Fire')}
+                        disabled={isLeadCoordinator}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          border: coordGame === 'Free Fire' 
+                            ? '2px solid #ea580c' 
+                            : `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                          background: coordGame === 'Free Fire'
+                            ? (isDark ? 'linear-gradient(135deg, rgba(234, 88, 12, 0.3), rgba(220, 38, 38, 0.3))' : '#ffedd5')
+                            : (isDark ? '#111827' : '#ffffff'),
+                          color: coordGame === 'Free Fire' ? (isDark ? '#fdba74' : '#c2410c') : (isDark ? '#d1d5db' : '#475569'),
+                          fontWeight: coordGame === 'Free Fire' ? '800' : '600',
+                          fontSize: '0.84rem',
+                          cursor: isLeadCoordinator ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: coordGame === 'Free Fire' ? '0 0 12px rgba(234, 88, 12, 0.35)' : 'none',
+                          transform: coordGame === 'Free Fire' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🔥</span>
+                        <span>Free Fire</span>
+                        {coordGame === 'Free Fire' && <FaCheckCircle size={13} color="#ea580c" />}
+                      </button>
+
+                      {/* BGMI */}
+                      <button
+                        type="button"
+                        onClick={() => setCoordGame('BGMI')}
+                        disabled={isLeadCoordinator}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          border: coordGame === 'BGMI' 
+                            ? '2px solid #0891b2' 
+                            : `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                          background: coordGame === 'BGMI'
+                            ? (isDark ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(16, 185, 129, 0.3))' : '#cffafe')
+                            : (isDark ? '#111827' : '#ffffff'),
+                          color: coordGame === 'BGMI' ? (isDark ? '#67e8f9' : '#0e7490') : (isDark ? '#d1d5db' : '#475569'),
+                          fontWeight: coordGame === 'BGMI' ? '800' : '600',
+                          fontSize: '0.84rem',
+                          cursor: isLeadCoordinator ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: coordGame === 'BGMI' ? '0 0 12px rgba(6, 182, 212, 0.35)' : 'none',
+                          transform: coordGame === 'BGMI' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🎯</span>
+                        <span>BGMI</span>
+                        {coordGame === 'BGMI' && <FaCheckCircle size={13} color="#0891b2" />}
+                      </button>
+
+                      {/* BOTH */}
+                      <button
+                        type="button"
+                        onClick={() => setCoordGame('Both')}
+                        disabled={isLeadCoordinator}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '10px',
+                          border: coordGame === 'Both' 
+                            ? '2px solid #7c3aed' 
+                            : `1px solid ${isDark ? '#374151' : '#e2e8f0'}`,
+                          background: coordGame === 'Both'
+                            ? (isDark ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(236, 72, 153, 0.3))' : '#ede9fe')
+                            : (isDark ? '#111827' : '#ffffff'),
+                          color: coordGame === 'Both' ? (isDark ? '#d8b4fe' : '#6d28d9') : (isDark ? '#d1d5db' : '#475569'),
+                          fontWeight: coordGame === 'Both' ? '800' : '600',
+                          fontSize: '0.84rem',
+                          cursor: isLeadCoordinator ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: coordGame === 'Both' ? '0 0 12px rgba(124, 58, 237, 0.35)' : 'none',
+                          transform: coordGame === 'Both' ? 'scale(1.02)' : 'scale(1)'
+                        }}
+                      >
+                        <span style={{ fontSize: '1rem' }}>🎮</span>
+                        <span>Both (FF & BGMI)</span>
+                        {coordGame === 'Both' && <FaCheckCircle size={13} color="#7c3aed" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'center' }}>
                   <div style={S.modalInputGroup}>
                     <label style={S.label}>Display Order</label>
@@ -9193,7 +9958,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       readOnly={isLeadCoordinator}
                       placeholder="e.g. MAIN COORDINATOR TEAM, WEBSITE DEVELOPMENT TEAM, MEDIA & PROMOTIONS TEAM"
                       value={hpTeamRole}
-                      onChange={(e) => setHpTeamRole(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setHpTeamRole(val);
+                        if (!editingHpTeamId && !hpTeamTierManuallySelected) {
+                          const suggested = suggestCoordinatorTheme(val, hpTeamTag);
+                          setHpTeamTier(suggested.tier);
+                        }
+                      }}
                       style={S.input}
                     />
                     <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
@@ -9211,7 +9983,14 @@ export default function AdminDashboard({ token, user, onLogout }) {
                         readOnly={isLeadCoordinator}
                         placeholder="e.g. STUDENT LEADERSHIP, WEB & TECH CREW, CREATIVE TEAM"
                         value={hpTeamTag}
-                        onChange={(e) => setHpTeamTag(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setHpTeamTag(val);
+                          if (!editingHpTeamId && !hpTeamTierManuallySelected) {
+                            const suggested = suggestCoordinatorTheme(hpTeamRole, val);
+                            setHpTeamTier(suggested.tier);
+                          }
+                        }}
                         style={S.input}
                       />
                     </div>
@@ -9229,6 +10008,145 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       />
                     </div>
                   </div>
+
+                  {/* Card Theme & Color Selector with Smart Suggestion */}
+                  {(() => {
+                    const smartThemeSuggestion = suggestCoordinatorTheme(hpTeamRole, hpTeamTag);
+                    const isSuggestedSelected = hpTeamTier === smartThemeSuggestion.tier;
+
+                    return (
+                      <div style={S.modalInputGroup}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                          <label style={{ ...S.label, marginBottom: 0 }}>
+                            Card Color Theme {!isLeadCoordinator && <span style={{ color: '#ef4444' }}>*</span>}
+                          </label>
+                          {smartThemeSuggestion && (
+                            <div style={{
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '999px',
+                              background: isSuggestedSelected
+                                ? (isDark ? 'rgba(16, 185, 129, 0.16)' : '#ecfdf5')
+                                : (isDark ? 'rgba(59, 130, 246, 0.16)' : '#eff6ff'),
+                              color: isSuggestedSelected ? '#10b981' : '#3b82f6',
+                              border: `1px solid ${isSuggestedSelected ? 'rgba(16, 185, 129, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}>
+                              <span>✨ Suggested: <strong>{smartThemeSuggestion.name}</strong></span>
+                              {!isSuggestedSelected && !isLeadCoordinator && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setHpTeamTier(smartThemeSuggestion.tier);
+                                    setHpTeamTierManuallySelected(true);
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#2563eb',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    padding: 0,
+                                    marginLeft: '2px'
+                                  }}
+                                >
+                                  Apply
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                          gap: '8px'
+                        }}>
+                          {COORDINATOR_THEMES.map((theme) => {
+                            const isSelected = hpTeamTier === theme.id;
+                            return (
+                              <button
+                                key={theme.id}
+                                type="button"
+                                disabled={isLeadCoordinator}
+                                onClick={() => {
+                                  if (!isLeadCoordinator) {
+                                    setHpTeamTier(theme.id);
+                                    setHpTeamTierManuallySelected(true);
+                                  }
+                                }}
+                                style={{
+                                  padding: '0.7rem 0.8rem',
+                                  borderRadius: '12px',
+                                  border: isSelected
+                                    ? `2px solid ${theme.primaryColor}`
+                                    : (isDark ? '1px solid #374151' : '1px solid #e2e8f0'),
+                                  background: isSelected
+                                    ? (isDark ? `linear-gradient(135deg, ${theme.bgColor}, rgba(255,255,255,0.03))` : '#ffffff')
+                                    : (isDark ? '#161e2e' : '#f8fafc'),
+                                  boxShadow: isSelected
+                                    ? `0 0 16px ${theme.borderGlow}`
+                                    : 'none',
+                                  cursor: isLeadCoordinator ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-start',
+                                  gap: '4px',
+                                  textAlign: 'left',
+                                  transition: 'all 0.18s ease',
+                                  position: 'relative',
+                                  opacity: isLeadCoordinator && !isSelected ? 0.6 : 1
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{
+                                      width: '12px',
+                                      height: '12px',
+                                      borderRadius: '50%',
+                                      background: theme.primaryColor,
+                                      boxShadow: `0 0 8px ${theme.primaryColor}`,
+                                      display: 'inline-block',
+                                      flexShrink: 0
+                                    }} />
+                                    <span style={{
+                                      fontSize: '0.8rem',
+                                      fontWeight: isSelected ? '800' : '700',
+                                      color: isSelected ? (isDark ? '#f9fafb' : '#0f172a') : (isDark ? '#d1d5db' : '#334155')
+                                    }}>
+                                      {theme.name}
+                                    </span>
+                                  </div>
+                                  {isSelected && (
+                                    <span style={{
+                                      fontSize: '0.72rem',
+                                      fontWeight: '800',
+                                      color: theme.primaryColor
+                                    }}>
+                                      ✓
+                                    </span>
+                                  )}
+                                </div>
+
+                                <span style={{
+                                  fontSize: '0.67rem',
+                                  color: isSelected ? theme.primaryColor : (isDark ? '#9ca3af' : '#64748b'),
+                                  fontWeight: '600',
+                                  lineHeight: '1.2'
+                                }}>
+                                  {theme.roleHint}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Icon Selector */}
                   <div style={S.modalInputGroup}>
@@ -9513,28 +10431,11 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   {/* Cyber Slide Card Preview */}
                   {(() => {
                     const tier = hpTeamTier || 'emerald';
-                    const strokeColor =
-                      tier === 'cyan' ? '#00f0ff' :
-                      tier === 'gold' ? '#f5e4b8' :
-                      tier === 'purple' ? '#d946ef' : '#39ff88';
-
-                    let color1 = '#00a83b';
-                    let color2 = '#39ff88';
-                    let color3 = '#040a06';
-
-                    if (tier === 'cyan') {
-                      color1 = '#0077b6';
-                      color2 = '#00f0ff';
-                      color3 = '#020e18';
-                    } else if (tier === 'gold') {
-                      color1 = '#b99358';
-                      color2 = '#f5e4b8';
-                      color3 = '#0a0804';
-                    } else if (tier === 'purple') {
-                      color1 = '#7928ca';
-                      color2 = '#d946ef';
-                      color3 = '#0d0216';
-                    }
+                    const currentTheme = COORDINATOR_THEMES.find(ct => ct.id === tier) || COORDINATOR_THEMES[0];
+                    const strokeColor = currentTheme.primaryColor;
+                    const color1 = currentTheme.secondaryColor;
+                    const color2 = currentTheme.primaryColor;
+                    const color3 = currentTheme.bgColor;
 
                     return (
                       <div style={{

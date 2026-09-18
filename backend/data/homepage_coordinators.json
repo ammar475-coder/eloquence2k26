@@ -3,9 +3,17 @@
     "id": "web-team",
     "role": "WEBSITE DEVELOPMENT TEAM",
     "tag": "WEB & TECH CREW",
-    "icon_name": "Code",
+    "iconName": "Code",
     "tier": "cyan",
-    "description": "",
+    "desc": "",
+    "names": [
+      "SHAHID AHAMED VS",
+      "SHAWOOR SAQIB SK",
+      "SYED MUSTHAFA S",
+      "MD FAAZIL AMMAR P",
+      "MOHAMMED SAAD V",
+      "MOHAMMED AYAZ A"
+    ],
     "members": [
       {
         "name": "SHAHID AHAMED VS"
@@ -26,21 +34,24 @@
         "name": "MOHAMMED AYAZ A"
       }
     ],
-    "is_active": true,
-    "display_order": 1,
-    "created_at": "2026-09-16T10:16:17.921918+00:00",
-    "updated_at": "2026-09-18T10:25:06.278+00:00",
-    "icon": "Users",
-    "color": "from-blue-500 to-cyan-500",
-    "desc_text": ""
+    "displayOrder": 1,
+    "isActive": true,
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-18T10:25:06.278Z"
   },
   {
     "id": "main-coordinators",
     "role": "MAIN COORDINATOR TEAM",
     "tag": "STUDENT LEADERSHIP",
-    "icon_name": "Users",
+    "iconName": "Users",
     "tier": "emerald",
-    "description": null,
+    "desc": "",
+    "names": [
+      "SAMNESH S",
+      "HARISH KUMAR RG",
+      "SHARMILA Y",
+      "MADHUMITHA R"
+    ],
     "members": [
       {
         "name": "SAMNESH S"
@@ -55,21 +66,22 @@
         "name": "MADHUMITHA R"
       }
     ],
-    "is_active": true,
-    "display_order": 2,
-    "created_at": "2026-09-16T10:16:17.998059+00:00",
-    "updated_at": "2026-09-16T10:16:17.998059+00:00",
-    "icon": "Users",
-    "color": "from-blue-500 to-cyan-500",
-    "desc_text": ""
+    "displayOrder": 2,
+    "isActive": true,
+    "createdAt": "2026-09-16T10:16:17.998Z",
+    "updatedAt": "2026-09-16T10:16:17.998Z"
   },
   {
     "id": "team-1788933349572",
     "role": "DESIGNING TEAM",
     "tag": "DESIGN",
-    "icon_name": "Users",
+    "iconName": "Users",
     "tier": "emerald",
-    "description": null,
+    "desc": "",
+    "names": [
+      "ashfaq",
+      "adin"
+    ],
     "members": [
       {
         "name": "ashfaq"
@@ -78,12 +90,9 @@
         "name": "adin"
       }
     ],
-    "is_active": false,
-    "display_order": 3,
-    "created_at": "2026-09-18T10:53:54.479956+00:00",
-    "updated_at": "2026-09-18T10:53:54.479956+00:00",
-    "icon": "Users",
-    "color": "from-blue-500 to-cyan-500",
-    "desc_text": ""
+    "displayOrder": 3,
+    "isActive": false,
+    "createdAt": "2026-09-18T10:53:54.479Z",
+    "updatedAt": "2026-09-18T10:53:54.479Z"
   }
 ]

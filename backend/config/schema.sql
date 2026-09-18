@@ -149,6 +149,7 @@ ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS whatsapp TEXT;
 ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS assigned_events JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS display_order INT DEFAULT 999;
+ALTER TABLE public.coordinators ADD COLUMN IF NOT EXISTS game TEXT;
 
 -- ------------------------------------------------------------------------------
 -- 5. SPONSORS TABLE
@@ -239,6 +240,7 @@ CREATE TABLE IF NOT EXISTS public.homepage_coordinators (
 
 ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS icon TEXT DEFAULT 'Users';
 ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS color TEXT DEFAULT 'from-blue-500 to-cyan-500';
+ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'emerald';
 ALTER TABLE public.homepage_coordinators ADD COLUMN IF NOT EXISTS desc_text TEXT;
 
 -- ------------------------------------------------------------------------------

@@ -5,15 +5,59 @@ import ShaderCard from '../components/ShaderCard.jsx';
 import ScrollableMarquee from '../components/ScrollableMarquee.jsx';
 import { fetchPublicHomepageCoordinators } from '../services/api.js';
 
+function getCoordinatorThemeColors(tier = 'emerald') {
+  const t = String(tier).toLowerCase();
+  if (t === 'cyan' || t === 'sky-blue' || t === 'blue') {
+    return {
+      strokeColor: '#00f0ff',
+      color1: '#0077b6',
+      color2: '#00f0ff',
+      color3: '#020e18',
+    };
+  }
+  if (t === 'gold' || t === 'amber') {
+    return {
+      strokeColor: '#f5e4b8',
+      color1: '#b99358',
+      color2: '#f5e4b8',
+      color3: '#0a0804',
+    };
+  }
+  if (t === 'purple' || t === 'violet') {
+    return {
+      strokeColor: '#d946ef',
+      color1: '#7928ca',
+      color2: '#d946ef',
+      color3: '#0d0216',
+    };
+  }
+  if (t === 'crimson' || t === 'red' || t === 'rose') {
+    return {
+      strokeColor: '#ff3b5c',
+      color1: '#be123c',
+      color2: '#ff3b5c',
+      color3: '#140306',
+    };
+  }
+  if (t === 'orange') {
+    return {
+      strokeColor: '#ff9100',
+      color1: '#c2410c',
+      color2: '#ff9100',
+      color3: '#140802',
+    };
+  }
+  // Default: emerald / green
+  return {
+    strokeColor: '#39ff88',
+    color1: '#00a83b',
+    color2: '#39ff88',
+    color3: '#040a06',
+  };
+}
+
 function renderCoordinatorIcon(iconName, tier) {
-  const strokeColor =
-    tier === 'cyan'
-      ? '#00f0ff'
-      : tier === 'gold'
-      ? '#f5e4b8'
-      : tier === 'purple'
-      ? '#d946ef'
-      : '#39ff88';
+  const { strokeColor } = getCoordinatorThemeColors(tier);
 
   switch (iconName) {
     case 'Code':
@@ -111,25 +155,7 @@ function renderCoordinatorIcon(iconName, tier) {
 
 function CoordinatorSlideCard({ item, index }) {
   const tier = item.tier || 'emerald';
-
-  // Determine shader colors based on tier
-  let color1 = '#00a83b';
-  let color2 = '#39ff88';
-  let color3 = '#040a06';
-
-  if (tier === 'cyan') {
-    color1 = '#0077b6';
-    color2 = '#00f0ff';
-    color3 = '#020e18';
-  } else if (tier === 'gold') {
-    color1 = '#b99358';
-    color2 = '#f5e4b8';
-    color3 = '#0a0804';
-  } else if (tier === 'purple') {
-    color1 = '#7928ca';
-    color2 = '#d946ef';
-    color3 = '#0d0216';
-  }
+  const { color1, color2, color3 } = getCoordinatorThemeColors(tier);
 
   // Support both member objects and simple name strings, filtering out empty entries
   const rawMembers = item.members && item.members.length > 0

@@ -1,5 +1,268 @@
 [
   {
+    "id": "tech-01",
+    "number": "01",
+    "name": "SLIDE CRAFT",
+    "alias": "Slide Craft",
+    "subtitle": "PPT PRESENTATION",
+    "category": "technical",
+    "teamSize": "Max of 3 members",
+    "minMembers": 1,
+    "maxMembers": 3,
+    "fee": "₹100 per head",
+    "feePerHead": 100,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Technical Presentation",
+    "venue": "CSE & AIDS Smart room",
+    "venueImage": "",
+    "timing": "10:40 AM TO 3:00 PM",
+    "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
+    "image": "/events/card_ppt_presentation-BHzUng4c.png",
+    "rules": [
+      "Submit a 300-word abstract during registration and the final PPT before the event.",
+      "Each team has 5 minutes to present, followed by a 2-minute Q&A session. Slides must be less than 7.",
+      "Content must be strictly original; any plagiarism will result in immediate disqualification.",
+      "Topic will be provided 2 days before the event.",
+      "Participants are responsible for their presentation files; organizers are not liable for technical glitches.",
+      "Presentations are evaluated on technical content, clarity, and Q&A performance."
+    ],
+    "rounds": [
+      {
+        "desc": "Initial slide deck review by panel judges.",
+        "name": "Preliminary Deck Screening",
+        "time": "15 Mins"
+      },
+      {
+        "desc": "Live presentation followed by jury Q&A.",
+        "name": "Final Stage Pitch",
+        "time": "7 Mins / Team"
+      }
+    ],
+    "guidelines": [
+      "Standard projector and clicker will be provided.",
+      "Presenters must report 15 minutes before the allocated slot."
+    ],
+    "highlights": [
+      "5 mins presentation",
+      "2 mins Q&A",
+      "< 7 slides limit",
+      "₹100/head"
+    ],
+    "createdAt": "2026-09-16T10:16:13.515539+00:00",
+    "updatedAt": "2026-09-18T08:58:22.23+00:00"
+  },
+  {
+    "id": "tech-02",
+    "number": "02",
+    "name": "CRACK THE CODE",
+    "alias": "Crack the Code",
+    "subtitle": "coding and debugging",
+    "category": "technical",
+    "teamSize": "Individual / Team of 2",
+    "minMembers": 1,
+    "maxMembers": 2,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Competitive Coding",
+    "venue": "Lab 1 & 2",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
+    "description": "Test your logic and debugging prowess across intense algorithmic challenges and bug fixes.",
+    "image": "/events/event-1789617913099-6240.png",
+    "rules": [
+      "Round 1 is a written test on code analysis and technical questions.",
+      "Inbuilt library should not be used. No gadgets are allowed.",
+      "Top 15 scorers advance to the final debugging round on a provided system.",
+      "Allowed languages for the final round are C, Java, and Python.",
+      "Participation can be individual or in a team of up to 2 members; any form of malpractice leads to disqualification.",
+      "Finalists are ranked by problems solved and time taken."
+    ],
+    "rounds": [
+      {
+        "name": "Round 1: Written Logic Test",
+        "time": "30 Mins",
+        "desc": "MCQs covering syntax, complexity, and output prediction."
+      },
+      {
+        "name": "Round 2: Live Bug Hunting & Coding",
+        "time": "60 Mins",
+        "desc": "Fix broken code snippets and solve competitive problems."
+      }
+    ],
+    "guidelines": [
+      "Desktop PCs will be provided with offline compilers.",
+      "Use of internet or mobile phones is strictly forbidden."
+    ],
+    "highlights": [
+      "No built-in libraries",
+      "Round 1: Written test",
+      "Round 2: Coding & Debugging"
+    ],
+    "createdAt": "2026-09-16T10:16:13.781394+00:00",
+    "updatedAt": "2026-09-18T09:00:16.827+00:00"
+  },
+  {
+    "id": "tech-03",
+    "number": "03",
+    "name": "TECH BATTLE",
+    "alias": "Tech Battle",
+    "subtitle": "Tech Quiz",
+    "category": "technical",
+    "teamSize": "Individual / Team of 2",
+    "minMembers": 1,
+    "maxMembers": 2,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Knowledge Battle",
+    "venue": "CSE DEPT 3RD Year Class A",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
+    "description": "Rapid-fire online technology trivia covering computer fundamentals, latest trends, AI, and IT giants.",
+    "image": "/events/event-1789617928386-8030.png",
+    "rules": [
+      "Screen sharing or cheating must be strictly restricted.",
+      "Questions will cover core CSE/IT domains like programming, networks, databases, and AI.",
+      "Hints from the audience are not allowed and may lead to a team's disqualification.",
+      "The quiz will consist of multiple formats, including buzzer and rapid-fire rounds."
+    ],
+    "rounds": [
+      {
+        "desc": "30 fast-paced technical questions.",
+        "name": "Round 1: Rapid Fire MCQs",
+        "time": "15 Mins"
+      },
+      {
+        "desc": "Audio-visual and logo identification.",
+        "name": "Round 2: Identify the Tech & Buzz",
+        "time": "15 Mins"
+      },
+      {
+        "desc": "Buzzer-based tie-breaker and high-difficulty trivia.",
+        "name": "Round 3: Grand Finale Showdown",
+        "time": "15 Mins"
+      }
+    ],
+    "guidelines": [
+      "Ensure stable mobile data or connect to designated campus Wi-Fi."
+    ],
+    "highlights": [
+      "Screen lock enforcement",
+      "3 Rounds (15 mins/round)",
+      "Total 45 mins"
+    ],
+    "createdAt": "2026-09-16T10:16:13.863678+00:00",
+    "updatedAt": "2026-09-18T09:09:53.513+00:00"
+  },
+  {
+    "id": "tech-04",
+    "number": "04",
+    "name": "WEB PROMPT",
+    "alias": "Web / Prompt",
+    "subtitle": "Web Development & Generative AI Prompting",
+    "category": "technical",
+    "teamSize": "Individual / Team of 2",
+    "minMembers": 1,
+    "maxMembers": 2,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": true,
+    "tag": "Web & Prompt AI",
+    "venue": "Lab 3 & 4",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
+    "description": "Craft responsive web pages and generate AI visual assets through precision prompting.",
+    "image": "/events/event-1789617939462-850.png",
+    "rules": [
+      "Computer systems will be provided to all participants for the competition.",
+      "The event will consist of two rounds: Round 1 focuses on frontend design, and Round 2 involves backend development and connecting it to the frontend.",
+      "Round 1 has a maximum duration of 30 minutes, followed by an intermediate evaluation, while Round 2 allows a maximum duration of 45 minutes.",
+      "Only shortlisted teams from Round 1 will be eligible to advance and participate in Round 2.",
+      "All submissions will be evaluated primarily on their User Interface (UI) design and quality.",
+      "The competition topic or theme will be revealed on the spot at the start of the event.",
+      "Final results for both the winners and runners-up will be officially announced by the end of the event."
+    ],
+    "rounds": [
+      {
+        "desc": "Design a pixel-perfect hero and feature section on given theme.",
+        "name": "Round 1: Responsive Landing Page",
+        "time": "45 Mins"
+      },
+      {
+        "desc": "Complete interactive web application with generated UI assets.",
+        "name": "Round 2: AI Prompt Integration & Full UI",
+        "time": "45 Mins"
+      }
+    ],
+    "guidelines": [
+      "VS Code and standard browsers will be pre-installed."
+    ],
+    "highlights": [
+      "Systems provided",
+      "Round 1: Landing page",
+      "Round 2: Overall website"
+    ],
+    "createdAt": "2026-09-16T10:16:13.942986+00:00",
+    "updatedAt": "2026-09-18T09:02:32.61+00:00"
+  },
+  {
+    "id": "tech-06",
+    "number": "06",
+    "name": "UI/UX",
+    "alias": "UI/UX",
+    "subtitle": "UI and UX DESIGN",
+    "category": "technical",
+    "teamSize": "Individual",
+    "minMembers": 1,
+    "maxMembers": 1,
+    "fee": "₹50 per head",
+    "feePerHead": 50,
+    "feeType": "per_head",
+    "isTeam": false,
+    "tag": "Product Design",
+    "venue": "MAIN BUILDING Python Lab",
+    "venueImage": "",
+    "timing": "10:40 AM TO 12:40 PM",
+    "description": "Design intuitive, modern digital interfaces and user experiences using industry-standard design tools.",
+    "image": "/events/event-tech-06-1789621679528-2221.png",
+    "rules": [
+      "Systems will be provided for all the participants.",
+      "The theme or topic will be announced on the spot; AI tools are strictly restricted.",
+      "Participants can use any design software (e.g., Canva, Figma).",
+      "Round 1 is for designing the login page, Round 2 is for designing the dashboard.",
+      "It should be designed and submitted within the time limit.",
+      "Designs are judged on creativity, visual appeal, and relevance to the theme."
+    ],
+    "rounds": [
+      {
+        "desc": "Design smooth login, registration, and onboarding screens.",
+        "name": "Round 1: Auth & Onboarding Flow",
+        "time": "30 Mins"
+      },
+      {
+        "desc": "Create main dashboard UI with interactive prototypes.",
+        "name": "Round 2: Feature Dashboard & Interactions",
+        "time": "60 Mins"
+      }
+    ],
+    "guidelines": [
+      "Participants can bring their own laptops with Figma installed."
+    ],
+    "highlights": [
+      "Tools: Figma & Canva",
+      "AI strictly restricted",
+      "Round 1: Login page",
+      "Round 2: Dashboard"
+    ],
+    "createdAt": "2026-09-16T10:16:14.040091+00:00",
+    "updatedAt": "2026-09-18T09:03:11.131+00:00"
+  },
+  {
     "id": "nontech-01",
     "number": "01",
     "name": "SNAP & REEL",
@@ -355,260 +618,5 @@
     ],
     "createdAt": "2026-09-16T10:16:14.674392+00:00",
     "updatedAt": "2026-09-18T09:13:00.937+00:00"
-  },
-  {
-    "id": "tech-01",
-    "number": "01",
-    "name": "SLIDE CRAFT",
-    "alias": "Slide Craft",
-    "subtitle": "PPT PRESENTATION",
-    "category": "technical",
-    "teamSize": "Max of 3 members",
-    "minMembers": 1,
-    "maxMembers": 3,
-    "fee": "₹100 per head",
-    "feePerHead": 100,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Technical Presentation",
-    "venue": "CSE & AIDS Smart room",
-    "venueImage": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80",
-    "timing": "10:40 AM TO 3:00 PM",
-    "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
-    "image": "/events/card_ppt_presentation-BHzUng4c.png",
-    "rules": [
-      "Submit a 300-word abstract during registration and the final PPT before the event.",
-      "Each team has 5 minutes to present, followed by a 2-minute Q&A session. Slides must be less than 7.",
-      "Content must be strictly original; any plagiarism will result in immediate disqualification.",
-      "Topic will be provided 2 days before the event.",
-      "Participants are responsible for their presentation files; organizers are not liable for technical glitches.",
-      "Presentations are evaluated on technical content, clarity, and Q&A performance."
-    ],
-    "rounds": [
-      {
-        "desc": "Initial slide deck review by panel judges.",
-        "name": "Preliminary Deck Screening",
-        "time": "15 Mins"
-      },
-      {
-        "desc": "Live presentation followed by jury Q&A.",
-        "name": "Final Stage Pitch",
-        "time": "7 Mins / Team"
-      }
-    ],
-    "guidelines": [
-      "Standard projector and clicker will be provided.",
-      "Presenters must report 15 minutes before the allocated slot."
-    ],
-    "highlights": [
-      "5 mins presentation",
-      "2 mins Q&A",
-      "< 7 slides limit",
-      "₹100/head"
-    ],
-    "createdAt": "2026-09-16T10:16:13.515539+00:00",
-    "updatedAt": "2026-09-18T08:58:22.23+00:00"
-  },
-  {
-    "id": "tech-02",
-    "number": "02",
-    "name": "CRACK THE CODE",
-    "alias": "Crack the Code",
-    "subtitle": "coding and debugging",
-    "category": "technical",
-    "teamSize": "Individual / Team of 2",
-    "minMembers": 1,
-    "maxMembers": 2,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Competitive Coding",
-    "venue": "Lab 1 & 2",
-    "venueImage": "",
-    "timing": "10:40 AM TO 12:40 PM",
-    "description": "Test your logic and debugging prowess across intense algorithmic challenges and bug fixes.",
-    "image": "/events/event-1789617913099-6240.png",
-    "rules": [
-      "Round 1 is a written test on code analysis and technical questions.",
-      "Inbuilt library should not be used. No gadgets are allowed.",
-      "Top 15 scorers advance to the final debugging round on a provided system.",
-      "Allowed languages for the final round are C, Java, and Python.",
-      "Participation can be individual or in a team of up to 2 members; any form of malpractice leads to disqualification.",
-      "Finalists are ranked by problems solved and time taken."
-    ],
-    "rounds": [
-      "Round 1: Written Logic Test: MCQs covering syntax, complexity, and output prediction.",
-      "Round 2: Live Bug Hunting & Coding: Fix broken code snippets and solve competitive problems."
-    ],
-    "guidelines": [
-      "Desktop PCs will be provided with offline compilers.",
-      "Use of internet or mobile phones is strictly forbidden."
-    ],
-    "highlights": [
-      "No built-in libraries",
-      "Round 1: Written test",
-      "Round 2: Coding & Debugging"
-    ],
-    "createdAt": "2026-09-16T10:16:13.781394+00:00",
-    "updatedAt": "2026-09-18T09:00:16.827+00:00"
-  },
-  {
-    "id": "tech-03",
-    "number": "03",
-    "name": "TECH BATTLE",
-    "alias": "Tech Battle",
-    "subtitle": "Tech Quiz",
-    "category": "technical",
-    "teamSize": "Individual / Team of 2",
-    "minMembers": 1,
-    "maxMembers": 2,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Knowledge Battle",
-    "venue": "CSE DEPT 3RD Year Class A",
-    "venueImage": "",
-    "timing": "10:40 AM TO 12:40 PM",
-    "description": "Rapid-fire online technology trivia covering computer fundamentals, latest trends, AI, and IT giants.",
-    "image": "/events/event-1789617928386-8030.png",
-    "rules": [
-      "Screen sharing or cheating must be strictly restricted.",
-      "Questions will cover core CSE/IT domains like programming, networks, databases, and AI.",
-      "Hints from the audience are not allowed and may lead to a team's disqualification.",
-      "The quiz will consist of multiple formats, including buzzer and rapid-fire rounds."
-    ],
-    "rounds": [
-      {
-        "desc": "30 fast-paced technical questions.",
-        "name": "Round 1: Rapid Fire MCQs",
-        "time": "15 Mins"
-      },
-      {
-        "desc": "Audio-visual and logo identification.",
-        "name": "Round 2: Identify the Tech & Buzz",
-        "time": "15 Mins"
-      },
-      {
-        "desc": "Buzzer-based tie-breaker and high-difficulty trivia.",
-        "name": "Round 3: Grand Finale Showdown",
-        "time": "15 Mins"
-      }
-    ],
-    "guidelines": [
-      "Ensure stable mobile data or connect to designated campus Wi-Fi."
-    ],
-    "highlights": [
-      "Screen lock enforcement",
-      "3 Rounds (15 mins/round)",
-      "Total 45 mins"
-    ],
-    "createdAt": "2026-09-16T10:16:13.863678+00:00",
-    "updatedAt": "2026-09-18T09:09:53.513+00:00"
-  },
-  {
-    "id": "tech-04",
-    "number": "04",
-    "name": "WEB PROMPT",
-    "alias": "Web / Prompt",
-    "subtitle": "Web Development & Generative AI Prompting",
-    "category": "technical",
-    "teamSize": "Individual / Team of 2",
-    "minMembers": 1,
-    "maxMembers": 2,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": true,
-    "tag": "Web & Prompt AI",
-    "venue": "Lab 3 & 4",
-    "venueImage": "",
-    "timing": "10:40 AM TO 12:40 PM",
-    "description": "Craft responsive web pages and generate AI visual assets through precision prompting.",
-    "image": "/events/event-1789617939462-850.png",
-    "rules": [
-      "Computer systems will be provided to all participants for the competition.",
-      "The event will consist of two rounds: Round 1 focuses on frontend design, and Round 2 involves backend development and connecting it to the frontend.",
-      "Round 1 has a maximum duration of 30 minutes, followed by an intermediate evaluation, while Round 2 allows a maximum duration of 45 minutes.",
-      "Only shortlisted teams from Round 1 will be eligible to advance and participate in Round 2.",
-      "All submissions will be evaluated primarily on their User Interface (UI) design and quality.",
-      "The competition topic or theme will be revealed on the spot at the start of the event.",
-      "Final results for both the winners and runners-up will be officially announced by the end of the event."
-    ],
-    "rounds": [
-      {
-        "desc": "Design a pixel-perfect hero and feature section on given theme.",
-        "name": "Round 1: Responsive Landing Page",
-        "time": "45 Mins"
-      },
-      {
-        "desc": "Complete interactive web application with generated UI assets.",
-        "name": "Round 2: AI Prompt Integration & Full UI",
-        "time": "45 Mins"
-      }
-    ],
-    "guidelines": [
-      "VS Code and standard browsers will be pre-installed."
-    ],
-    "highlights": [
-      "Systems provided",
-      "Round 1: Landing page",
-      "Round 2: Overall website"
-    ],
-    "createdAt": "2026-09-16T10:16:13.942986+00:00",
-    "updatedAt": "2026-09-18T09:02:32.61+00:00"
-  },
-  {
-    "id": "tech-06",
-    "number": "06",
-    "name": "UI/UX",
-    "alias": "UI/UX",
-    "subtitle": "UI and UX DESIGN",
-    "category": "technical",
-    "teamSize": "Individual",
-    "minMembers": 1,
-    "maxMembers": 1,
-    "fee": "₹50 per head",
-    "feePerHead": 50,
-    "feeType": "per_head",
-    "isTeam": false,
-    "tag": "Product Design",
-    "venue": "MAIN BUILDING Python Lab",
-    "venueImage": "",
-    "timing": "10:40 AM TO 12:40 PM",
-    "description": "Design intuitive, modern digital interfaces and user experiences using industry-standard design tools.",
-    "image": "/events/event-tech-06-1789621679528-2221.png",
-    "rules": [
-      "Systems will be provided for all the participants.",
-      "The theme or topic will be announced on the spot; AI tools are strictly restricted.",
-      "Participants can use any design software (e.g., Canva, Figma).",
-      "Round 1 is for designing the login page, Round 2 is for designing the dashboard.",
-      "It should be designed and submitted within the time limit.",
-      "Designs are judged on creativity, visual appeal, and relevance to the theme."
-    ],
-    "rounds": [
-      {
-        "desc": "Design smooth login, registration, and onboarding screens.",
-        "name": "Round 1: Auth & Onboarding Flow",
-        "time": "30 Mins"
-      },
-      {
-        "desc": "Create main dashboard UI with interactive prototypes.",
-        "name": "Round 2: Feature Dashboard & Interactions",
-        "time": "60 Mins"
-      }
-    ],
-    "guidelines": [
-      "Participants can bring their own laptops with Figma installed."
-    ],
-    "highlights": [
-      "Tools: Figma & Canva",
-      "AI strictly restricted",
-      "Round 1: Login page",
-      "Round 2: Dashboard"
-    ],
-    "createdAt": "2026-09-16T10:16:14.040091+00:00",
-    "updatedAt": "2026-09-18T09:03:11.131+00:00"
   }
 ]

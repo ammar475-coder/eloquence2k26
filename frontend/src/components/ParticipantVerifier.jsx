@@ -30,7 +30,8 @@ import {
   FaInfoCircle,
   FaBullseye,
   FaSpinner,
-  FaClock
+  FaClock,
+  FaBan
 } from 'react-icons/fa';
 import { Html5Qrcode } from 'html5-qrcode';
 import jsQR from 'jsqr';
@@ -150,16 +151,27 @@ export default function ParticipantVerifier({
   isDark, 
   registrations = [], 
   events = [], 
+  allocatedEventId,
+  allocatedEventName,
   onRefreshRegistrations,
+  onVerificationSuccess,
   onPrintTicket 
 }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'verified' | 'unverified'
-  const [eventFilter, setEventFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('verified'); // 'verified' | 'all' | 'flagged' | 'unverified' | 'admitted'
+  const [eventFilter, setEventFilter] = useState(allocatedEventId || 'all');
   const [modeFilter, setModeFilter] = useState('all'); // 'all' | 'online' | 'offline'
 
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [scanAlert, setScanAlert] = useState(null); // { type: 'unverified'|'flagged'|'not_found', participant?: object, reason?: string, message?: string }
+
+  // Sync eventFilter if allocatedEventId changes
+  useEffect(() => {
+    if (allocatedEventId) {
+      setEventFilter(allocatedEventId);
+    }
+  }, [allocatedEventId]);
 
   // Scanner state
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -197,8 +209,43 @@ export default function ParticipantVerifier({
     );
   };
 
+  const isFlaggedRecord = (r) => {
+    return Boolean(
+      r?.is_flagged === true ||
+      r?.isFlagged === true ||
+      r?.verification_status === 'flagged' ||
+      r?.verificationStatus === 'flagged'
+    );
+  };
+
+  const getFlagReason = (r) => {
+    return r?.flag_reason || r?.flagReason || r?.flagNote || r?.reason || 'Payment amount not credited / UTR mismatch at Registration Desk';
+  };
+
+  const isRegistrationVerified = (r) => {
+    if (isFlaggedRecord(r)) return false;
+    return Boolean(
+      r?.is_verified === true ||
+      r?.isVerified === true ||
+      r?.verification_status === 'verified' ||
+      r?.verificationStatus === 'verified'
+    );
+  };
+
+  const isEventAdmitted = (r) => {
+    if (isFlaggedRecord(r) || !isRegistrationVerified(r)) return false;
+    return Boolean(
+      r?.attendance_status === 'verified' ||
+      r?.attendanceStatus === 'verified' ||
+      r?.attendance_status === 'PRESENT' ||
+      r?.attendanceStatus === 'PRESENT' ||
+      r?.attended === true ||
+      r?.checkedIn === true
+    );
+  };
+
   const isVerifiedRecord = (r) => {
-    return Boolean(r?.is_verified || r?.isVerified || r?.attendance_status === 'verified' || r?.attendanceStatus === 'verified');
+    return isRegistrationVerified(r);
   };
 
   const getTicketCode = (r) => {
@@ -331,42 +378,118 @@ export default function ParticipantVerifier({
     });
 
     if (matched) {
-      setSelectedParticipant(matched);
-      setSearchTerm(getTicketCode(matched));
+      const isFlagged = isFlaggedRecord(matched);
+      const isRegVerified = isRegistrationVerified(matched);
+      const flagReason = getFlagReason(matched);
 
-      // Play audio chime
-      try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
-      } catch (e) {}
+      if (isFlagged) {
+        // FLAGGED RECORD!
+        // When scanned, it MUST be showed and it MUST SHOW THE REASON!
+        setSelectedParticipant(matched);
+        setSearchTerm(getTicketCode(matched));
+        setScanAlert({
+          type: 'flagged',
+          participant: matched,
+          reason: flagReason
+        });
 
-      const isAlreadyVerified = isVerifiedRecord(matched);
+        // Distinct audio buzzer alert for flagged participant
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, audioCtx.currentTime); // Low warning A3
+          osc.frequency.setValueAtTime(146.83, audioCtx.currentTime + 0.15); // Drop to D3
+          gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.45);
+        } catch (e) {}
 
-      if (isAlreadyVerified) {
-        toast.success(
-          `${getParticipantName(matched)} is ALREADY VERIFIED & ADMITTED!`,
-          { id: 'scan-verify-toast', duration: 4500 }
+        toast.error(
+          `⛔ ENTRY BLOCKED! ${getParticipantName(matched)} is FLAGGED in Registration Verification.\nReason: "${flagReason}"`,
+          { id: 'scan-verify-toast', duration: 8500 }
         );
-      } else if (autoVerifyOnScan) {
-        // Automatically verify and admit in database
-        await handleToggleVerification(matched, true);
+      } else if (!isRegVerified) {
+        // NOT VERIFIED in Registration Verification (payment or desk check pending)
+        // Only ones verified in registration verification will be showed!
+        setSelectedParticipant(null);
+        setSearchTerm('');
+        setScanAlert({
+          type: 'unverified',
+          participant: matched,
+          reason: 'Desk verification pending (Payment / UTR verification required at Registration Desk)'
+        });
+
+        // Caution tone
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(330, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(220, audioCtx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.35);
+        } catch (e) {}
+
+        toast.error(
+          `⚠️ ADMISSION DENIED: ${getParticipantName(matched)} (#${getTicketCode(matched)}) is NOT verified in Registration Verification. Only desk-verified participants will be showed.`,
+          { id: 'scan-verify-toast', duration: 7500 }
+        );
       } else {
-        toast.success(
-          `Participant Found: ${getParticipantName(matched)}`,
-          { id: 'scan-verify-toast', duration: 4000 }
-        );
+        // VERIFIED in Registration Verification!
+        // This participant WILL BE SHOWED!
+        setSelectedParticipant(matched);
+        setSearchTerm(getTicketCode(matched));
+        setScanAlert(null);
+
+        // Play success chime
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+          gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.3);
+        } catch (e) {}
+
+        const isAlreadyAdmitted = isEventAdmitted(matched);
+
+        if (isAlreadyAdmitted) {
+          toast.success(
+            `✓ ${getParticipantName(matched)} is ALREADY ADMITTED & PRESENT!`,
+            { id: 'scan-verify-toast', duration: 4500 }
+          );
+        } else if (autoVerifyOnScan) {
+          // Automatically verify and admit in database
+          await handleToggleVerification(matched, true);
+        } else {
+          toast.success(
+            `✓ Registration Desk Verified: ${getParticipantName(matched)} is eligible for admission`,
+            { id: 'scan-verify-toast', duration: 4000 }
+          );
+        }
       }
     } else {
+      setSelectedParticipant(null);
+      setScanAlert({
+        type: 'not_found',
+        message: `No participant registration found matching "${lookupKey}"`
+      });
       setSearchTerm(lookupKey);
       toast.error(`No registration matched: "${lookupKey}"`, { id: 'scan-verify-toast' });
     }
@@ -500,18 +623,31 @@ export default function ParticipantVerifier({
     if (!participant) return;
     const participantId = participant.id || getTicketCode(participant);
     const code = getTicketCode(participant);
+
+    if (desiredStatus) {
+      if (isFlaggedRecord(participant)) {
+        toast.error(`Cannot admit participant. Ticket is FLAGGED: "${getFlagReason(participant)}"`, { duration: 6000 });
+        return;
+      }
+      if (!isRegistrationVerified(participant)) {
+        toast.error(`Cannot admit participant. Registration verification pending at Registration Desk.`, { duration: 5000 });
+        return;
+      }
+    }
+
     setIsVerifying(true);
 
     const verifiedAt = desiredStatus ? new Date().toISOString() : null;
     const verifiedBy = desiredStatus ? (user?.username || user?.role || 'Coordinator') : null;
 
-    // 1. Optimistic Update immediately so the badge flips to VERIFIED without any lag
+    // 1. Optimistic Update immediately so the badge flips without lag
     const updatedObj = {
       ...participant,
-      is_verified: desiredStatus,
-      isVerified: desiredStatus,
+      is_verified: true, // Remains verified in registration
       attendance_status: desiredStatus ? 'verified' : 'pending',
       attendanceStatus: desiredStatus ? 'verified' : 'pending',
+      attended: desiredStatus,
+      checkedIn: desiredStatus,
       verified_at: verifiedAt,
       verifiedAt: verifiedAt,
       verified_by: verifiedBy,
@@ -527,7 +663,9 @@ export default function ParticipantVerifier({
           'Authorization': token ? `Bearer ${token}` : ''
         },
         body: JSON.stringify({
-          isVerified: desiredStatus
+          isVerified: true,
+          attendance_status: desiredStatus ? 'verified' : 'pending',
+          action: desiredStatus ? 'admit' : 'unadmit'
         })
       });
 
@@ -535,8 +673,8 @@ export default function ParticipantVerifier({
       if (data.success) {
         toast.success(
           desiredStatus 
-            ? `${getParticipantName(participant)} verified & admitted!`
-            : `Verification reset for ${getParticipantName(participant)}`,
+            ? `${getParticipantName(participant)} admitted & attendance recorded!`
+            : `Admission reset for ${getParticipantName(participant)}`,
           { id: `verify-status-${code}`, duration: 4000 }
         );
 
@@ -547,12 +685,15 @@ export default function ParticipantVerifier({
         if (typeof onRefreshRegistrations === 'function') {
           onRefreshRegistrations();
         }
+        if (typeof onVerificationSuccess === 'function' && desiredStatus) {
+          onVerificationSuccess(finalRecord);
+        }
       } else {
-        toast.error(data.message || 'Failed to update verification status', { id: `verify-err-${code}` });
+        toast.error(data.message || 'Failed to update attendance status', { id: `verify-err-${code}`, duration: 6000 });
       }
     } catch (err) {
       console.error('Verification request error:', err);
-      toast.error('Server error updating verification', { id: `verify-err-${code}` });
+      toast.error('Server error updating attendance', { id: `verify-err-${code}` });
     } finally {
       setIsVerifying(false);
     }
@@ -561,9 +702,14 @@ export default function ParticipantVerifier({
   // Filter registrations list for table / search
   const filteredList = registrations.filter(r => {
     // Status filter
-    const isVer = isVerifiedRecord(r);
-    if (statusFilter === 'verified' && !isVer) return false;
-    if (statusFilter === 'unverified' && isVer) return false;
+    const isRegVer = isRegistrationVerified(r);
+    const isFlagged = isFlaggedRecord(r);
+    const isAdmitted = isEventAdmitted(r);
+
+    if (statusFilter === 'verified' && !isRegVer) return false;
+    if (statusFilter === 'flagged' && !isFlagged) return false;
+    if (statusFilter === 'unverified' && (isRegVer || isFlagged)) return false;
+    if (statusFilter === 'admitted' && !isAdmitted) return false;
 
     // Mode filter
     const isOnline = isOnlineRecord(r);
@@ -588,6 +734,7 @@ export default function ParticipantVerifier({
     const dept = String(r.department || '').toLowerCase();
     const teamName = String(r.team_name || r.teamName || '').toLowerCase();
     const members = getTeamMembers(r).join(' ').toLowerCase();
+    const flagReason = getFlagReason(r).toLowerCase();
 
     return (
       ticket.includes(q) ||
@@ -597,16 +744,19 @@ export default function ParticipantVerifier({
       college.includes(q) ||
       dept.includes(q) ||
       teamName.includes(q) ||
-      members.includes(q)
+      members.includes(q) ||
+      flagReason.includes(q)
     );
   });
 
   // Calculate statistics
   const totalCount = registrations.length;
-  const verifiedCount = registrations.filter(isVerifiedRecord).length;
-  const unverifiedCount = totalCount - verifiedCount;
+  const regVerifiedCount = registrations.filter(isRegistrationVerified).length;
+  const flaggedCount = registrations.filter(isFlaggedRecord).length;
+  const unverifiedCount = registrations.filter(r => !isRegistrationVerified(r) && !isFlaggedRecord(r)).length;
+  const admittedCount = registrations.filter(isEventAdmitted).length;
   const totalRevenue = registrations.reduce((sum, r) => sum + getFee(r), 0);
-  const verifiedPercent = totalCount > 0 ? Math.round((verifiedCount / totalCount) * 100) : 0;
+  const verifiedPercent = regVerifiedCount > 0 ? Math.round((admittedCount / regVerifiedCount) * 100) : 0;
 
   // Visual Styles
   const S = {
@@ -1006,31 +1156,31 @@ export default function ParticipantVerifier({
           <span style={S.statLabel}>Total Registrations</span>
           <span style={S.statNumber}>{totalCount}</span>
           <span style={{ ...S.statBadge, background: isDark ? '#1e293b' : '#f1f5f9', color: isDark ? '#94a3b8' : '#475569' }}>
-            All Enrolled Students
+            All Records
           </span>
         </div>
 
         <div style={S.statCard}>
-          <span style={S.statLabel}>Verified & Confirmed</span>
-          <span style={{ ...S.statNumber, color: '#10b981' }}>{verifiedCount}</span>
+          <span style={S.statLabel}>Registration Verified</span>
+          <span style={{ ...S.statNumber, color: '#10b981' }}>{regVerifiedCount}</span>
           <span style={{ ...S.statBadge, background: isDark ? '#064e3b' : '#ecfdf5', color: isDark ? '#6ee7b7' : '#047857', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <FaCheck /> {verifiedPercent}% Checked-in
+            <FaCheck /> {admittedCount} Admitted ({verifiedPercent}%)
           </span>
         </div>
 
         <div style={S.statCard}>
-          <span style={S.statLabel}>Pending Verification</span>
+          <span style={S.statLabel}>Flagged &amp; Blocked</span>
+          <span style={{ ...S.statNumber, color: '#ef4444' }}>{flaggedCount}</span>
+          <span style={{ ...S.statBadge, background: isDark ? '#450a0a' : '#fef2f2', color: isDark ? '#f87171' : '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <FaBan /> UTR Issues / Rejected
+          </span>
+        </div>
+
+        <div style={S.statCard}>
+          <span style={S.statLabel}>Pending Desk Review</span>
           <span style={{ ...S.statNumber, color: '#f59e0b' }}>{unverifiedCount}</span>
           <span style={{ ...S.statBadge, background: isDark ? '#451a03' : '#fffbeb', color: isDark ? '#fcd34d' : '#b45309', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <FaHourglassHalf /> Awaiting Desk Entry
-          </span>
-        </div>
-
-        <div style={S.statCard}>
-          <span style={S.statLabel}>Total Fees Collected</span>
-          <span style={{ ...S.statNumber, color: '#3b82f6' }}>₹{totalRevenue}</span>
-          <span style={{ ...S.statBadge, background: isDark ? '#1e3a8a' : '#eff6ff', color: isDark ? '#93c5fd' : '#1d4ed8' }}>
-            Online & Offline
+            <FaHourglassHalf /> Awaiting Desk
           </span>
         </div>
       </div>
@@ -1062,7 +1212,7 @@ export default function ParticipantVerifier({
           </div>
 
           <button 
-            type="button"
+            type="button" 
             onClick={() => setIsScannerOpen(!isScannerOpen)}
             style={S.scanToggleBtn}
           >
@@ -1117,9 +1267,11 @@ export default function ParticipantVerifier({
             onChange={(e) => setStatusFilter(e.target.value)}
             style={S.filterSelect}
           >
-            <option value="all">All Verification Statuses</option>
-            <option value="verified">Verified & Confirmed Only</option>
-            <option value="unverified">Pending Verification Only</option>
+            <option value="verified">✓ Registration Verified Only ({regVerifiedCount})</option>
+            <option value="all">All Registrations ({totalCount})</option>
+            <option value="flagged">⛔ Flagged Registrations ({flaggedCount})</option>
+            <option value="unverified">⏳ Pending Desk Verification ({unverifiedCount})</option>
+            <option value="admitted">🎟️ Admitted / Present Only ({admittedCount})</option>
           </select>
 
           <select 
@@ -1282,198 +1434,463 @@ export default function ParticipantVerifier({
         </div>
       )}
 
-      {/* ==================== 5. SELECTED PARTICIPANT VERIFICATION SHOWCASE ==================== */}
-      {selectedParticipant && (
-        <div style={S.detailsHeroCard}>
-          {/* Header Banner with Live Status */}
-          <div style={S.detailsHeader}>
+      {/* ==================== 4.5 UNVERIFIED SCAN REJECTION ALERT BANNER ==================== */}
+      {scanAlert && scanAlert.type === 'unverified' && scanAlert.participant && !selectedParticipant && (
+        <div style={{
+          background: isDark ? 'linear-gradient(135deg, #451a03 0%, #291503 100%)' : 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          border: '2px solid #f59e0b',
+          borderRadius: '16px',
+          padding: '1.5rem 1.75rem',
+          boxShadow: isDark ? '0 10px 25px rgba(245,158,11,0.25)' : '0 6px 20px rgba(245,158,11,0.12)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, minWidth: '280px' }}>
+            <div style={{
+              background: '#f59e0b',
+              color: '#ffffff',
+              borderRadius: '50%',
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <FaExclamationTriangle size={22} />
+            </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ 
-                  fontSize: '0.8rem', 
-                  fontWeight: '800', 
-                  color: isDark ? '#93c5fd' : '#1d4ed8',
-                  background: isDark ? '#1e3a8a' : '#dbeafe',
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{
+                  fontSize: '0.78rem',
+                  fontWeight: '800',
+                  background: isDark ? '#78350f' : '#fde68a',
+                  color: isDark ? '#fef3c7' : '#92400e',
                   padding: '0.2rem 0.6rem',
                   borderRadius: '6px'
                 }}>
-                  #{getTicketCode(selectedParticipant)}
+                  #{getTicketCode(scanAlert.participant)}
                 </span>
-                <span style={{ fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '600' }}>
-                  {isOnlineRecord(selectedParticipant) ? 'Online Registration' : 'Desk On-Site Registration'}
-                </span>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#fef3c7' : '#92400e' }}>
+                  Admission Denied — Desk Verification Pending
+                </h3>
               </div>
-              <h2 style={{ margin: '6px 0 0 0', fontSize: '1.45rem', fontWeight: '800', color: isDark ? '#f8fafc' : '#0f172a' }}>
-                {getParticipantName(selectedParticipant)}
-              </h2>
-            </div>
-
-            {/* Verification Status Pill */}
-            {isVerifiedRecord(selectedParticipant) ? (
-              <span style={{ 
-                ...S.statusBadgeBig, 
-                background: isDark ? '#064e3b' : '#ecfdf5', 
-                color: isDark ? '#34d399' : '#047857',
-                border: isDark ? '1px solid #059669' : '1px solid #a7f3d0'
-              }}>
-                <FaCheckCircle size={18} />
-                VERIFIED & CONFIRMED
-              </span>
-            ) : (
-              <span style={{ 
-                ...S.statusBadgeBig, 
-                background: isDark ? '#451a03' : '#fffbeb', 
-                color: isDark ? '#fbbf24' : '#b45309',
-                border: isDark ? '1px solid #d97706' : '1px solid #fde68a'
-              }}>
-                <FaExclamationTriangle size={18} />
-                PENDING VERIFICATION
-              </span>
-            )}
-          </div>
-
-          {/* Body Information */}
-          <div style={S.detailsBody}>
-            {/* Timestamp of verification if present */}
-            {isVerifiedRecord(selectedParticipant) && selectedParticipant.verified_at && (
-              <div style={{
-                background: isDark ? '#064e3b' : '#ecfdf5',
-                border: isDark ? '1px solid #059669' : '1px solid #6ee7b7',
-                borderRadius: '10px',
-                padding: '0.75rem 1.25rem',
-                color: isDark ? '#a7f3d0' : '#065f46',
-                fontSize: '0.88rem',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <FaCheckCircle size={16} />
-                Participant checked in on {new Date(selectedParticipant.verified_at).toLocaleDateString()} at {new Date(selectedParticipant.verified_at).toLocaleTimeString()}
-                {selectedParticipant.verified_by && ` (Verified by: ${selectedParticipant.verified_by})`}
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.92rem', color: isDark ? '#fde68a' : '#78350f', fontWeight: '700' }}>
+                Participant: {getParticipantName(scanAlert.participant)} ({getEventName(scanAlert.participant)})
+              </p>
+              <div style={{ fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#64748b', marginTop: '4px' }}>
+                ⚠️ This participant has NOT been verified at the Registration Desk (Payment / UTR unconfirmed). In accordance with event policy, only participants verified in Registration Verification will be showed and admitted.
               </div>
-            )}
-
-            <div style={S.gridTwoCol}>
-              {/* Event Info */}
-              <div style={S.infoBlock}>
-                <span style={S.infoBlockLabel}>Event Enrolled</span>
-                <span style={{ ...S.infoBlockValue, color: '#2563eb' }}>
-                  {getEventName(selectedParticipant)}
-                </span>
-                <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b', textTransform: 'capitalize' }}>
-                  {getEventCategory(selectedParticipant)} Event
-                </span>
-              </div>
-
-              {/* College & Department */}
-              <div style={S.infoBlock}>
-                <span style={S.infoBlockLabel}>College & Department</span>
-                <span style={S.infoBlockValue}>
-                  {selectedParticipant.college || 'C. Abdul Hakeem College of Engg & Tech'}
-                </span>
-                <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b' }}>
-                  {selectedParticipant.department || 'CSE'} • {selectedParticipant.year || '3rd Year'}
-                </span>
-              </div>
-
-              {/* Contact Phone */}
-              <div style={S.infoBlock}>
-                <span style={S.infoBlockLabel}>Contact Phone</span>
-                <span style={S.infoBlockValue}>
-                  <FaPhone size={14} style={{ marginRight: '6px', color: '#10b981' }} />
-                  {selectedParticipant.phone || 'N/A'}
-                </span>
-                {selectedParticipant.email && (
-                  <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b' }}>
-                    <FaEnvelope size={12} style={{ marginRight: '4px' }} /> {selectedParticipant.email}
-                  </span>
-                )}
-              </div>
-
-              {/* Fee & Payment */}
-              <div style={S.infoBlock}>
-                <span style={S.infoBlockLabel}>Registration Fee</span>
-                <span style={{ ...S.infoBlockValue, color: '#10b981', fontSize: '1.25rem' }}>
-                  ₹{getFee(selectedParticipant)}
-                </span>
-                <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b' }}>
-                  Status: <strong style={{ color: '#10b981' }}>PAID / CONFIRMED</strong>
-                </span>
-              </div>
-            </div>
-
-            {/* Team Details if team event */}
-            {getTeamMembers(selectedParticipant).length > 0 && (
-              <div style={S.infoBlock}>
-                <span style={S.infoBlockLabel}>
-                  Team Details: {selectedParticipant.team_name || selectedParticipant.teamName || 'Team'} ({getTeamMembers(selectedParticipant).length + 1} Members)
-                </span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
-                  <span style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '8px',
-                    background: isDark ? '#1e3a8a' : '#dbeafe',
-                    color: isDark ? '#bfdbfe' : '#1e40af',
-                    fontSize: '0.85rem',
-                    fontWeight: '700'
-                  }}>
-                    1. {getParticipantName(selectedParticipant)} (Lead)
-                  </span>
-                  {getTeamMembers(selectedParticipant).map((m, idx) => (
-                    <span key={idx} style={{
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '8px',
-                      background: isDark ? '#374151' : '#f1f5f9',
-                      color: isDark ? '#f3f4f6' : '#334155',
-                      fontSize: '0.85rem',
-                      fontWeight: '600'
-                    }}>
-                      {idx + 2}. {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ACTION BUTTONS */}
-            <div style={S.actionButtonsBar}>
-              {!isVerifiedRecord(selectedParticipant) ? (
-                <button
-                  type="button"
-                  disabled={isVerifying}
-                  onClick={() => handleToggleVerification(selectedParticipant, true)}
-                  style={S.confirmBtn}
-                >
-                  <FaCheck size={20} />
-                  {isVerifying ? 'Confirming Verification...' : 'Confirm Verification & Admit Participant'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={isVerifying}
-                  onClick={() => handleToggleVerification(selectedParticipant, false)}
-                  style={S.undoBtn}
-                >
-                  <FaUndo size={14} />
-                  Undo / Reset Verification
-                </button>
-              )}
-
-              {typeof onPrintTicket === 'function' && (
-                <button
-                  type="button"
-                  onClick={() => onPrintTicket(selectedParticipant)}
-                  style={S.printBtn}
-                >
-                  <FaPrint size={15} />
-                  Print Verified Ticket
-                </button>
-              )}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setScanAlert(null)}
+            style={{
+              background: isDark ? '#78350f' : '#fde68a',
+              color: isDark ? '#fef3c7' : '#92400e',
+              border: isDark ? '1px solid #b45309' : '1px solid #f59e0b',
+              borderRadius: '8px',
+              padding: '0.55rem 1.1rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            Dismiss Alert
+          </button>
         </div>
       )}
+
+      {/* ==================== 5. SELECTED PARTICIPANT VERIFICATION SHOWCASE ==================== */}
+      {selectedParticipant && (() => {
+        const isFlagged = isFlaggedRecord(selectedParticipant);
+        const isRegVer = isRegistrationVerified(selectedParticipant);
+        const isAdmitted = isEventAdmitted(selectedParticipant);
+        const flagReason = getFlagReason(selectedParticipant);
+
+        return (
+          <div style={{
+            ...S.detailsHeroCard,
+            border: isFlagged
+              ? (isDark ? '2px solid #ef4444' : '2px solid #dc2626')
+              : isRegVer
+              ? (isDark ? '2px solid #10b981' : '2px solid #059669')
+              : (isDark ? '2px solid #f59e0b' : '2px solid #d97706'),
+            boxShadow: isFlagged
+              ? (isDark ? '0 12px 35px rgba(239,68,68,0.3)' : '0 10px 30px rgba(220,38,38,0.15)')
+              : isRegVer
+              ? (isDark ? '0 12px 35px rgba(16,185,129,0.25)' : '0 10px 30px rgba(16,185,129,0.12)')
+              : (isDark ? '0 12px 35px rgba(245,158,11,0.25)' : '0 10px 30px rgba(245,158,11,0.12)')
+          }}>
+            {/* Header Banner with Live Status */}
+            <div style={{
+              ...S.detailsHeader,
+              background: isFlagged
+                ? (isDark ? '#2b1215' : '#fef2f2')
+                : isRegVer
+                ? (isDark ? '#062d22' : '#ecfdf5')
+                : (isDark ? '#2d1e0d' : '#fffbeb'),
+              borderBottom: isFlagged
+                ? (isDark ? '1px solid #7f1d1d' : '1px solid #fecaca')
+                : isRegVer
+                ? (isDark ? '1px solid #065f46' : '1px solid #a7f3d0')
+                : (isDark ? '1px solid #78350f' : '1px solid #fde68a')
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    fontWeight: '800', 
+                    color: isFlagged 
+                      ? (isDark ? '#fca5a5' : '#b91c1c') 
+                      : (isDark ? '#93c5fd' : '#1d4ed8'),
+                    background: isFlagged 
+                      ? (isDark ? '#7f1d1d' : '#fee2e2') 
+                      : (isDark ? '#1e3a8a' : '#dbeafe'),
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '6px'
+                  }}>
+                    #{getTicketCode(selectedParticipant)}
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: isDark ? '#94a3b8' : '#64748b', fontWeight: '600' }}>
+                    {isOnlineRecord(selectedParticipant) ? 'Online Registration' : 'Desk On-Site Registration'}
+                  </span>
+                </div>
+                <h2 style={{ margin: '6px 0 0 0', fontSize: '1.45rem', fontWeight: '800', color: isDark ? '#f8fafc' : '#0f172a' }}>
+                  {getParticipantName(selectedParticipant)}
+                </h2>
+              </div>
+
+              {/* Verification Status Pill */}
+              {isFlagged ? (
+                <span style={{ 
+                  ...S.statusBadgeBig, 
+                  background: isDark ? '#450a0a' : '#fef2f2', 
+                  color: isDark ? '#f87171' : '#b91c1c',
+                  border: isDark ? '1px solid #dc2626' : '1px solid #fca5a5'
+                }}>
+                  <FaBan size={18} />
+                  FLAGGED &amp; ENTRY BLOCKED
+                </span>
+              ) : isRegVer ? (
+                <span style={{ 
+                  ...S.statusBadgeBig, 
+                  background: isDark ? '#064e3b' : '#ecfdf5', 
+                  color: isDark ? '#34d399' : '#047857',
+                  border: isDark ? '1px solid #059669' : '1px solid #a7f3d0'
+                }}>
+                  <FaCheckCircle size={18} />
+                  {isAdmitted ? 'ADMITTED & PRESENT' : 'REGISTRATION VERIFIED'}
+                </span>
+              ) : (
+                <span style={{ 
+                  ...S.statusBadgeBig, 
+                  background: isDark ? '#451a03' : '#fffbeb', 
+                  color: isDark ? '#fbbf24' : '#b45309',
+                  border: isDark ? '1px solid #d97706' : '1px solid #fde68a'
+                }}>
+                  <FaExclamationTriangle size={18} />
+                  DESK PENDING
+                </span>
+              )}
+            </div>
+
+            {/* Body Information */}
+            <div style={S.detailsBody}>
+              {/* ==================== FLAGGED REASON ALERT BANNER ==================== */}
+              {isFlagged && (
+                <div style={{
+                  background: isDark ? 'rgba(127, 29, 29, 0.45)' : '#fef2f2',
+                  border: '2px solid #ef4444',
+                  borderRadius: '14px',
+                  padding: '1.25rem 1.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      borderRadius: '50%',
+                      width: '38px',
+                      height: '38px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <FaBan size={20} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: isDark ? '#fca5a5' : '#b91c1c' }}>
+                        ENTRY BLOCKED: PARTICIPANT IS FLAGGED IN REGISTRATION VERIFICATION
+                      </h3>
+                      <span style={{ fontSize: '0.85rem', color: isDark ? '#f87171' : '#991b1b', fontWeight: '600' }}>
+                        This ticket was flagged by the Registration Verification team. Admission cannot be granted.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* PROMINENT REASON BOX */}
+                  <div style={{
+                    background: isDark ? 'rgba(0, 0, 0, 0.45)' : '#ffffff',
+                    border: isDark ? '1.5px solid rgba(239, 68, 68, 0.5)' : '1.5px solid #fca5a5',
+                    borderRadius: '10px',
+                    padding: '1rem 1.35rem'
+                  }}>
+                    <div style={{
+                      fontSize: '0.78rem',
+                      fontWeight: '800',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: isDark ? '#fca5a5' : '#b91c1c',
+                      marginBottom: '6px'
+                    }}>
+                      Reason for Flagging:
+                    </div>
+                    <div style={{
+                      fontSize: '1.15rem',
+                      fontWeight: '800',
+                      color: isDark ? '#ffffff' : '#7f1d1d',
+                      lineHeight: '1.45'
+                    }}>
+                      "{flagReason}"
+                    </div>
+                    {selectedParticipant.flagged_at && (
+                      <div style={{ fontSize: '0.78rem', color: isDark ? '#94a3b8' : '#64748b', marginTop: '6px' }}>
+                        Flagged on: {new Date(selectedParticipant.flagged_at).toLocaleString()}
+                        {selectedParticipant.flagged_by && ` by ${selectedParticipant.flagged_by}`}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{
+                    fontSize: '0.84rem',
+                    color: isDark ? '#fca5a5' : '#991b1b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: '600'
+                  }}>
+                    <FaExclamationTriangle size={15} />
+                    <span>Resolution: Participant must visit the Main Registration Desk with payment proof (UPI receipt / passbook) to clear this flag.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp of admission if present */}
+              {isAdmitted && (selectedParticipant.verified_at || selectedParticipant.verifiedAt) && (
+                <div style={{
+                  background: isDark ? '#064e3b' : '#ecfdf5',
+                  border: isDark ? '1px solid #059669' : '1px solid #6ee7b7',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1.25rem',
+                  color: isDark ? '#a7f3d0' : '#065f46',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <FaCheckCircle size={16} />
+                  Admitted to event on {new Date(selectedParticipant.verified_at || selectedParticipant.verifiedAt).toLocaleDateString()} at {new Date(selectedParticipant.verified_at || selectedParticipant.verifiedAt).toLocaleTimeString()}
+                  {(selectedParticipant.verified_by || selectedParticipant.verifiedBy) && ` (Admitted by: ${selectedParticipant.verified_by || selectedParticipant.verifiedBy})`}
+                </div>
+              )}
+
+              <div style={S.gridTwoCol}>
+                {/* Event Info */}
+                <div style={S.infoBlock}>
+                  <span style={S.infoBlockLabel}>Event Enrolled</span>
+                  <span style={{ ...S.infoBlockValue, color: '#2563eb' }}>
+                    {getEventName(selectedParticipant)}
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b', textTransform: 'capitalize' }}>
+                    {getEventCategory(selectedParticipant)} Event
+                  </span>
+                </div>
+
+                {/* College & Department */}
+                <div style={S.infoBlock}>
+                  <span style={S.infoBlockLabel}>College & Department</span>
+                  <span style={S.infoBlockValue}>
+                    {selectedParticipant.college || 'C. Abdul Hakeem College of Engg & Tech'}
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                    {selectedParticipant.department || 'CSE'} • {selectedParticipant.year || '3rd Year'}
+                  </span>
+                </div>
+
+                {/* Contact Phone */}
+                <div style={S.infoBlock}>
+                  <span style={S.infoBlockLabel}>Contact Phone</span>
+                  <span style={S.infoBlockValue}>
+                    <FaPhone size={14} style={{ marginRight: '6px', color: '#10b981' }} />
+                    {selectedParticipant.phone || 'N/A'}
+                  </span>
+                  {selectedParticipant.email && (
+                    <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                      <FaEnvelope size={12} style={{ marginRight: '4px' }} /> {selectedParticipant.email}
+                    </span>
+                  )}
+                </div>
+
+                {/* Fee & Payment */}
+                <div style={S.infoBlock}>
+                  <span style={S.infoBlockLabel}>Registration Fee</span>
+                  <span style={{ ...S.infoBlockValue, color: isFlagged ? '#ef4444' : '#10b981', fontSize: '1.25rem' }}>
+                    ₹{getFee(selectedParticipant)}
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: isDark ? '#94a3b8' : '#64748b' }}>
+                    {isFlagged ? (
+                      <strong style={{ color: '#ef4444' }}>FLAGGED / DISPUTED</strong>
+                    ) : isRegVer ? (
+                      <strong style={{ color: '#10b981' }}>DESK VERIFIED &amp; CONFIRMED</strong>
+                    ) : (
+                      <strong style={{ color: '#f59e0b' }}>PAYMENT PENDING VERIFICATION</strong>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Team Details if team event */}
+              {getTeamMembers(selectedParticipant).length > 0 && (
+                <div style={S.infoBlock}>
+                  <span style={S.infoBlockLabel}>
+                    Team Details: {selectedParticipant.team_name || selectedParticipant.teamName || 'Team'} ({getTeamMembers(selectedParticipant).length + 1} Members)
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                    <span style={{
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '8px',
+                      background: isDark ? '#1e3a8a' : '#dbeafe',
+                      color: isDark ? '#bfdbfe' : '#1e40af',
+                      fontSize: '0.85rem',
+                      fontWeight: '700'
+                    }}>
+                      1. {getParticipantName(selectedParticipant)} (Lead)
+                    </span>
+                    {getTeamMembers(selectedParticipant).map((m, idx) => (
+                      <span key={idx} style={{
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '8px',
+                        background: isDark ? '#374151' : '#f1f5f9',
+                        color: isDark ? '#f3f4f6' : '#334155',
+                        fontSize: '0.85rem',
+                        fontWeight: '600'
+                      }}>
+                        {idx + 2}. {m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ACTION BUTTONS */}
+              <div style={S.actionButtonsBar}>
+                {isFlagged ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '1rem 1.5rem',
+                    borderRadius: '12px',
+                    background: isDark ? '#450a0a' : '#fef2f2',
+                    border: '2px solid #ef4444',
+                    color: isDark ? '#fca5a5' : '#b91c1c',
+                    fontWeight: '800',
+                    fontSize: '0.98rem',
+                    flex: 1
+                  }}>
+                    <FaBan size={22} style={{ flexShrink: 0 }} />
+                    <div>
+                      <div>ADMISSION BLOCKED — TICKET IS FLAGGED</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: '600', opacity: 0.9 }}>
+                        Reason: "{flagReason}"
+                      </div>
+                    </div>
+                  </div>
+                ) : !isRegVer ? (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '1rem 1.5rem',
+                    borderRadius: '12px',
+                    background: isDark ? '#451a03' : '#fffbeb',
+                    border: '2px solid #f59e0b',
+                    color: isDark ? '#fcd34d' : '#92400e',
+                    fontWeight: '800',
+                    fontSize: '0.98rem',
+                    flex: 1
+                  }}>
+                    <FaExclamationTriangle size={22} style={{ flexShrink: 0 }} />
+                    <div>
+                      <div>ADMISSION LOCKED — DESK VERIFICATION REQUIRED</div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: '600', opacity: 0.9 }}>
+                        Only participants verified in Registration Verification can be admitted.
+                      </div>
+                    </div>
+                  </div>
+                ) : !isAdmitted ? (
+                  <button
+                    type="button"
+                    disabled={isVerifying}
+                    onClick={() => handleToggleVerification(selectedParticipant, true)}
+                    style={S.confirmBtn}
+                  >
+                    <FaCheck size={20} />
+                    {isVerifying ? 'Confirming Admission...' : 'Confirm Verification & Admit Participant'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isVerifying}
+                    onClick={() => handleToggleVerification(selectedParticipant, false)}
+                    style={S.undoBtn}
+                  >
+                    <FaUndo size={14} />
+                    Undo / Reset Admission
+                  </button>
+                )}
+
+                {typeof onPrintTicket === 'function' && isRegVer && (
+                  <button
+                    type="button"
+                    onClick={() => onPrintTicket(selectedParticipant)}
+                    style={S.printBtn}
+                  >
+                    <FaPrint size={15} />
+                    Print Verified Ticket
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedParticipant(null)}
+                  style={{
+                    padding: '0.85rem 1.2rem',
+                    borderRadius: '12px',
+                    background: isDark ? '#1e293b' : '#f1f5f9',
+                    color: isDark ? '#cbd5e1' : '#64748b',
+                    border: isDark ? '1px solid #334155' : '1px solid #cbd5e1',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Close Card
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ==================== 6. SEARCH MATCHES & PARTICIPANT LIST ==================== */}
       <div style={S.tableCard}>
@@ -1513,7 +1930,9 @@ export default function ParticipantVerifier({
                 </tr>
               ) : (
                 filteredList.map((r, idx) => {
-                  const isVer = isVerifiedRecord(r);
+                  const isFlagged = isFlaggedRecord(r);
+                  const isRegVer = isRegistrationVerified(r);
+                  const isAdmitted = isEventAdmitted(r);
                   const isSelected = selectedParticipant && (
                     selectedParticipant.id === r.id || 
                     getTicketCode(selectedParticipant) === getTicketCode(r)
@@ -1526,6 +1945,8 @@ export default function ParticipantVerifier({
                         ...S.tr,
                         background: isSelected 
                           ? (isDark ? '#1e293b' : '#eff6ff') 
+                          : isFlagged
+                          ? (isDark ? 'rgba(127, 29, 29, 0.15)' : '#fff5f5')
                           : 'transparent'
                       }}
                       onClick={() => setSelectedParticipant(r)}
@@ -1534,8 +1955,10 @@ export default function ParticipantVerifier({
                         <span style={{ 
                           fontFamily: 'monospace', 
                           fontWeight: '800', 
-                          color: '#2563eb',
-                          background: isDark ? '#1e293b' : '#eff6ff',
+                          color: isFlagged ? '#ef4444' : '#2563eb',
+                          background: isFlagged 
+                            ? (isDark ? '#450a0a' : '#fee2e2') 
+                            : (isDark ? '#1e293b' : '#eff6ff'),
                           padding: '0.2rem 0.5rem',
                           borderRadius: '6px',
                           fontSize: '0.85rem'
@@ -1576,11 +1999,43 @@ export default function ParticipantVerifier({
                       </td>
 
                       <td style={S.td}>
-                        <span style={{ fontWeight: '700', color: '#10b981' }}>₹{getFee(r)}</span>
+                        <span style={{ fontWeight: '700', color: isFlagged ? '#ef4444' : '#10b981' }}>₹{getFee(r)}</span>
                       </td>
 
                       <td style={S.td}>
-                        {isVer ? (
+                        {isFlagged ? (
+                          <div>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '0.25rem 0.6rem',
+                              borderRadius: '999px',
+                              fontSize: '0.75rem',
+                              fontWeight: '800',
+                              background: isDark ? '#450a0a' : '#fef2f2',
+                              color: isDark ? '#f87171' : '#b91c1c',
+                              border: isDark ? '1px solid #991b1b' : '1px solid #fecaca'
+                            }}>
+                              <FaBan size={11} /> FLAGGED
+                            </span>
+                            <div 
+                              style={{ 
+                                fontSize: '0.72rem', 
+                                color: isDark ? '#f87171' : '#dc2626', 
+                                marginTop: '3px', 
+                                maxWidth: '160px', 
+                                overflow: 'hidden', 
+                                textOverflow: 'ellipsis', 
+                                whiteSpace: 'nowrap',
+                                fontWeight: '600'
+                              }} 
+                              title={getFlagReason(r)}
+                            >
+                              Reason: {getFlagReason(r)}
+                            </div>
+                          </div>
+                        ) : isRegVer ? (
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -1592,7 +2047,7 @@ export default function ParticipantVerifier({
                             background: isDark ? '#064e3b' : '#ecfdf5',
                             color: isDark ? '#6ee7b7' : '#047857'
                           }}>
-                            <FaCheck /> VERIFIED
+                            <FaCheck /> {isAdmitted ? 'ADMITTED' : 'VERIFIED'}
                           </span>
                         ) : (
                           <span style={{
@@ -1613,7 +2068,47 @@ export default function ParticipantVerifier({
 
                       <td style={{ ...S.td, textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                          {!isVer ? (
+                          {isFlagged ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedParticipant(r);
+                              }}
+                              style={{
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '8px',
+                                background: isDark ? '#450a0a' : '#fef2f2',
+                                color: isDark ? '#fca5a5' : '#b91c1c',
+                                border: isDark ? '1px solid #7f1d1d' : '1px solid #fca5a5',
+                                fontWeight: '700',
+                                fontSize: '0.78rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <FaBan size={12} /> Blocked (View)
+                            </button>
+                          ) : !isRegVer ? (
+                            <button
+                              type="button"
+                              disabled
+                              style={{
+                                padding: '0.4rem 0.8rem',
+                                borderRadius: '8px',
+                                background: isDark ? '#1e293b' : '#f1f5f9',
+                                color: isDark ? '#64748b' : '#94a3b8',
+                                border: '1px solid transparent',
+                                fontWeight: '600',
+                                fontSize: '0.78rem',
+                                cursor: 'not-allowed'
+                              }}
+                            >
+                              Desk Pending
+                            </button>
+                          ) : !isAdmitted ? (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1634,7 +2129,7 @@ export default function ParticipantVerifier({
                                 gap: '4px'
                               }}
                             >
-                              <FaCheck size={12} /> Verify
+                              <FaCheck size={12} /> Admit
                             </button>
                           ) : (
                             <button

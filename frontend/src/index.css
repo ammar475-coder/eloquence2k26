@@ -717,6 +717,47 @@ img {
   color: #f0e6d6;
 }
 
+/* Hero Campus Venue Chip */
+.hero-venue-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  margin: 0 auto 1.2rem;
+  padding: 0.32rem 0.85rem;
+  color: #c4d7cc;
+  font-family: var(--font-display);
+  font-size: clamp(0.64rem, 0.95vw, 0.78rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid rgba(57, 255, 136, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 22, 14, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(57, 255, 136, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  max-width: 95vw;
+  box-sizing: border-box;
+}
+
+.hero-venue-chip:hover {
+  border-color: rgba(57, 255, 136, 0.65);
+  color: #ffffff;
+  background: rgba(14, 38, 24, 0.85);
+  box-shadow: 0 0 20px rgba(57, 255, 136, 0.35), inset 0 0 14px rgba(57, 255, 136, 0.12);
+  transform: translateY(-2px);
+}
+
+.hero-venue-chip-icon {
+  color: #39ff88;
+  font-size: 0.85em;
+  filter: drop-shadow(0 0 6px rgba(57, 255, 136, 0.7));
+}
+
 .hero-buttons {
   display: flex;
   gap: 1rem;
@@ -907,25 +948,132 @@ img {
 }
 
 .intro-image-wrapper {
-  background: rgba(15, 6, 6, 0.4);
-  border: 1px solid rgba(255, 50, 50, 0.1);
-  padding: 1.5rem;
-  border-radius: 12px;
-  text-align: center;
+  background: linear-gradient(145deg, rgba(8, 24, 14, 0.75) 0%, rgba(4, 14, 8, 0.9) 100%);
+  border: 1.5px solid rgba(57, 255, 136, 0.3);
+  padding: 1.15rem;
+  border-radius: 16px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.85),
+    0 0 25px rgba(57, 255, 136, 0.12),
+    inset 0 0 20px rgba(57, 255, 136, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.intro-image-wrapper:hover {
+  transform: translateY(-4px);
+  border-color: rgba(57, 255, 136, 0.55);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.95),
+    0 0 35px rgba(57, 255, 136, 0.25),
+    inset 0 0 25px rgba(57, 255, 136, 0.08);
+}
+
+.intro-image-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #020804;
+  border: 1px solid rgba(57, 255, 136, 0.22);
 }
 
 .intro-image {
   width: 100%;
-  height: auto;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.intro-venue {
-  font-size: 0.85rem;
-  color: var(--silver);
-  opacity: 0.8;
+.intro-image-wrapper:hover .intro-image {
+  transform: scale(1.04);
+}
+
+.intro-venue-pill {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(3, 16, 8, 0.88);
+  border: 1px solid rgba(57, 255, 136, 0.5);
+  color: #39FF88;
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+.intro-venue-pill-icon {
+  font-size: 0.68rem;
+  color: #39FF88;
+  animation: pulseOpacity 2s infinite alternate;
+}
+
+.intro-venue-details {
+  padding-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  text-align: left;
+}
+
+.intro-venue-name {
+  font-family: var(--font-display);
+  font-size: clamp(0.92rem, 1.35vw, 1.12rem);
+  font-weight: 800;
+  color: #FFFFFF;
   margin: 0;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.intro-venue-address {
+  font-size: 0.82rem;
+  color: var(--silver);
+  opacity: 0.85;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.intro-map-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #39FF88;
+  text-decoration: none;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(57, 255, 136, 0.12);
+  border: 1px solid rgba(57, 255, 136, 0.4);
+  transition: all 0.25s ease;
+}
+
+.intro-map-link:hover {
+  background: #39FF88;
+  color: #041209;
+  box-shadow: 0 0 16px rgba(57, 255, 136, 0.6);
+  transform: translateX(2px);
 }
 
 .intro .intro-left,
@@ -4459,24 +4607,26 @@ img {
 }
 
 /* Tier border and glows */
-.coordinator-cyan-tier .shader-card-wrapper {
-  border: 1px solid rgba(0, 240, 255, 0.3);
-  box-shadow: 0 10px 30px rgba(0, 150, 220, 0.12), inset 0 0 20px rgba(0, 240, 255, 0.04);
+.coordinator-cyan-tier .shader-card-wrapper,
+.coordinator-sky-blue-tier .shader-card-wrapper {
+  border: 1px solid rgba(0, 240, 255, 0.38);
+  box-shadow: 0 10px 30px rgba(0, 150, 220, 0.16), inset 0 0 20px rgba(0, 240, 255, 0.06);
 }
 
-.coordinator-cyan-tier .shader-card-wrapper:hover {
-  border-color: rgba(0, 240, 255, 0.75);
-  box-shadow: 0 16px 40px rgba(0, 200, 255, 0.28), 0 0 25px rgba(0, 240, 255, 0.2);
+.coordinator-cyan-tier .shader-card-wrapper:hover,
+.coordinator-sky-blue-tier .shader-card-wrapper:hover {
+  border-color: rgba(0, 240, 255, 0.85);
+  box-shadow: 0 16px 40px rgba(0, 200, 255, 0.32), 0 0 25px rgba(0, 240, 255, 0.22);
 }
 
 .coordinator-emerald-tier .shader-card-wrapper {
-  border: 1px solid rgba(57, 255, 136, 0.22);
-  box-shadow: 0 10px 30px rgba(0, 168, 59, 0.1);
+  border: 1px solid rgba(57, 255, 136, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 168, 59, 0.12);
 }
 
 .coordinator-emerald-tier .shader-card-wrapper:hover {
-  border-color: rgba(57, 255, 136, 0.65);
-  box-shadow: 0 16px 40px rgba(0, 168, 59, 0.28), 0 0 25px rgba(57, 255, 136, 0.2);
+  border-color: rgba(57, 255, 136, 0.7);
+  box-shadow: 0 16px 40px rgba(0, 168, 59, 0.32), 0 0 25px rgba(57, 255, 136, 0.22);
 }
 
 .coordinator-gold-tier .shader-card-wrapper {
@@ -4487,6 +4637,36 @@ img {
 .coordinator-gold-tier .shader-card-wrapper:hover {
   border-color: rgba(245, 228, 184, 0.75);
   box-shadow: 0 16px 40px rgba(185, 147, 88, 0.25), 0 0 25px rgba(245, 228, 184, 0.2);
+}
+
+.coordinator-purple-tier .shader-card-wrapper {
+  border: 1px solid rgba(217, 70, 239, 0.35);
+  box-shadow: 0 10px 30px rgba(121, 40, 202, 0.15), inset 0 0 20px rgba(217, 70, 239, 0.05);
+}
+
+.coordinator-purple-tier .shader-card-wrapper:hover {
+  border-color: rgba(217, 70, 239, 0.8);
+  box-shadow: 0 16px 40px rgba(217, 70, 239, 0.32), 0 0 25px rgba(217, 70, 239, 0.22);
+}
+
+.coordinator-crimson-tier .shader-card-wrapper {
+  border: 1px solid rgba(255, 59, 92, 0.35);
+  box-shadow: 0 10px 30px rgba(190, 18, 60, 0.15), inset 0 0 20px rgba(255, 59, 92, 0.05);
+}
+
+.coordinator-crimson-tier .shader-card-wrapper:hover {
+  border-color: rgba(255, 59, 92, 0.8);
+  box-shadow: 0 16px 40px rgba(255, 59, 92, 0.32), 0 0 25px rgba(255, 59, 92, 0.22);
+}
+
+.coordinator-orange-tier .shader-card-wrapper {
+  border: 1px solid rgba(255, 145, 0, 0.35);
+  box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15), inset 0 0 20px rgba(255, 145, 0, 0.05);
+}
+
+.coordinator-orange-tier .shader-card-wrapper:hover {
+  border-color: rgba(255, 145, 0, 0.8);
+  box-shadow: 0 16px 40px rgba(255, 145, 0, 0.32), 0 0 25px rgba(255, 145, 0, 0.22);
 }
 
 .student-coordinator-card-inner {
@@ -4521,7 +4701,8 @@ img {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.coordinator-cyan-tier .coordinator-icon-badge {
+.coordinator-cyan-tier .coordinator-icon-badge,
+.coordinator-sky-blue-tier .coordinator-icon-badge {
   background: linear-gradient(135deg, rgba(0, 240, 255, 0.25) 0%, rgba(2, 25, 45, 0.95) 100%);
   border: 1px solid rgba(0, 240, 255, 0.6);
   color: #00f0ff;
@@ -4540,6 +4721,27 @@ img {
   border: 1px solid rgba(245, 228, 184, 0.6);
   color: #f5e4b8;
   box-shadow: 0 0 15px rgba(185, 147, 88, 0.35);
+}
+
+.coordinator-purple-tier .coordinator-icon-badge {
+  background: linear-gradient(135deg, rgba(217, 70, 239, 0.3) 0%, rgba(30, 5, 40, 0.9) 100%);
+  border: 1px solid rgba(217, 70, 239, 0.6);
+  color: #d946ef;
+  box-shadow: 0 0 15px rgba(217, 70, 239, 0.35);
+}
+
+.coordinator-crimson-tier .coordinator-icon-badge {
+  background: linear-gradient(135deg, rgba(255, 59, 92, 0.3) 0%, rgba(40, 5, 15, 0.9) 100%);
+  border: 1px solid rgba(255, 59, 92, 0.6);
+  color: #ff3b5c;
+  box-shadow: 0 0 15px rgba(255, 59, 92, 0.35);
+}
+
+.coordinator-orange-tier .coordinator-icon-badge {
+  background: linear-gradient(135deg, rgba(255, 145, 0, 0.3) 0%, rgba(40, 15, 5, 0.9) 100%);
+  border: 1px solid rgba(255, 145, 0, 0.6);
+  color: #ff9100;
+  box-shadow: 0 0 15px rgba(255, 145, 0, 0.35);
 }
 
 .student-coordinator-shader-card:hover .coordinator-icon-badge {
@@ -4564,7 +4766,8 @@ img {
   text-transform: uppercase;
 }
 
-.coordinator-cyan-tier .coordinator-tag-badge {
+.coordinator-cyan-tier .coordinator-tag-badge,
+.coordinator-sky-blue-tier .coordinator-tag-badge {
   background: rgba(0, 240, 255, 0.15);
   border: 1px solid rgba(0, 240, 255, 0.45);
   color: #00f0ff;
@@ -4585,6 +4788,27 @@ img {
   text-shadow: 0 0 8px rgba(245, 228, 184, 0.35);
 }
 
+.coordinator-purple-tier .coordinator-tag-badge {
+  background: rgba(217, 70, 239, 0.18);
+  border: 1px solid rgba(217, 70, 239, 0.45);
+  color: #d946ef;
+  text-shadow: 0 0 8px rgba(217, 70, 239, 0.35);
+}
+
+.coordinator-crimson-tier .coordinator-tag-badge {
+  background: rgba(255, 59, 92, 0.18);
+  border: 1px solid rgba(255, 59, 92, 0.45);
+  color: #ff3b5c;
+  text-shadow: 0 0 8px rgba(255, 59, 92, 0.35);
+}
+
+.coordinator-orange-tier .coordinator-tag-badge {
+  background: rgba(255, 145, 0, 0.18);
+  border: 1px solid rgba(255, 145, 0, 0.45);
+  color: #ff9100;
+  text-shadow: 0 0 8px rgba(255, 145, 0, 0.35);
+}
+
 .coordinator-role-title {
   font-family: var(--font-display);
   font-size: clamp(0.92rem, 1.2vw, 1.05rem);
@@ -4595,7 +4819,8 @@ img {
   line-height: 1.25;
 }
 
-.coordinator-cyan-tier .coordinator-role-title {
+.coordinator-cyan-tier .coordinator-role-title,
+.coordinator-sky-blue-tier .coordinator-role-title {
   color: #00f0ff;
   text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
 }
@@ -4610,6 +4835,21 @@ img {
   text-shadow: 0 0 12px rgba(185, 147, 88, 0.35);
 }
 
+.coordinator-purple-tier .coordinator-role-title {
+  color: #d946ef;
+  text-shadow: 0 0 12px rgba(217, 70, 239, 0.35);
+}
+
+.coordinator-crimson-tier .coordinator-role-title {
+  color: #ff3b5c;
+  text-shadow: 0 0 12px rgba(255, 59, 92, 0.35);
+}
+
+.coordinator-orange-tier .coordinator-role-title {
+  color: #ff9100;
+  text-shadow: 0 0 12px rgba(255, 145, 0, 0.35);
+}
+
 .coordinator-card-flourish {
   display: flex;
   align-items: center;
@@ -4622,7 +4862,8 @@ img {
   height: 1px;
 }
 
-.coordinator-cyan-tier .coordinator-flourish-line {
+.coordinator-cyan-tier .coordinator-flourish-line,
+.coordinator-sky-blue-tier .coordinator-flourish-line {
   background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.6), transparent);
 }
 
@@ -4634,11 +4875,24 @@ img {
   background: linear-gradient(90deg, transparent, rgba(185, 147, 88, 0.6), transparent);
 }
 
+.coordinator-purple-tier .coordinator-flourish-line {
+  background: linear-gradient(90deg, transparent, rgba(217, 70, 239, 0.6), transparent);
+}
+
+.coordinator-crimson-tier .coordinator-flourish-line {
+  background: linear-gradient(90deg, transparent, rgba(255, 59, 92, 0.6), transparent);
+}
+
+.coordinator-orange-tier .coordinator-flourish-line {
+  background: linear-gradient(90deg, transparent, rgba(255, 145, 0, 0.6), transparent);
+}
+
 .coordinator-star-symbol {
   font-size: 0.5rem;
 }
 
-.coordinator-cyan-tier .coordinator-star-symbol {
+.coordinator-cyan-tier .coordinator-star-symbol,
+.coordinator-sky-blue-tier .coordinator-star-symbol {
   color: #00f0ff;
 }
 
@@ -4648,6 +4902,51 @@ img {
 
 .coordinator-gold-tier .coordinator-star-symbol {
   color: #b99358;
+}
+
+.coordinator-purple-tier .coordinator-star-symbol {
+  color: #d946ef;
+}
+
+.coordinator-crimson-tier .coordinator-star-symbol {
+  color: #ff3b5c;
+}
+
+.coordinator-orange-tier .coordinator-star-symbol {
+  color: #ff9100;
+}
+
+/* Cyber tech corners by tier */
+.coordinator-cyan-tier .corner-top-left,
+.coordinator-cyan-tier .corner-bottom-right,
+.coordinator-sky-blue-tier .corner-top-left,
+.coordinator-sky-blue-tier .corner-bottom-right {
+  border-color: rgba(0, 240, 255, 0.6);
+}
+
+.coordinator-emerald-tier .corner-top-left,
+.coordinator-emerald-tier .corner-bottom-right {
+  border-color: rgba(57, 255, 136, 0.55);
+}
+
+.coordinator-gold-tier .corner-top-left,
+.coordinator-gold-tier .corner-bottom-right {
+  border-color: rgba(245, 228, 184, 0.6);
+}
+
+.coordinator-purple-tier .corner-top-left,
+.coordinator-purple-tier .corner-bottom-right {
+  border-color: rgba(217, 70, 239, 0.6);
+}
+
+.coordinator-crimson-tier .corner-top-left,
+.coordinator-crimson-tier .corner-bottom-right {
+  border-color: rgba(255, 59, 92, 0.6);
+}
+
+.coordinator-orange-tier .corner-top-left,
+.coordinator-orange-tier .corner-bottom-right {
+  border-color: rgba(255, 145, 0, 0.6);
 }
 
 .coordinator-names-list {
@@ -4671,7 +4970,8 @@ img {
   flex-shrink: 0;
 }
 
-.coordinator-cyan-tier .coordinator-name-bullet {
+.coordinator-cyan-tier .coordinator-name-bullet,
+.coordinator-sky-blue-tier .coordinator-name-bullet {
   color: #00f0ff;
 }
 
@@ -4681,6 +4981,18 @@ img {
 
 .coordinator-gold-tier .coordinator-name-bullet {
   color: #b99358;
+}
+
+.coordinator-purple-tier .coordinator-name-bullet {
+  color: #d946ef;
+}
+
+.coordinator-crimson-tier .coordinator-name-bullet {
+  color: #ff3b5c;
+}
+
+.coordinator-orange-tier .coordinator-name-bullet {
+  color: #ff9100;
 }
 
 .coordinator-member-info {
@@ -6478,13 +6790,13 @@ img {
     flex-direction: column;
     gap: 1.75rem;
   }
-  /* Rules & Guidelines shown FIRST on mobile */
-  .rules-right-stack {
+  /* Overview & Details shown first from starting of page on mobile */
+  .rules-left-overview-stack {
     order: 1;
     width: 100%;
   }
-  /* Overview & Details comes after rules on mobile */
-  .rules-left-overview-stack {
+  /* Rules, Rounds & Coordinators follow naturally */
+  .rules-right-stack {
     order: 2;
     width: 100%;
   }
@@ -7187,6 +7499,62 @@ img {
   filter: drop-shadow(0 0 6px rgba(57, 255, 136, 0.8));
 }
 
+.esports-game-pill-btn.arena-selected-ff {
+  border-color: #ff7b00 !important;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.28) 0%, rgba(20, 8, 2, 0.98) 100%) !important;
+  box-shadow: 0 0 28px rgba(255, 107, 0, 0.45), inset 0 0 14px rgba(255, 107, 0, 0.2) !important;
+}
+
+.esports-game-pill-btn.arena-selected-ff .esports-pill-text {
+  color: #ff9d42 !important;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.6) !important;
+}
+
+.esports-game-pill-btn.arena-selected-ff .esports-pill-check {
+  color: #ff9d42 !important;
+  filter: drop-shadow(0 0 6px rgba(255, 107, 0, 0.8)) !important;
+}
+
+.esports-game-pill-btn.arena-selected-bgmi {
+  border-color: #00d2ff !important;
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.28) 0%, rgba(2, 14, 24, 0.98) 100%) !important;
+  box-shadow: 0 0 28px rgba(0, 210, 255, 0.45), inset 0 0 14px rgba(0, 210, 255, 0.2) !important;
+}
+
+.esports-game-pill-btn.arena-selected-bgmi .esports-pill-text {
+  color: #38bdf8 !important;
+  text-shadow: 0 0 10px rgba(0, 210, 255, 0.6) !important;
+}
+
+.esports-game-pill-btn.arena-selected-bgmi .esports-pill-check {
+  color: #38bdf8 !important;
+  filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.8)) !important;
+}
+
+.btn-rules-main-register.esports-ff-active {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 50%, #7c2d12 100%) !important;
+  border-color: #f97316 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(234, 88, 12, 0.45) !important;
+}
+
+.btn-rules-main-register.esports-ff-active:hover {
+  box-shadow: 0 0 35px rgba(234, 88, 12, 0.7) !important;
+  transform: translateY(-2px);
+}
+
+.btn-rules-main-register.esports-bgmi-active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #075985 100%) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.45) !important;
+}
+
+.btn-rules-main-register.esports-bgmi-active:hover {
+  box-shadow: 0 0 35px rgba(56, 189, 248, 0.7) !important;
+  transform: translateY(-2px);
+}
+
 .esports-change-game-btn {
   display: inline-flex;
   align-items: center;
@@ -7820,10 +8188,328 @@ img {
     align-items: flex-start;
     gap: 0.6rem;
   }
-  .coord-chip-call-btn {
+  .coord-chip-actions-group {
     width: 100%;
+  }
+  .coord-chip-call-btn {
+    flex: 1;
     justify-content: center;
   }
+}
+
+/* Dynamic Game Track Pills in Coordinator Card */
+.rules-coord-game-pill {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.rules-coord-game-pill.pill-ff {
+  background: rgba(255, 107, 0, 0.16);
+  color: #ff9d42;
+  border: 1px solid rgba(255, 107, 0, 0.4);
+}
+
+.rules-coord-game-pill.pill-bgmi {
+  background: rgba(0, 210, 255, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(0, 210, 255, 0.4);
+}
+
+.coord-chip-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.coord-chip-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #25D366;
+  background: rgba(37, 211, 102, 0.1);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  border-radius: 6px;
+  padding: 0.38rem 0.55rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.coord-chip-wa-btn:hover {
+  background: rgba(37, 211, 102, 0.28);
+  border-color: #25D366;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(37, 211, 102, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Side-by-Side Arena Preview Cards in Initial Esports State */
+.esports-prompt-arenas-grid {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  text-align: left;
+}
+
+.esports-arena-interactive-card {
+  border-radius: 16px;
+  padding: 1.35rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  cursor: default;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.arena-card-freefire {
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.09) 0%, rgba(5, 18, 12, 0.85) 100%);
+  border: 1px solid rgba(255, 107, 0, 0.32);
+}
+
+.arena-card-freefire:hover {
+  border-color: rgba(255, 107, 0, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(255, 107, 0, 0.15);
+}
+
+.arena-card-bgmi {
+  background: linear-gradient(135deg, rgba(0, 210, 255, 0.09) 0%, rgba(5, 18, 12, 0.85) 100%);
+  border: 1px solid rgba(0, 210, 255, 0.32);
+}
+
+.arena-card-bgmi:hover {
+  border-color: rgba(0, 210, 255, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 210, 255, 0.15);
+}
+
+.arena-card-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.arena-track-badge {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 11px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.arena-track-badge.ff-badge {
+  background: rgba(255, 107, 0, 0.2);
+  color: #ff9d42;
+  border: 1px solid rgba(255, 107, 0, 0.45);
+}
+
+.arena-track-badge.bgmi-badge {
+  background: rgba(0, 210, 255, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(0, 210, 255, 0.45);
+}
+
+.arena-price-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.arena-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.arena-card-heading {
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+.arena-card-summary {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.arena-coords-preview-box {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.arena-coords-heading {
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.arena-coords-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.arena-coord-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+}
+
+.arena-coord-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.arena-coord-name {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arena-coord-sub {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+}
+
+.arena-coord-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.arena-call-link {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.28rem 0.55rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.arena-card-freefire .arena-call-link {
+  color: #ff9d42;
+  background: rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+}
+
+.arena-card-freefire .arena-call-link:hover {
+  background: rgba(255, 107, 0, 0.3);
+  color: #ffffff;
+}
+
+.arena-card-bgmi .arena-call-link {
+  color: #38bdf8;
+  background: rgba(0, 210, 255, 0.15);
+  border: 1px solid rgba(0, 210, 255, 0.4);
+}
+
+.arena-card-bgmi .arena-call-link:hover {
+  background: rgba(0, 210, 255, 0.3);
+  color: #ffffff;
+}
+
+.arena-wa-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #25D366;
+  background: rgba(37, 211, 102, 0.15);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.arena-wa-link:hover {
+  background: rgba(37, 211, 102, 0.3);
+  color: #ffffff;
+}
+
+.arena-select-cta-btn {
+  margin-top: auto;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.arena-select-cta-btn.ff-cta-btn {
+  background: rgba(255, 107, 0, 0.18);
+  border: 1px solid #ff7b00;
+  color: #ff9d42;
+}
+
+.arena-select-cta-btn.ff-cta-btn:hover {
+  background: #ff7b00;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 123, 0, 0.5);
+}
+
+.arena-select-cta-btn.bgmi-cta-btn {
+  background: rgba(0, 210, 255, 0.18);
+  border: 1px solid #00d2ff;
+  color: #38bdf8;
+}
+
+.arena-select-cta-btn.bgmi-cta-btn:hover {
+  background: #00d2ff;
+  color: #04140a;
+  box-shadow: 0 0 14px rgba(0, 210, 255, 0.5);
 }
 
 

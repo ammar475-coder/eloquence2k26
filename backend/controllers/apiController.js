@@ -134,21 +134,44 @@ const dbToSponsor = (s) => {
   };
 };
 
-const dbToCoordinator = (c) => ({
-  id: c.id,
-  name: c.name,
-  phone: c.phone || '',
-  whatsapp: c.whatsapp || '',
-  email: c.email || '',
-  department: c.department || '',
-  year: c.year || '',
-  role: c.role || 'Lead Coordinator',
-  assignedEvents: Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []),
-  displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
-  isActive: c.is_active !== false && c.isActive !== false,
-  createdAt: c.created_at || c.createdAt,
-  updatedAt: c.updated_at || c.updatedAt
-});
+const dbToCoordinator = (c) => {
+  let game = c.game || '';
+  let events = [];
+  const rawList = Array.isArray(c.assigned_events) ? c.assigned_events : (Array.isArray(c.assignedEvents) ? c.assignedEvents : []);
+  for (const item of rawList) {
+    if (typeof item === 'string' && item.startsWith('game:')) {
+      if (!game) game = item.replace('game:', '').trim();
+    } else if (item && typeof item === 'object' && item.game) {
+      if (!game) game = item.game;
+      if (item.eventId) events.push(item.eventId);
+    } else if (item && typeof item === 'string') {
+      events.push(item.trim());
+    }
+  }
+  if (!game && c.id) {
+    try {
+      const localCoords = readCoordinators();
+      const match = localCoords.find(lc => lc.id === c.id);
+      if (match && match.game) game = match.game;
+    } catch (_) {}
+  }
+  return {
+    id: c.id,
+    name: c.name,
+    phone: c.phone || '',
+    whatsapp: c.whatsapp || '',
+    email: c.email || '',
+    department: c.department || '',
+    year: c.year || '',
+    role: c.role || 'Lead Coordinator',
+    game: game || c.game || '',
+    assignedEvents: events,
+    displayOrder: Number(c.display_order ?? c.displayOrder ?? 999),
+    isActive: c.is_active !== false && c.isActive !== false,
+    createdAt: c.created_at || c.createdAt,
+    updatedAt: c.updated_at || c.updatedAt
+  };
+};
 
 const dbToHomepageTeam = (t) => {
   let members = [];
@@ -173,13 +196,29 @@ const dbToHomepageTeam = (t) => {
     };
   });
 
+  let resolvedTier = t.tier;
+  if (!resolvedTier || resolvedTier === 'emerald') {
+    try {
+      const localTeams = readHomepageCoordinators();
+      const localMatch = localTeams.find(lt => lt.id === t.id);
+      if (localMatch && localMatch.tier) {
+        resolvedTier = localMatch.tier;
+      }
+    } catch (_) {}
+  }
+  if (!resolvedTier) {
+    if (t.id === 'web-team') resolvedTier = 'cyan';
+    else if (t.color && ['cyan', 'emerald', 'gold', 'purple', 'crimson', 'orange'].includes(t.color)) resolvedTier = t.color;
+    else resolvedTier = 'emerald';
+  }
+
   return {
     id: t.id,
     role: t.role || '',
     tag: t.tag || 'TEAM',
-    iconName: t.icon_name || t.iconName || 'Users',
-    tier: t.tier || 'emerald',
-    desc: t.description || t.desc || '',
+    iconName: t.icon_name || t.iconName || t.icon || 'Users',
+    tier: resolvedTier,
+    desc: t.description || t.desc || t.desc_text || '',
     members: normalizedMembers,
     names: normalizedMembers.map(m => m.name),
     displayOrder: Number(t.display_order ?? t.displayOrder ?? 999),
@@ -892,6 +931,41 @@ const enrichRegistrationRecord = (r) => {
   copy.ticketCode = copy.ticket_code || copy.ticketCode || copy.registrationId || copy.id;
   copy.registrationId = copy.ticketCode;
   copy.eventId = copy.event_id || copy.eventId;
+  copy.event_id = copy.eventId;
+
+  // If Supabase joined events relation is present
+  if (copy.events && typeof copy.events === 'object') {
+    copy.eventName = copy.events.name || copy.events.alias || copy.eventName;
+    copy.event_name = copy.eventName;
+    copy.category = copy.events.category || copy.category;
+    copy.eventCategory = copy.category;
+  }
+
+  // Resolve event metadata from catalog if not present
+  const evId = String(copy.eventId || '').trim().toLowerCase();
+  let evList = inMemoryEvents || [];
+  if (evList.length === 0) {
+    try {
+      const eventsFile = path.join(DATA_DIR, 'events.json');
+      if (fs.existsSync(eventsFile)) {
+        evList = JSON.parse(fs.readFileSync(eventsFile, 'utf-8') || '[]');
+        inMemoryEvents = evList;
+      }
+    } catch (e) {}
+  }
+  const foundEvt = evList.find(e => {
+    const eId = String(e.id || '').trim().toLowerCase();
+    const eNum = String(e.number || '').trim().toLowerCase();
+    const eName = String(e.name || '').trim().toLowerCase();
+    const eAlias = String(e.alias || '').trim().toLowerCase();
+    return evId && (eId === evId || eNum === evId || eName === evId || eAlias === evId);
+  });
+
+  copy.eventName = copy.eventName || copy.event_name || foundEvt?.name || foundEvt?.alias || (evId ? `Event (${evId})` : 'Symposium Event');
+  copy.event_name = copy.eventName;
+  copy.category = copy.category || copy.eventCategory || foundEvt?.category || (String(copy.ticketCode || '').includes('TCH') ? 'technical' : (String(copy.ticketCode || '').includes('NTC') ? 'non-technical' : 'technical'));
+  copy.eventCategory = copy.category;
+
   copy.teamName = copy.team_name || copy.teamName;
   copy.totalAmount = Number(copy.total_fee || copy.totalAmount || copy.total_fee || 0);
   copy.totalFee = copy.totalAmount;
@@ -911,6 +985,18 @@ const enrichRegistrationRecord = (r) => {
   if (copy.venue_snapshot && typeof copy.venue_snapshot === 'string' && copy.venue_snapshot.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(copy.venue_snapshot);
+      if (parsed.eventName || parsed.event_name) {
+        copy.eventName = copy.eventName || parsed.eventName || parsed.event_name;
+        copy.event_name = copy.eventName;
+      }
+      if (parsed.eventId || parsed.event_id) {
+        copy.eventId = copy.eventId || parsed.eventId || parsed.event_id;
+        copy.event_id = copy.eventId;
+      }
+      if (parsed.category || parsed.eventCategory) {
+        copy.category = copy.category || parsed.category || parsed.eventCategory;
+        copy.eventCategory = copy.category;
+      }
       if (parsed.payment_method) {
         copy.payment_method = parsed.payment_method;
         copy.paymentMethod = parsed.payment_method;
@@ -986,10 +1072,13 @@ const enrichRegistrationRecord = (r) => {
   copy.is_flagged = isFlagged;
   copy.isFlagged = isFlagged;
   copy.flagReason = copy.flag_reason || copy.flagReason || null;
+  copy.flag_reason = copy.flagReason;
   copy.flaggedAt = copy.flagged_at || copy.flaggedAt || null;
   copy.flaggedBy = copy.flagged_by || copy.flaggedBy || null;
 
   if (isFlagged) {
+    copy.is_verified = false;
+    copy.isVerified = false;
     copy.verificationStatus = 'flagged';
     copy.verification_status = 'flagged';
   } else if (copy.is_verified) {
@@ -1009,7 +1098,7 @@ exports.getRegistrations = async (req, res) => {
 
     let query = supabase
       .from('registrations')
-      .select('*, registration_members(*)')
+      .select('*, events(*), registration_members(*)')
       .order('created_at', { ascending: false });
 
     if (eventId) {
@@ -1056,8 +1145,8 @@ exports.getRegistrationById = async (req, res) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
 
     const query = isUUID
-      ? supabase.from('registrations').select('*, registration_members(*)').eq('id', normId).maybeSingle()
-      : supabase.from('registrations').select('*, registration_members(*)').ilike('ticket_code', normId).maybeSingle();
+      ? supabase.from('registrations').select('*, events(*), registration_members(*)').eq('id', normId).maybeSingle()
+      : supabase.from('registrations').select('*, events(*), registration_members(*)').ilike('ticket_code', normId).maybeSingle();
 
     const { data, error } = await query;
 
@@ -1227,24 +1316,37 @@ exports.getActiveCoordinators = async (req, res) => {
 exports.getCoordinatorsByEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const { role } = req.query;
+    const { role, game } = req.query;
     if (!eventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    const allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
-      ? inMemoryCoordinators
-      : (() => {
-          const coords = readCoordinators();
-          const active = coords.filter(c => c.isActive !== false);
-          active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-          return active;
-        })();
+    let allCoords = [];
+    try {
+      const { data: dbCoords, error } = await supabase
+        .from('coordinators')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && Array.isArray(dbCoords) && dbCoords.length > 0) {
+        allCoords = dbCoords.map(dbToCoordinator);
+        inMemoryCoordinators = allCoords;
+      }
+    } catch (e) {
+      console.warn('Supabase getCoordinatorsByEvent fallback:', e.message);
+    }
+
+    if (!allCoords || allCoords.length === 0) {
+      allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
+        ? inMemoryCoordinators
+        : readCoordinators().map(dbToCoordinator).filter(c => c.isActive !== false);
+    }
 
     let matching = allCoords.filter(c => 
       c.isActive !== false && 
       Array.isArray(c.assignedEvents) && 
-      c.assignedEvents.map(e => e.toLowerCase()).includes(eventId.toLowerCase())
+      c.assignedEvents.map(e => String(e).toLowerCase()).includes(eventId.toLowerCase())
     );
 
     if (role) {
@@ -1252,6 +1354,22 @@ exports.getCoordinatorsByEvent = async (req, res) => {
       matching = matching.filter(c => {
         const cRole = String(c.role || '').toLowerCase();
         return cRole.includes(rLower);
+      });
+    }
+
+    if (game) {
+      const gLower = game.toLowerCase().trim();
+      matching = matching.filter(c => {
+        const cGame = String(c.game || '').toLowerCase().trim();
+        if (!cGame) return true;
+        if (cGame.includes('both')) return true;
+        if (gLower.includes('free') || gLower.includes('fire')) {
+          return cGame.includes('fire');
+        }
+        if (gLower.includes('bgmi')) {
+          return cGame.includes('bgmi');
+        }
+        return cGame.includes(gLower);
       });
     }
 
@@ -1272,11 +1390,14 @@ exports.getCoordinatorsByEvent = async (req, res) => {
 // ==================== PUBLIC STUDENT COORDINATORS (LEADERSHIP) ====================
 exports.getStudentCoordinators = async (req, res) => {
   try {
-    // Check fallback file or default
     const fallbackPath = path.join(DATA_DIR, 'studentCoordinators.json');
     if (fs.existsSync(fallbackPath)) {
       const raw = fs.readFileSync(fallbackPath, 'utf-8');
       return res.json({ success: true, data: JSON.parse(raw) });
+    }
+    const hpTeams = readHomepageCoordinators();
+    if (hpTeams && hpTeams.length > 0) {
+      return res.json({ success: true, data: hpTeams.filter(t => t.isActive !== false) });
     }
   } catch (err) {}
 
@@ -1638,7 +1759,8 @@ exports.submitEventWinners = async (req, res) => {
 exports.updateEventCoordinatorDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    const { rounds, rules, venue, time, conductorNotes, venueImage, venue_image } = req.body;
+    const { rounds, rules, venue, time, timing, conductorNotes, venueImage, venue_image, description, subtitle } = req.body;
+    const finalTiming = (timing !== undefined && timing !== '') ? timing : time;
     const rawVenueImage = venueImage !== undefined ? venueImage : venue_image;
     const finalVenueImage = rawVenueImage !== undefined ? saveBase64ImageIfPresent(rawVenueImage, 'venue') : undefined;
 
@@ -1648,13 +1770,18 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       events = JSON.parse(fs.readFileSync(EVENTS_FILE, 'utf-8') || '[]');
     }
 
-    const idx = events.findIndex(e => e.id === id);
+    const idx = events.findIndex(e => String(e.id || '').toLowerCase() === String(id || '').toLowerCase());
     if (idx !== -1) {
-      if (rounds) events[idx].rounds = rounds;
-      if (rules) events[idx].rules = rules;
-      if (venue) events[idx].venue = venue;
-      if (time) events[idx].time = time;
+      if (Array.isArray(rounds)) events[idx].rounds = rounds;
+      if (Array.isArray(rules)) events[idx].rules = rules;
+      if (venue !== undefined) events[idx].venue = venue.trim();
+      if (finalTiming !== undefined) {
+        events[idx].timing = typeof finalTiming === 'string' ? finalTiming.trim() : finalTiming;
+        events[idx].time = events[idx].timing;
+      }
       if (conductorNotes !== undefined) events[idx].conductorNotes = conductorNotes;
+      if (description !== undefined) events[idx].description = description.trim();
+      if (subtitle !== undefined) events[idx].subtitle = subtitle.trim();
       if (finalVenueImage !== undefined) {
         events[idx].venueImage = finalVenueImage ? finalVenueImage.trim() : '';
         events[idx].venue_image = finalVenueImage ? finalVenueImage.trim() : '';
@@ -1663,26 +1790,60 @@ exports.updateEventCoordinatorDetails = async (req, res) => {
       fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf-8');
     }
 
-    try {
-      const updateData = {};
-      if (rounds) updateData.rounds = rounds;
-      if (rules) updateData.rules = rules;
-      if (venue) updateData.venue = venue;
-      if (time) updateData.time = time;
-      if (finalVenueImage !== undefined) {
-        updateData.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+    // 1. Immediately invalidate & update in-memory cache
+    exports.invalidateEventsCache();
+    if (idx !== -1 && Array.isArray(inMemoryEvents)) {
+      const memIdx = inMemoryEvents.findIndex(e => String(e.id || '').toLowerCase() === String(id || '').toLowerCase());
+      if (memIdx !== -1) {
+        inMemoryEvents[memIdx] = { ...inMemoryEvents[memIdx], ...events[idx] };
       }
-      if (Object.keys(updateData).length > 0) {
-        await supabase.from('events').update(updateData).eq('id', id);
+    }
+
+    // 2. Persist to Supabase events table with correct schema columns ('timing', NOT 'time')
+    try {
+      const { data: existingDbEvent } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
+      const currentEv = idx !== -1 ? events[idx] : {};
+      const dbPayload = {
+        id,
+        number: (existingDbEvent && existingDbEvent.number) ? existingDbEvent.number : (currentEv.number || '01'),
+        ...(existingDbEvent || {}),
+        updated_at: new Date().toISOString()
+      };
+      if (Array.isArray(rounds)) dbPayload.rounds = rounds;
+      if (Array.isArray(rules)) dbPayload.rules = rules;
+      if (venue !== undefined) dbPayload.venue = venue.trim();
+      if (finalTiming !== undefined) dbPayload.timing = typeof finalTiming === 'string' ? finalTiming.trim() : finalTiming;
+      if (description !== undefined) dbPayload.description = description.trim();
+      if (subtitle !== undefined) dbPayload.subtitle = subtitle.trim();
+      if (finalVenueImage !== undefined) dbPayload.venue_image = finalVenueImage ? finalVenueImage.trim() : '';
+
+      let { error: dbErr } = await supabase.from('events').upsert(dbPayload, { onConflict: 'id' });
+      if (dbErr && dbErr.code === 'PGRST204') {
+        delete dbPayload.venue_image;
+        const retryRes = await supabase.from('events').upsert(dbPayload, { onConflict: 'id' });
+        dbErr = retryRes.error;
+      }
+      if (dbErr) {
+        console.warn('Supabase updateEventCoordinatorDetails upsert error:', dbErr.message);
+      } else {
+        console.log(`[Supabase] Event ${id} rules & details successfully synced by coordinator`);
       }
     } catch (dbErr) {
-      console.warn('Supabase update event coordinator details fallback:', dbErr.message);
+      console.warn('Supabase update event coordinator details exception:', dbErr.message);
     }
+
+    // 3. Broadcast real-time WebSocket event to all connected dashboards and public pages
+    try {
+      const { broadcastRegistrationUpdate } = require('../config/websocket');
+      if (broadcastRegistrationUpdate) {
+        broadcastRegistrationUpdate('EVENT_UPDATED', idx !== -1 ? events[idx] : { id, rounds, rules, venue, timing: finalTiming });
+      }
+    } catch (_) {}
 
     res.json({
       success: true,
-      message: 'Event venue and coordinator details updated successfully',
-      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, time, venueImage: finalVenueImage }
+      message: 'Event venue, rounds, and rules updated successfully!',
+      data: idx !== -1 ? events[idx] : { id, rounds, rules, venue, timing: finalTiming, venueImage: finalVenueImage }
     });
   } catch (err) {
     console.error('Error updating event coordinator details:', err);

@@ -23,7 +23,8 @@ import {
   FaCheckCircle,
   FaGamepad,
   FaStar,
-  FaRedoAlt
+  FaRedoAlt,
+  FaWhatsapp
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
@@ -174,6 +175,12 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                 setIsRegClosed(Boolean(msg.data?.isRegistrationClosed));
               }
             }
+            if (msg.type === 'REGISTRATION_UPDATE' && msg.action === 'EVENT_UPDATED') {
+              if (isMounted && msg.data?.id) {
+                setEventsList(prev => prev.map(ev => (ev.id === msg.data.id ? { ...ev, ...msg.data } : ev)));
+                fetchEventsData(true).catch(() => {});
+              }
+            }
           } catch (_) {}
         };
         ws.onclose = () => {
@@ -213,7 +220,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
 
   useEffect(() => {
     let isMounted = true;
-    fetchEventsData()
+    fetchEventsData(true)
       .then((data) => {
         if (isMounted && Array.isArray(data) && data.length > 0) {
           setEventsList(data);
@@ -300,11 +307,44 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
 
   const [showMobileStickyBar, setShowMobileStickyBar] = useState(false);
   // ONLY show Lead Coordinators publicly on Event Details (Coordinators & Sub-Coordinators are visible only in internal Coordinator login)
+  // For E-Sports (Battle of Champions), if an arena/game is selected (Free Fire vs BGMI), filter strictly to that game's coordinators
   const coordsList = allCoords.filter(c => {
     const roleStr = String(c.role || '').toLowerCase().trim();
-    if (!roleStr) return true;
-    return roleStr.includes('lead');
+    const isLead = !roleStr || roleStr.includes('lead');
+    if (!isLead) return false;
+
+    if (isEsports && selectedEsportsGame) {
+      const gUpper = selectedEsportsGame.toUpperCase().trim();
+      const cGame = String(c.game || '').toUpperCase().trim();
+      if (!cGame) return true;
+      if (cGame.includes('BOTH')) return true;
+      if (gUpper.includes('FREE') || gUpper.includes('FIRE')) {
+        return cGame.includes('FIRE') || cGame.includes('FREE');
+      }
+      if (gUpper.includes('BGMI')) {
+        return cGame.includes('BGMI');
+      }
+      return cGame.includes(gUpper);
+    }
+    return true;
   });
+
+  // Pre-filtered lists for the initial arena overview prompt
+  const freeFireLeadCoords = isEsports ? allCoords.filter(c => {
+    const roleStr = String(c.role || '').toLowerCase().trim();
+    const isLead = !roleStr || roleStr.includes('lead');
+    if (!isLead) return false;
+    const cGame = String(c.game || '').toUpperCase().trim();
+    return cGame.includes('FIRE') || cGame.includes('FREE') || cGame.includes('BOTH');
+  }) : [];
+
+  const bgmiLeadCoords = isEsports ? allCoords.filter(c => {
+    const roleStr = String(c.role || '').toLowerCase().trim();
+    const isLead = !roleStr || roleStr.includes('lead');
+    if (!isLead) return false;
+    const cGame = String(c.game || '').toUpperCase().trim();
+    return cGame.includes('BGMI') || cGame.includes('BOTH');
+  }) : [];
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -348,6 +388,11 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
       const queryStr = params.toString() ? `?${params.toString()}` : '';
       window.history.replaceState(null, '', `${baseHash}${queryStr}`);
     } catch (_) {}
+
+    // Smoothly scroll to the very top so user sees all details from the starting of the page
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleRegisterGame = (game) => {
@@ -511,9 +556,36 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
             {event.tag && (
               <span className="rules-sub-tag-badge">{event.tag}</span>
             )}
+            {isEsports && selectedEsportsGame && (
+              <span
+                className={`rules-sub-tag-badge ${selectedEsportsGame === 'FREE FIRE' ? 'tag-ff' : 'tag-bgmi'}`}
+                style={{
+                  background: selectedEsportsGame === 'FREE FIRE' ? 'rgba(255, 107, 0, 0.2)' : 'rgba(0, 210, 255, 0.2)',
+                  color: selectedEsportsGame === 'FREE FIRE' ? '#ff9d42' : '#38bdf8',
+                  borderColor: selectedEsportsGame === 'FREE FIRE' ? 'rgba(255, 107, 0, 0.5)' : 'rgba(0, 210, 255, 0.5)'
+                }}
+              >
+                {selectedEsportsGame === 'FREE FIRE' ? '🔥 FREE FIRE SQUAD' : '🎯 BGMI SQUAD'}
+              </span>
+            )}
           </div>
           <div className="rules-hero-title-row">
-            <h1 className="rules-clean-main-title">{event.name}</h1>
+            <h1 className="rules-clean-main-title">
+              {event.name}
+              {isEsports && selectedEsportsGame && (
+                <span
+                  style={{
+                    color: selectedEsportsGame === 'FREE FIRE' ? '#ff9d42' : '#38bdf8',
+                    textShadow: selectedEsportsGame === 'FREE FIRE'
+                      ? '0 0 24px rgba(255, 107, 0, 0.55)'
+                      : '0 0 24px rgba(0, 210, 255, 0.55)',
+                    marginLeft: '0.45rem'
+                  }}
+                >
+                  : {selectedEsportsGame}
+                </span>
+              )}
+            </h1>
             {eventSticker && (
               <div className="rules-hero-sticker-container" title={eventSticker.title}>
                 <img
@@ -528,9 +600,11 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
               </div>
             )}
           </div>
-          {event.alias && event.alias.toLowerCase() !== event.name.toLowerCase() && (
-            <p className="rules-alias-sub">// {event.alias}</p>
-          )}
+          <p className="rules-alias-sub">
+            {isEsports && activeEsportsData
+              ? `// ${activeEsportsData.tagline} • ${activeEsportsData.badge}`
+              : (event.alias && event.alias.toLowerCase() !== event.name.toLowerCase() ? `// ${event.alias}` : '')}
+          </p>
         </motion.div>
 
         {/* E-Sports Top Game Selector: Two Options initially, then ONLY the chosen one after selection */}
@@ -544,7 +618,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
           >
             <div className="esports-selector-header-line">
               <span className="esports-selector-label">
-                {selectedEsportsGame ? `SELECTED ARENA: ${selectedEsportsGame}` : 'CHOOSE GAME TO REGISTER'}
+                {selectedEsportsGame ? `ACTIVE ARENA: ${selectedEsportsGame}` : 'CHOOSE GAME TO REGISTER'}
               </span>
               <span className="esports-selector-divider-bar" />
             </div>
@@ -566,7 +640,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     onClick={() => handleSelectGame('FREE FIRE')}
                     id="btn-select-freefire"
                   >
-                    <span className="esports-pill-text">FREE FIRE</span>
+                    <span className="esports-pill-text">🔥 FREE FIRE</span>
                     <FaArrowRight className="esports-pill-arrow" />
                   </button>
 
@@ -576,12 +650,12 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     onClick={() => handleSelectGame('BGMI')}
                     id="btn-select-bgmi"
                   >
-                    <span className="esports-pill-text">BGMI</span>
+                    <span className="esports-pill-text">🎯 BGMI</span>
                     <FaArrowRight className="esports-pill-arrow" />
                   </button>
                 </motion.div>
               ) : (
-                /* After selection: Show ONLY the chosen option, NOT the other one! */
+                /* After selection: Show ONLY the chosen option with quick change button */
                 <motion.div
                   key={`selected-${selectedEsportsGame}`}
                   initial={{ opacity: 0, scale: 0.96 }}
@@ -590,8 +664,10 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                   transition={{ duration: 0.25 }}
                   className="esports-pills-row esports-selected-single-row"
                 >
-                  <div className="esports-game-pill-btn is-active is-selected-single">
-                    <span className="esports-pill-text">{selectedEsportsGame}</span>
+                  <div className={`esports-game-pill-btn is-active is-selected-single ${selectedEsportsGame === 'FREE FIRE' ? 'arena-selected-ff' : 'arena-selected-bgmi'}`}>
+                    <span className="esports-pill-text">
+                      {selectedEsportsGame === 'FREE FIRE' ? '🔥 FREE FIRE' : '🎯 BGMI'}
+                    </span>
                     <FaCheckCircle className="esports-pill-check" />
                   </div>
 
@@ -603,7 +679,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     title="Choose another game"
                   >
                     <FaRedoAlt className="esports-change-icon" />
-                    <span>Change Game</span>
+                    <span>Change Arena</span>
                   </button>
                 </motion.div>
               )}
@@ -611,7 +687,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
           </motion.div>
         )}
 
-        {/* When in E-Sports and no game is chosen yet: Show only the prompt */}
+        {/* When in E-Sports and no game is chosen yet: Show interactive prompt with both arenas' details and coordinator preview */}
         {isEsports && !selectedEsportsGame && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -631,6 +707,135 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
               <span className="esports-prompt-tag"><FaUsers style={{ marginRight: '6px' }} /> 4-Player Squad Match</span>
               <span className="esports-prompt-tag"><FaMoneyBillWave style={{ marginRight: '6px' }} /> Flat ₹200 / Squad</span>
               <span className="esports-prompt-tag"><FaBolt style={{ marginRight: '6px' }} /> Custom Tournament Rooms</span>
+            </div>
+
+            {/* Side-by-Side Dual Arena Coordinator & Info Cards */}
+            <div className="esports-prompt-arenas-grid">
+              {/* Free Fire Arena Preview Card */}
+              <div className="esports-arena-interactive-card arena-card-freefire">
+                <div className="arena-card-topbar">
+                  <span className="arena-track-badge ff-badge">🔥 Free Fire Arena</span>
+                  <span className="arena-price-badge">₹200 / Squad</span>
+                </div>
+                <div className="arena-card-info">
+                  <h4 className="arena-card-heading">FREE FIRE SHOWDOWN</h4>
+                  <p className="arena-card-summary">
+                    Bermuda & Purgatory custom room matches. Mobile only with gun attributes turned OFF for fair play.
+                  </p>
+                </div>
+
+                {freeFireLeadCoords.length > 0 && (
+                  <div className="arena-coords-preview-box">
+                    <div className="arena-coords-heading">
+                      <span>Event Coordinators ({freeFireLeadCoords.length})</span>
+                    </div>
+                    <div className="arena-coords-list">
+                      {freeFireLeadCoords.map((c, i) => (
+                        <div key={i} className="arena-coord-row">
+                          <div className="arena-coord-meta">
+                            <span className="arena-coord-name">{c.name}</span>
+                            <span className="arena-coord-sub">{c.role || 'Lead Coordinator'}</span>
+                          </div>
+                          <div className="arena-coord-actions">
+                            <a
+                              href={`tel:${c.phone}`}
+                              className="arena-call-link"
+                              title={`Call ${c.name}`}
+                            >
+                              <FaPhoneAlt size={10} style={{ marginRight: '5px' }} />
+                              <span>{c.displayPhone || c.phone}</span>
+                            </a>
+                            {(c.whatsapp || c.phone) && (
+                              <a
+                                href={`https://wa.me/91${String(c.whatsapp || c.phone).replace(/\D/g, '').slice(-10)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="arena-wa-link"
+                                title={`WhatsApp ${c.name}`}
+                              >
+                                <FaWhatsapp size={13} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="arena-select-cta-btn ff-cta-btn"
+                  onClick={() => handleSelectGame('FREE FIRE')}
+                  id="btn-arena-select-freefire"
+                >
+                  <span>Select Free Fire Rules & Register</span>
+                  <FaArrowRight size={11} style={{ marginLeft: '6px' }} />
+                </button>
+              </div>
+
+              {/* BGMI Arena Preview Card */}
+              <div className="esports-arena-interactive-card arena-card-bgmi">
+                <div className="arena-card-topbar">
+                  <span className="arena-track-badge bgmi-badge">🎯 BGMI Arena</span>
+                  <span className="arena-price-badge">₹200 / Squad</span>
+                </div>
+                <div className="arena-card-info">
+                  <h4 className="arena-card-heading">BGMI CHAMPIONSHIP</h4>
+                  <p className="arena-card-summary">
+                    Erangel & Miramar tactical battlegrounds. TPP Squad rooms following the official BGIS points matrix.
+                  </p>
+                </div>
+
+                {bgmiLeadCoords.length > 0 && (
+                  <div className="arena-coords-preview-box">
+                    <div className="arena-coords-heading">
+                      <span>Event Coordinators ({bgmiLeadCoords.length})</span>
+                    </div>
+                    <div className="arena-coords-list">
+                      {bgmiLeadCoords.map((c, i) => (
+                        <div key={i} className="arena-coord-row">
+                          <div className="arena-coord-meta">
+                            <span className="arena-coord-name">{c.name}</span>
+                            <span className="arena-coord-sub">{c.role || 'Lead Coordinator'}</span>
+                          </div>
+                          <div className="arena-coord-actions">
+                            <a
+                              href={`tel:${c.phone}`}
+                              className="arena-call-link"
+                              title={`Call ${c.name}`}
+                            >
+                              <FaPhoneAlt size={10} style={{ marginRight: '5px' }} />
+                              <span>{c.displayPhone || c.phone}</span>
+                            </a>
+                            {(c.whatsapp || c.phone) && (
+                              <a
+                                href={`https://wa.me/91${String(c.whatsapp || c.phone).replace(/\D/g, '').slice(-10)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="arena-wa-link"
+                                title={`WhatsApp ${c.name}`}
+                              >
+                                <FaWhatsapp size={13} />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="arena-select-cta-btn bgmi-cta-btn"
+                  onClick={() => handleSelectGame('BGMI')}
+                  id="btn-arena-select-bgmi"
+                >
+                  <span>Select BGMI Rules & Register</span>
+                  <FaArrowRight size={11} style={{ marginLeft: '6px' }} />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -728,6 +933,40 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                       <p className="diagonal-desc-text">
                         {displayDescription}
                       </p>
+                      {((activeEsportsData && Array.isArray(activeEsportsData.highlights)) || (event && Array.isArray(event.highlights) && event.highlights.length > 0)) && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', marginTop: '0.85rem', marginBottom: '0.5rem' }}>
+                          {(activeEsportsData?.highlights || event.highlights).map((hl, i) => (
+                            <span
+                              key={i}
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                padding: '3px 9px',
+                                borderRadius: '12px',
+                                background: isEsports && selectedEsportsGame === 'FREE FIRE'
+                                  ? 'rgba(255, 107, 0, 0.15)'
+                                  : (isEsports && selectedEsportsGame === 'BGMI'
+                                      ? 'rgba(0, 210, 255, 0.15)'
+                                      : 'rgba(57, 255, 136, 0.12)'),
+                                color: isEsports && selectedEsportsGame === 'FREE FIRE'
+                                  ? '#ff9d42'
+                                  : (isEsports && selectedEsportsGame === 'BGMI'
+                                      ? '#38bdf8'
+                                      : '#39FF88'),
+                                border: `1px solid ${
+                                  isEsports && selectedEsportsGame === 'FREE FIRE'
+                                    ? 'rgba(255, 107, 0, 0.35)'
+                                    : (isEsports && selectedEsportsGame === 'BGMI'
+                                        ? 'rgba(0, 210, 255, 0.35)'
+                                        : 'rgba(57, 255, 136, 0.25)')
+                                }`
+                              }}
+                            >
+                              ⚡ {hl}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {displaySubtitle && (
                         <div className="rules-subtitle-banner">
                           <span><FaStar style={{ marginRight: '0.35rem', fontSize: '0.75rem' }} /> {displaySubtitle}</span>
@@ -814,7 +1053,10 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     >
                       <div className="rules-card-header">
                         <h2 className="rules-card-title">
-                          <FaHeadset className="rules-card-icon" /> Event Coordinators & Contact
+                          <FaHeadset className="rules-card-icon" />{' '}
+                          {isEsports && selectedEsportsGame
+                            ? `${selectedEsportsGame === 'FREE FIRE' ? '🔥 Free Fire' : '🎯 BGMI'} Coordinators & Contact`
+                            : 'Event Coordinators & Contact'}
                         </h2>
                         <span className="rules-count-badge">
                           {coordsList.length} Lead Coordinator{coordsList.length !== 1 ? 's' : ''}
@@ -825,17 +1067,41 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                         {coordsList.map((coord, idx) => (
                           <div key={idx} className="rules-embedded-coord-chip">
                             <div className="coord-chip-info">
-                              <span className="coord-chip-badge">{coord.role || 'Lead Coordinator'}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                                <span className="coord-chip-badge">{coord.role || 'Lead Coordinator'}</span>
+                                {coord.game && (
+                                  <span
+                                    className={`rules-coord-game-pill ${
+                                      coord.game.toLowerCase().includes('fire') ? 'pill-ff' : 'pill-bgmi'
+                                    }`}
+                                  >
+                                    {coord.game.toLowerCase().includes('fire') ? '🔥 Free Fire' : '🎯 BGMI'}
+                                  </span>
+                                )}
+                              </div>
                               <h4 className="coord-chip-name">{coord.name}</h4>
                             </div>
-                            <a
-                              href={`tel:${coord.phone}`}
-                              className="coord-chip-call-btn"
-                              title={`Call ${coord.name}`}
-                            >
-                              <FaPhoneAlt size={11} style={{ marginRight: '6px' }} />
-                              <span>{coord.displayPhone || coord.phone}</span>
-                            </a>
+                            <div className="coord-chip-actions-group">
+                              <a
+                                href={`tel:${coord.phone}`}
+                                className="coord-chip-call-btn"
+                                title={`Call ${coord.name}`}
+                              >
+                                <FaPhoneAlt size={11} style={{ marginRight: '5px' }} />
+                                <span>{coord.displayPhone || coord.phone}</span>
+                              </a>
+                              {(coord.whatsapp || coord.phone) && (
+                                <a
+                                  href={`https://wa.me/91${String(coord.whatsapp || coord.phone).replace(/\D/g, '').slice(-10)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="coord-chip-wa-btn"
+                                  title={`WhatsApp ${coord.name}`}
+                                >
+                                  <FaWhatsapp size={14} />
+                                </a>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -854,7 +1120,11 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                 <div className="overview-card-cta-wrap">
                   <button
                     type="button"
-                    className="btn btn-primary btn-full-width btn-rules-main-register esports-selected-register-btn"
+                    className={`btn btn-primary btn-full-width btn-rules-main-register esports-selected-register-btn ${
+                      isEsports && selectedEsportsGame === 'FREE FIRE'
+                        ? 'esports-ff-active'
+                        : (isEsports && selectedEsportsGame === 'BGMI' ? 'esports-bgmi-active' : '')
+                    }`}
                     onClick={isRegClosed ? undefined : () => (isEsports ? handleRegisterGame(selectedEsportsGame) : handleRegister())}
                     disabled={isRegClosed}
                     id={isEsports ? `btn-register-${selectedEsportsGame === 'BGMI' ? 'bgmi' : 'freefire'}` : 'btn-register-event'}
@@ -875,7 +1145,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     ) : (
                       <>
                         {isEsports && selectedEsportsGame
-                          ? `REGISTER FOR ${selectedEsportsGame}`
+                          ? `REGISTER SQUAD FOR ${selectedEsportsGame}`
                           : 'REGISTER FOR THIS EVENT'}{' '}
                         <FaArrowRight style={{ marginLeft: '0.45rem' }} />
                       </>

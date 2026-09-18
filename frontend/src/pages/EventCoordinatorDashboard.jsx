@@ -344,7 +344,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
         venue: venueHallName.trim() || currentEvent.venue || 'Designated Campus Venue'
       };
 
-      const result = await updateEventCoordinatorDetails(currentEvent.id, payload);
+      const result = await updateEventCoordinatorDetails(currentEvent.id, payload, token);
       if (result.success) {
         setEventsList(prev => prev.map(ev => {
           if (ev.id === currentEvent.id) {
@@ -358,6 +358,9 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           return ev;
         }));
         toast.success(`Venue photo for ${currentEvent.name} updated successfully!`);
+        try {
+          await fetchEventsData(true);
+        } catch (_) {}
       } else {
         toast.error(result.message || 'Failed to update venue photo');
       }
@@ -380,7 +383,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
         venue_image: '',
         venue: venueHallName.trim() || currentEvent.venue || ''
       };
-      const result = await updateEventCoordinatorDetails(currentEvent.id, payload);
+      const result = await updateEventCoordinatorDetails(currentEvent.id, payload, token);
       if (result.success) {
         setVenuePhotoInput('');
         setVenuePhotoPreview('');
@@ -396,6 +399,9 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           return ev;
         }));
         toast.success(`Venue photo removed for ${currentEvent.name}`);
+        try {
+          await fetchEventsData(true);
+        } catch (_) {}
       } else {
         toast.error(result.message || 'Failed to remove venue photo');
       }
@@ -516,10 +522,11 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
       const res = await updateEventCoordinatorDetails(selectedEventId, {
         venue: editVenue,
         time: editTime,
+        timing: editTime,
         rounds: roundsArray,
         rules: rulesArray,
         conductorNotes: editConductorNotes
-      });
+      }, token);
 
       if (res.success) {
         toast.success('Event details & rounds updated successfully!', { id: toastId });
@@ -529,6 +536,7 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
               ...evt,
               venue: editVenue,
               time: editTime,
+              timing: editTime,
               rounds: roundsArray,
               rules: rulesArray,
               conductorNotes: editConductorNotes
@@ -537,6 +545,11 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
           return evt;
         }));
         setIsEditEventModalOpen(false);
+
+        // Force-refresh global events cache so public website reflects changes immediately
+        try {
+          await fetchEventsData(true);
+        } catch (_) {}
       } else {
         toast.error(res.message || 'Failed to update event', { id: toastId });
       }
@@ -2333,6 +2346,40 @@ export default function EventCoordinatorDashboard({ token, user, onLogout }) {
                             {!isLead && !isSub && <FaBolt size={11} />}
                             {coord.role || (isLead ? 'Lead Coordinator' : isSub ? 'Sub-Coordinator' : 'Coordinator')}
                           </span>
+
+                          {coord.game && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '0.35rem 0.75rem',
+                              borderRadius: '20px',
+                              fontSize: '0.74rem',
+                              fontWeight: '800',
+                              letterSpacing: '0.03em',
+                              background: (coord.game || '').toLowerCase().includes('fire')
+                                ? (isDark ? 'rgba(234, 88, 12, 0.25)' : '#ffedd5')
+                                : (coord.game || '').toLowerCase().includes('bgmi')
+                                ? (isDark ? 'rgba(6, 182, 212, 0.25)' : '#cffafe')
+                                : (isDark ? 'rgba(124, 58, 237, 0.25)' : '#ede9fe'),
+                              color: (coord.game || '').toLowerCase().includes('fire')
+                                ? (isDark ? '#fdba74' : '#c2410c')
+                                : (coord.game || '').toLowerCase().includes('bgmi')
+                                ? (isDark ? '#67e8f9' : '#0891b2')
+                                : (isDark ? '#d8b4fe' : '#6d28d9'),
+                              border: `1px solid ${
+                                (coord.game || '').toLowerCase().includes('fire')
+                                  ? 'rgba(234, 88, 12, 0.4)'
+                                  : (coord.game || '').toLowerCase().includes('bgmi')
+                                  ? 'rgba(6, 182, 212, 0.4)'
+                                  : 'rgba(124, 58, 237, 0.4)'
+                              }`
+                            }}>
+                              {(coord.game || '').toLowerCase().includes('fire') && '🔥 Free Fire'}
+                              {(coord.game || '').toLowerCase().includes('bgmi') && '🎯 BGMI'}
+                              {!(coord.game || '').toLowerCase().includes('fire') && !(coord.game || '').toLowerCase().includes('bgmi') && '🎮 ' + coord.game}
+                            </span>
+                          )}
                         </div>
 
                         <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '1.15rem', fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>

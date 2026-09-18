@@ -13,7 +13,8 @@ import {
   FaBolt,
   FaGamepad,
   FaLayerGroup,
-  FaCheckCircle
+  FaCheckCircle,
+  FaWhatsapp
 } from 'react-icons/fa';
 import { getApiUrl } from '../config/api';
 
@@ -270,21 +271,58 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
                   <div className="rules-section-title">
                     <FaHeadset className="rules-sec-icon" /> LEAD COORDINATORS & CONTACT
                   </div>
-                  <div className="rules-coords-chips">
+                    <div className="rules-coords-chips">
                     {leadCoordinators.map((c, i) => (
                       <div key={i} className="rules-coord-card">
                         <div className="coord-info">
-                          <span className="coord-role-badge">{c.role || 'Lead Coordinator'}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                            <span className="coord-role-badge">{c.role || 'Lead Coordinator'}</span>
+                            {c.game && (
+                              <span
+                                style={{
+                                  fontSize: '0.62rem',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '8px',
+                                  textTransform: 'uppercase',
+                                  background: c.game.toLowerCase().includes('fire') ? 'rgba(255, 107, 0, 0.2)' : 'rgba(0, 210, 255, 0.2)',
+                                  color: c.game.toLowerCase().includes('fire') ? '#ff9d42' : '#38bdf8',
+                                  border: `1px solid ${c.game.toLowerCase().includes('fire') ? 'rgba(255, 107, 0, 0.4)' : 'rgba(0, 210, 255, 0.4)'}`
+                                }}
+                              >
+                                {c.game.toLowerCase().includes('fire') ? '🔥 Free Fire' : '🎯 BGMI'}
+                              </span>
+                            )}
+                          </div>
                           <strong className="coord-name-text">{c.name}</strong>
                         </div>
-                        <a
-                          href={`tel:${c.phone}`}
-                          className="coord-call-link"
-                          title={`Call ${c.name}`}
-                        >
-                          <FaPhoneAlt size={10} style={{ marginRight: '5px' }} />
-                          <span>{c.displayPhone || c.phone}</span>
-                        </a>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <a
+                            href={`tel:${c.phone}`}
+                            className="coord-call-link"
+                            title={`Call ${c.name}`}
+                          >
+                            <FaPhoneAlt size={10} style={{ marginRight: '5px' }} />
+                            <span>{c.displayPhone || c.phone}</span>
+                          </a>
+                          {(c.whatsapp || c.phone) && (
+                            <a
+                              href={`https://wa.me/91${String(c.whatsapp || c.phone).replace(/\D/g, '').slice(-10)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="coord-call-link"
+                              style={{
+                                color: '#25D366',
+                                background: 'rgba(37, 211, 102, 0.12)',
+                                borderColor: 'rgba(37, 211, 102, 0.4)',
+                                padding: '4px 8px'
+                              }}
+                              title={`WhatsApp ${c.name}`}
+                            >
+                              <FaWhatsapp size={12} />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
