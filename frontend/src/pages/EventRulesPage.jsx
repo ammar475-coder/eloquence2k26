@@ -31,6 +31,7 @@ import { getApiUrl, getWsUrl } from '../config/api';
 import { getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import coordinatorsData from '../data/coordinator.js';
+import rulesData from '../data/rules.js';
 import VenueImageModal from '../components/VenueImageModal.jsx';
 
 const ESPORTS_GAMES_DATA = {
@@ -274,11 +275,15 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
 
   const rulesList = activeEsportsData
     ? activeEsportsData.rules
-    : ((event && Array.isArray(event.rules) && event.rules.length > 0) ? event.rules : []);
+    : ((event && Array.isArray(event.rules) && event.rules.length > 0)
+        ? event.rules
+        : (rulesData[event?.id]?.rules || []));
 
   const rounds = activeEsportsData
     ? activeEsportsData.rounds
-    : ((event && Array.isArray(event.rounds) && event.rounds.length > 0) ? event.rounds : []);
+    : ((event && Array.isArray(event.rounds) && event.rounds.length > 0)
+        ? event.rounds
+        : (rulesData[event?.id]?.rounds || []));
 
   const displayDescription = activeEsportsData
     ? activeEsportsData.description
@@ -1038,19 +1043,58 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                         <h2 className="rules-card-title">
                           <FaLayerGroup className="rules-card-icon" /> Round Structure
                         </h2>
-                        <span className="rules-count-badge">{rounds.length} Rounds</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="rules-count-badge">{rounds.length} Rounds</span>
+                          {typeof window !== 'undefined' && localStorage.getItem('adminToken') && (
+                            <a
+                              href="/admin"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: 'rgba(56, 189, 248, 0.15)',
+                                border: '1px solid rgba(56, 189, 248, 0.35)',
+                                color: '#38bdf8',
+                                padding: '3px 9px',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '600',
+                                textDecoration: 'none',
+                                transition: 'all 0.2s ease'
+                              }}
+                              title="Admin: Edit this event and its rounds in Admin Panel"
+                            >
+                              Edit in Admin
+                            </a>
+                          )}
+                        </div>
                       </div>
                       <div className="rules-rounds-grid">
-                        {rounds.map((rnd, i) => (
-                          <div key={i} className="rules-round-card">
-                            <div className="rules-round-header">
-                              <span className="rules-round-num">ROUND {i + 1}</span>
-                              {rnd.time && <span className="rules-round-time">{rnd.time}</span>}
+                        {rounds.map((rnd, i) => {
+                          const isObj = typeof rnd === 'object' && rnd !== null;
+                          const roundTitle = isObj
+                            ? (rnd.name || rnd.title || `Round ${i + 1}`)
+                            : (typeof rnd === 'string' && rnd.includes(':') ? rnd.split(':')[0].trim() : (rnd || `Round ${i + 1}`));
+                          const roundTime = isObj
+                            ? (rnd.time || rnd.duration || '')
+                            : '';
+                          const roundDesc = isObj
+                            ? (rnd.desc || rnd.description || '')
+                            : (typeof rnd === 'string' && rnd.includes(':') ? rnd.substring(rnd.indexOf(':') + 1).trim() : '');
+
+                          return (
+                            <div key={i} className="rules-round-card">
+                              <div className="rules-round-header">
+                                <span className="rules-round-num">
+                                  {isObj && rnd.round ? rnd.round.toUpperCase() : `ROUND ${i + 1}`}
+                                </span>
+                                {roundTime && <span className="rules-round-time">{roundTime}</span>}
+                              </div>
+                              <h4 className="rules-round-title">{roundTitle}</h4>
+                              {roundDesc && <p className="rules-round-desc">{roundDesc}</p>}
                             </div>
-                            <h4 className="rules-round-title">{rnd.name}</h4>
-                            {rnd.desc && <p className="rules-round-desc">{rnd.desc}</p>}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </motion.div>
                   )}

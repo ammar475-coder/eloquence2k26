@@ -1260,6 +1260,13 @@ exports.createEvent = async (req, res) => {
   }
   saveEventsData(events);
 
+  try {
+    const apiController = require('./apiController');
+    if (apiController && typeof apiController.invalidateEventsCache === 'function') {
+      apiController.invalidateEventsCache();
+    }
+  } catch (_) {}
+
   res.json({
     success: true,
     message: 'Event created successfully in live database and storage',
@@ -1410,6 +1417,13 @@ exports.updateEvent = async (req, res) => {
     events.push(constructed);
     saveEventsData(events);
   }
+
+  try {
+    const apiController = require('./apiController');
+    if (apiController && typeof apiController.invalidateEventsCache === 'function') {
+      apiController.invalidateEventsCache();
+    }
+  } catch (_) {}
 
   const updatedResult = eventIndex !== -1 ? events[eventIndex] : { id, ...req.body, image: cleanImage };
 
