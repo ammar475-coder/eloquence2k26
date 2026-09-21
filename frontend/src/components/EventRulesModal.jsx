@@ -17,9 +17,16 @@ import {
   FaWhatsapp
 } from 'react-icons/fa';
 import { getApiUrl } from '../config/api';
+import coordinatorsData from '../data/coordinator.js';
 
 export default function EventRulesModal({ event, isOpen, onClose, onRegister }) {
-  const [coordinators, setCoordinators] = useState([]);
+  const getStaticCoords = (ev) => {
+    if (!ev?.id) return [];
+    if (Array.isArray(ev.coordinators) && ev.coordinators.length > 0) return ev.coordinators;
+    return coordinatorsData[ev.id]?.coordinators || [];
+  };
+
+  const [coordinators, setCoordinators] = useState(() => getStaticCoords(event));
 
   // Fetch live coordinators if available
   useEffect(() => {
@@ -28,7 +35,7 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
       return;
     }
     let isMounted = true;
-    const initialCoords = Array.isArray(event.coordinators) ? event.coordinators : [];
+    const initialCoords = getStaticCoords(event);
     setCoordinators(initialCoords);
 
     fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(event.id)}`))
@@ -36,9 +43,15 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
       .then((result) => {
         if (isMounted && result.success && Array.isArray(result.data) && result.data.length > 0) {
           setCoordinators(result.data);
+        } else if (isMounted && initialCoords.length > 0) {
+          setCoordinators(initialCoords);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (isMounted && initialCoords.length > 0) {
+          setCoordinators(initialCoords);
+        }
+      });
 
     return () => {
       isMounted = false;

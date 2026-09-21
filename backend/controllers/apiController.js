@@ -293,7 +293,7 @@ function initServerMemoryCache() {
 
   try {
     const sponsors = readSponsors();
-    const active = sponsors.filter(s => s.isActive !== false);
+    const active = sponsors.map(dbToSponsor).filter(s => s.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
     if (active.length > 0) {
       inMemorySponsors = active;
@@ -303,7 +303,7 @@ function initServerMemoryCache() {
 
   try {
     const coords = readCoordinators();
-    const active = coords.filter(c => c.isActive !== false);
+    const active = coords.map(dbToCoordinator).filter(c => c.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
     if (active.length > 0) {
       inMemoryCoordinators = active;
@@ -313,7 +313,7 @@ function initServerMemoryCache() {
 
   try {
     const hp = readHomepageCoordinators();
-    const active = hp.filter(t => t.isActive !== false);
+    const active = hp.map(dbToHomepageTeam).filter(t => t.isActive !== false);
     active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
     if (active.length > 0) {
       inMemoryHomepageTeams = active;
@@ -919,12 +919,41 @@ exports.getHealth = (req, res) => {
 
 const EVENT_SELECT_COLUMNS = 'id, number, name, alias, subtitle, category, team_size, min_members, max_members, fee, fee_per_head, fee_type, is_team, tag, venue, venue_image, timing, description, image, rules, rounds, guidelines, highlights, created_at, updated_at';
 
+const getEventCoordinatorsList = (eventId) => {
+  if (!eventId) return [];
+  const evLower = String(eventId).toLowerCase().trim();
+  const rawCoords = (inMemoryCoordinators && inMemoryCoordinators.length > 0)
+    ? inMemoryCoordinators
+    : readCoordinators();
+
+  return rawCoords
+    .map(c => (c && Array.isArray(c.assignedEvents) ? c : dbToCoordinator(c)))
+    .filter(c => {
+      if (c.isActive === false && c.is_active === false) return false;
+      const assigned = Array.isArray(c.assignedEvents)
+        ? c.assignedEvents
+        : (Array.isArray(c.assigned_events) ? c.assigned_events : []);
+      return assigned.some(e => String(e).toLowerCase().trim() === evLower);
+    })
+    .sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+};
+
+const attachCoordinatorsToEvents = (events) => {
+  if (!Array.isArray(events)) return events;
+  return events.map(ev => ({
+    ...ev,
+    coordinators: (Array.isArray(ev.coordinators) && ev.coordinators.length > 0)
+      ? ev.coordinators
+      : getEventCoordinatorsList(ev.id)
+  }));
+};
+
 exports.getPublicEvents = async (req, res) => {
   const now = Date.now();
 
   // 1. If in-memory cache is available and fresh, serve instantly (< 1ms, 0 DB egress)
   if (inMemoryEvents && inMemoryEvents.length > 0 && (now - lastEventsSyncTime < CACHE_TTL_MS)) {
-    return res.json({ success: true, data: inMemoryEvents });
+    return res.json({ success: true, data: attachCoordinatorsToEvents(inMemoryEvents) });
   }
 
   // 2. Load from local file if memory cache is not yet set
@@ -940,8 +969,8 @@ exports.getPublicEvents = async (req, res) => {
 
   // 3. Serve local/cached data immediately to ensure zero UI latency
   if (localEvents.length > 0) {
-    inMemoryEvents = localEvents;
-    res.json({ success: true, data: localEvents });
+    inMemoryEvents = attachCoordinatorsToEvents(localEvents);
+    res.json({ success: true, data: inMemoryEvents });
 
     // Deduplicated background sync with Supabase only if cache expired
     if (!inFlightEventsPromise && (now - lastEventsSyncTime >= CACHE_TTL_MS)) {
@@ -960,7 +989,7 @@ exports.getPublicEvents = async (req, res) => {
                 venueImage: e.venueImage || (local ? (local.venueImage || local.venue_image) : '') || ''
               };
             });
-            inMemoryEvents = merged;
+            inMemoryEvents = attachCoordinatorsToEvents(merged);
             lastEventsSyncTime = Date.now();
           }
         } catch (err) {
@@ -982,16 +1011,16 @@ exports.getPublicEvents = async (req, res) => {
 
     if (!error && Array.isArray(dbEvents) && dbEvents.length > 0) {
       const merged = dbEvents.map(dbToEvent);
-      inMemoryEvents = merged;
+      inMemoryEvents = attachCoordinatorsToEvents(merged);
       lastEventsSyncTime = Date.now();
-      return res.json({ success: true, data: merged });
+      return res.json({ success: true, data: inMemoryEvents });
     }
   } catch (e) {
     console.warn('Supabase getPublicEvents fallback:', e.message);
   }
 
-  inMemoryEvents = localEvents;
-  res.json({ success: true, data: localEvents });
+  inMemoryEvents = attachCoordinatorsToEvents(localEvents);
+  res.json({ success: true, data: inMemoryEvents });
 };
 
 // Helper to enrich a database registration with parsed venue_snapshot metadata (Razorpay info)
@@ -1346,12 +1375,14 @@ exports.getActiveCoordinators = async (req, res) => {
     return res.json({ success: true, count: inMemoryCoordinators.length, data: inMemoryCoordinators });
   }
 
-  const localCoords = inMemoryCoordinators || (() => {
-    const coordinators = readCoordinators();
-    const active = coordinators.filter(c => c.isActive !== false);
-    active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
-    return active;
-  })();
+  const localCoords = (inMemoryCoordinators && inMemoryCoordinators.length > 0)
+    ? inMemoryCoordinators
+    : (() => {
+        const coordinators = readCoordinators();
+        const active = coordinators.map(dbToCoordinator).filter(c => c.isActive !== false);
+        active.sort((a, b) => (Number(a.displayOrder) || 999) - (Number(b.displayOrder) || 999));
+        return active;
+      })();
 
   if (localCoords.length > 0) {
     inMemoryCoordinators = localCoords;
@@ -1408,15 +1439,7 @@ exports.getCoordinatorsByEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    let allCoords = inMemoryCoordinators && inMemoryCoordinators.length > 0
-      ? inMemoryCoordinators
-      : readCoordinators().map(dbToCoordinator).filter(c => c.isActive !== false);
-
-    let matching = allCoords.filter(c => 
-      c.isActive !== false && 
-      Array.isArray(c.assignedEvents) && 
-      c.assignedEvents.map(e => String(e).toLowerCase()).includes(eventId.toLowerCase())
-    );
+    let matching = getEventCoordinatorsList(eventId);
 
     if (role) {
       const rLower = role.toLowerCase().trim();

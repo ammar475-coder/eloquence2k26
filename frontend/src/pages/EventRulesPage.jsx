@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
 import { getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
+import coordinatorsData from '../data/coordinator.js';
 import VenueImageModal from '../components/VenueImageModal.jsx';
 
 const ESPORTS_GAMES_DATA = {
@@ -114,9 +115,19 @@ const ESPORTS_GAMES_DATA = {
 };
 
 export default function EventRulesPage({ eventId, from, categoryFilter, initialGame, onNavigate }) {
+  const getStaticFallbackCoordinators = (id, currentEvent) => {
+    if (currentEvent && Array.isArray(currentEvent.coordinators) && currentEvent.coordinators.length > 0) {
+      return currentEvent.coordinators;
+    }
+    if (id && coordinatorsData[id]?.coordinators) {
+      return coordinatorsData[id].coordinators;
+    }
+    return [];
+  };
+
   const [eventsList, setEventsList] = useState(() => getCachedEvents() || []);
   const [loading, setLoading] = useState(false);
-  const [liveCoordinators, setLiveCoordinators] = useState([]);
+  const [liveCoordinators, setLiveCoordinators] = useState(() => getStaticFallbackCoordinators(eventId));
   const [isRegClosed, setIsRegClosed] = useState(false);
   const [showVenueModal, setShowVenueModal] = useState(false);
 
@@ -237,19 +248,21 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
   useEffect(() => {
     if (!event?.id) return;
     let isMounted = true;
-    const staticFallback = Array.isArray(event.coordinators) ? event.coordinators : [];
+    const staticFallback = getStaticFallbackCoordinators(event.id, event);
+    setLiveCoordinators(prev => (Array.isArray(prev) && prev.length > 0 ? prev : staticFallback));
+
     fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(event.id)}`))
       .then((res) => res.json())
       .then((result) => {
         if (!isMounted) return;
         if (result.success && Array.isArray(result.data) && result.data.length > 0) {
           setLiveCoordinators(result.data);
-        } else {
+        } else if (staticFallback.length > 0) {
           setLiveCoordinators(staticFallback);
         }
       })
       .catch(() => {
-        if (isMounted) setLiveCoordinators(staticFallback);
+        if (isMounted && staticFallback.length > 0) setLiveCoordinators(staticFallback);
       });
     return () => { isMounted = false; };
   }, [event?.id]);
@@ -299,11 +312,10 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
     ? activeEsportsData.isTeam
     : event?.isTeam;
 
+  const staticFallbackCoords = getStaticFallbackCoordinators(event?.id, event);
   const allCoords = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
     ? liveCoordinators
-    : (event && Array.isArray(event.coordinators) && event.coordinators.length > 0
-        ? event.coordinators
-        : []);
+    : staticFallbackCoords;
 
   const [showMobileStickyBar, setShowMobileStickyBar] = useState(false);
   // ONLY show Lead Coordinators publicly on Event Details (Coordinators & Sub-Coordinators are visible only in internal Coordinator login)

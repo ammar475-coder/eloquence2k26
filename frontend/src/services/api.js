@@ -88,6 +88,7 @@ export async function submitRegistration(payload) {
 
 import defaultEvents from '../data/events.js';
 import defaultSponsorsObj from '../data/sponsors.js';
+import coordinatorsData from '../data/coordinator.js';
 
 const flatDefaultSponsors = Array.isArray(defaultSponsorsObj)
   ? defaultSponsorsObj
@@ -192,12 +193,11 @@ export async function fetchCoordinatorsByEvent(eventId) {
   try {
     const res = await fetch(getApiUrl(`/api/coordinators/event/${encodeURIComponent(eventId)}`));
     const data = await res.json();
-    if (data.success) return data.data;
-    return [];
+    if (data.success && Array.isArray(data.data) && data.data.length > 0) return data.data;
   } catch (err) {
     console.warn(`Failed to fetch coordinators for event ${eventId}:`, err);
-    return null;
   }
+  return coordinatorsData[eventId]?.coordinators || [];
 }
 
 // ==================== ADMIN APIS (AUTH REQUIRED) ====================
@@ -504,6 +504,14 @@ export async function fetchEventsData(force = false) {
             return a.category === 'technical' ? -1 : 1;
           }
           return (a.id || '').localeCompare(b.id || '', undefined, { numeric: true });
+        }).map(e => {
+          const fallbackCoords = coordinatorsData[e.id]?.coordinators || [];
+          return {
+            ...e,
+            coordinators: (Array.isArray(e.coordinators) && e.coordinators.length > 0)
+              ? e.coordinators
+              : fallbackCoords
+          };
         });
         setCachedEvents(sorted);
         return sorted;
