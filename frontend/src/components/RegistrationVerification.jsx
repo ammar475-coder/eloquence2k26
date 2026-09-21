@@ -1363,13 +1363,15 @@ export default function RegistrationVerification({
                       <td style={{ padding: '1rem 1.25rem', fontSize: '0.8rem', color: isDark ? '#9ca3af' : '#64748b' }}>
                         <div>{r.timestamp || (r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : 'N/A')}</div>
                         {isVerified && (r.verifiedAt || r.verified_at) && (
-                          <div style={{ fontSize: '0.7rem', color: '#10b981', marginTop: '2px' }}>
-                            ✓ Verified by {r.verifiedBy || r.verified_by || 'Admin'}
+                          <div style={{ fontSize: '0.7rem', color: '#10b981', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FaCheckCircle size={10} />
+                            <span>Verified by {r.verifiedBy || r.verified_by || 'Admin'}</span>
                           </div>
                         )}
                         {isFlagged && (r.flaggedAt || r.flagged_at) && (
-                          <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '2px' }}>
-                            ⚠ Flagged by {r.flaggedBy || r.flagged_by || 'Admin'}
+                          <div style={{ fontSize: '0.7rem', color: '#ef4444', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FaExclamationTriangle size={10} />
+                            <span>Flagged by {r.flaggedBy || r.flagged_by || 'Admin'}</span>
                           </div>
                         )}
                       </td>

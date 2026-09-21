@@ -14,7 +14,9 @@ import {
   FaGamepad,
   FaLayerGroup,
   FaCheckCircle,
-  FaWhatsapp
+  FaWhatsapp,
+  FaFire,
+  FaCrosshairs
 } from 'react-icons/fa';
 import { getApiUrl } from '../config/api';
 import coordinatorsData from '../data/coordinator.js';
@@ -303,7 +305,15 @@ export default function EventRulesModal({ event, isOpen, onClose, onRegister }) 
                                   border: `1px solid ${c.game.toLowerCase().includes('fire') ? 'rgba(255, 107, 0, 0.4)' : 'rgba(0, 210, 255, 0.4)'}`
                                 }}
                               >
-                                {c.game.toLowerCase().includes('fire') ? '🔥 Free Fire' : '🎯 BGMI'}
+                                {c.game.toLowerCase().includes('fire') ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <FaFire size={9} /> Free Fire
+                                  </span>
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <FaCrosshairs size={9} /> BGMI
+                                  </span>
+                                )}
                               </span>
                             )}
                           </div>

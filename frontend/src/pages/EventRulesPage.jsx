@@ -24,7 +24,9 @@ import {
   FaGamepad,
   FaStar,
   FaRedoAlt,
-  FaWhatsapp
+  FaWhatsapp,
+  FaFire,
+  FaCrosshairs
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
@@ -425,7 +427,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
     if (isEsports) {
       if (!selectedEsportsGame) {
         toast('Please choose Free Fire or BGMI below to proceed', {
-          icon: '🎮',
+          icon: <FaGamepad style={{ color: '#38bdf8' }} />,
           style: {
             background: '#04140a',
             color: '#39FF88',
@@ -579,10 +581,17 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                 style={{
                   background: selectedEsportsGame === 'FREE FIRE' ? 'rgba(255, 107, 0, 0.2)' : 'rgba(0, 210, 255, 0.2)',
                   color: selectedEsportsGame === 'FREE FIRE' ? '#ff9d42' : '#38bdf8',
-                  borderColor: selectedEsportsGame === 'FREE FIRE' ? 'rgba(255, 107, 0, 0.5)' : 'rgba(0, 210, 255, 0.5)'
+                  borderColor: selectedEsportsGame === 'FREE FIRE' ? 'rgba(255, 107, 0, 0.5)' : 'rgba(0, 210, 255, 0.5)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                {selectedEsportsGame === 'FREE FIRE' ? '🔥 FREE FIRE SQUAD' : '🎯 BGMI SQUAD'}
+                {selectedEsportsGame === 'FREE FIRE' ? (
+                  <><FaFire style={{ color: '#ff9d42' }} /> FREE FIRE SQUAD</>
+                ) : (
+                  <><FaCrosshairs style={{ color: '#38bdf8' }} /> BGMI SQUAD</>
+                )}
               </span>
             )}
           </div>
@@ -657,7 +666,9 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     onClick={() => handleSelectGame('FREE FIRE')}
                     id="btn-select-freefire"
                   >
-                    <span className="esports-pill-text">🔥 FREE FIRE</span>
+                    <span className="esports-pill-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <FaFire style={{ color: '#ff9d42' }} /> FREE FIRE
+                    </span>
                     <FaArrowRight className="esports-pill-arrow" />
                   </button>
 
@@ -667,7 +678,9 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                     onClick={() => handleSelectGame('BGMI')}
                     id="btn-select-bgmi"
                   >
-                    <span className="esports-pill-text">🎯 BGMI</span>
+                    <span className="esports-pill-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <FaCrosshairs style={{ color: '#38bdf8' }} /> BGMI
+                    </span>
                     <FaArrowRight className="esports-pill-arrow" />
                   </button>
                 </motion.div>
@@ -682,8 +695,12 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                   className="esports-pills-row esports-selected-single-row"
                 >
                   <div className={`esports-game-pill-btn is-active is-selected-single ${selectedEsportsGame === 'FREE FIRE' ? 'arena-selected-ff' : 'arena-selected-bgmi'}`}>
-                    <span className="esports-pill-text">
-                      {selectedEsportsGame === 'FREE FIRE' ? '🔥 FREE FIRE' : '🎯 BGMI'}
+                    <span className="esports-pill-text" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      {selectedEsportsGame === 'FREE FIRE' ? (
+                        <><FaFire style={{ color: '#ff9d42' }} /> FREE FIRE</>
+                      ) : (
+                        <><FaCrosshairs style={{ color: '#38bdf8' }} /> BGMI</>
+                      )}
                     </span>
                     <FaCheckCircle className="esports-pill-check" />
                   </div>
@@ -731,7 +748,9 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
               {/* Free Fire Arena Preview Card */}
               <div className="esports-arena-interactive-card arena-card-freefire">
                 <div className="arena-card-topbar">
-                  <span className="arena-track-badge ff-badge">🔥 Free Fire Arena</span>
+                  <span className="arena-track-badge ff-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <FaFire style={{ color: '#ff9d42' }} /> Free Fire Arena
+                  </span>
                   <span className="arena-price-badge">₹200 / Squad</span>
                 </div>
                 <div className="arena-card-info">
@@ -794,7 +813,9 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
               {/* BGMI Arena Preview Card */}
               <div className="esports-arena-interactive-card arena-card-bgmi">
                 <div className="arena-card-topbar">
-                  <span className="arena-track-badge bgmi-badge">🎯 BGMI Arena</span>
+                  <span className="arena-track-badge bgmi-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <FaCrosshairs style={{ color: '#38bdf8' }} /> BGMI Arena
+                  </span>
                   <span className="arena-price-badge">₹200 / Squad</span>
                 </div>
                 <div className="arena-card-info">
@@ -976,10 +997,13 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                                     : (isEsports && selectedEsportsGame === 'BGMI'
                                         ? 'rgba(0, 210, 255, 0.35)'
                                         : 'rgba(57, 255, 136, 0.25)')
-                                }`
+                                }`,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px'
                               }}
                             >
-                              ⚡ {hl}
+                              <FaBolt style={{ fontSize: '0.68rem' }} /> {hl}
                             </span>
                           ))}
                         </div>
@@ -1110,9 +1134,18 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                       <div className="rules-card-header">
                         <h2 className="rules-card-title">
                           <FaHeadset className="rules-card-icon" />{' '}
-                          {isEsports && selectedEsportsGame
-                            ? `${selectedEsportsGame === 'FREE FIRE' ? '🔥 Free Fire' : '🎯 BGMI'} Coordinators & Contact`
-                            : 'Event Coordinators & Contact'}
+                          {isEsports && selectedEsportsGame ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                              {selectedEsportsGame === 'FREE FIRE' ? (
+                                <><FaFire style={{ color: '#ff9d42' }} /> Free Fire</>
+                              ) : (
+                                <><FaCrosshairs style={{ color: '#38bdf8' }} /> BGMI</>
+                              )}{' '}
+                              Coordinators & Contact
+                            </span>
+                          ) : (
+                            'Event Coordinators & Contact'
+                          )}
                         </h2>
                         <span className="rules-count-badge">
                           {coordsList.length} Lead Coordinator{coordsList.length !== 1 ? 's' : ''}
@@ -1130,8 +1163,13 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                                     className={`rules-coord-game-pill ${
                                       coord.game.toLowerCase().includes('fire') ? 'pill-ff' : 'pill-bgmi'
                                     }`}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                                   >
-                                    {coord.game.toLowerCase().includes('fire') ? '🔥 Free Fire' : '🎯 BGMI'}
+                                    {coord.game.toLowerCase().includes('fire') ? (
+                                      <><FaFire style={{ color: '#ff9d42' }} /> Free Fire</>
+                                    ) : (
+                                      <><FaCrosshairs style={{ color: '#38bdf8' }} /> BGMI</>
+                                    )}
                                   </span>
                                 )}
                               </div>

@@ -733,7 +733,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     const cleanUtr = (upiUtr || '').trim();
     if (!cleanUtr) {
       toast.error('Please enter the 12-digit UPI UTR / Transaction ID after completing payment.', {
-        icon: '⚠️'
+        icon: <FaExclamationTriangle style={{ color: '#f59e0b' }} />
       });
       setIsSubmitting(false);
       return;
@@ -741,7 +741,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
     if (cleanUtr.length < 6) {
       toast.error('Please enter a valid 12-digit UPI UTR / Reference number from your payment app.', {
-        icon: '⚠️'
+        icon: <FaExclamationTriangle style={{ color: '#f59e0b' }} />
       });
       setIsSubmitting(false);
       return;
@@ -777,7 +777,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       const data = await response.json();
       if (data.success) {
         toast.success('Congratulations, you are an Avenger now!', {
-          icon: '🛡️',
+          icon: <FaShieldAlt style={{ color: '#6366f1' }} />,
           duration: 5000,
           id: 'avenger-success-toast'
         });
@@ -826,7 +826,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     try {
       navigator.clipboard.writeText('6374229503@yesfam');
       setCopiedUpi(true);
-      toast.success('UPI ID copied: 6374229503@yesfam', { icon: '📋' });
+      toast.success('UPI ID copied: 6374229503@yesfam', { icon: <FaCopy style={{ color: '#38bdf8' }} /> });
       setTimeout(() => setCopiedUpi(false), 3000);
     } catch (e) {
       toast.success('UPI ID: 6374229503@yesfam');
@@ -947,7 +947,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
             if (verifyRes.success && verifyRes.ticketData) {
               toast.success('Congratulations, you are an Avenger now!', {
-                icon: '🛡️',
+                icon: <FaShieldAlt style={{ color: '#6366f1' }} />,
                 duration: 5000,
                 id: 'avenger-success-toast'
               });
@@ -2131,8 +2131,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                                 <div className="fampay-amount-pill">
                                   AMOUNT: <strong>₹{feeInfo.total}</strong>
                                 </div>
-                                <div className="fampay-hint-text">
-                                  ⚡ Scan with GPay / PhonePe / Paytm to auto-fill ₹{feeInfo.total}
+                                <div className="fampay-hint-text" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                  <FaBolt style={{ color: '#39FF88' }} /> Scan with GPay / PhonePe / Paytm to auto-fill ₹{feeInfo.total}
                                 </div>
                               </div>
                             </div>

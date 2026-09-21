@@ -68,7 +68,10 @@ import {
   FaCrown,
   FaWhatsapp,
   FaPhoneAlt,
-  FaBell
+  FaBell,
+  FaFire,
+  FaCrosshairs,
+  FaMagic
 } from 'react-icons/fa';
 import defaultEvents from '../data/events.js';
 import rulesData from '../data/rules.js';
@@ -5273,10 +5276,10 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               {ev.id === 'nontech-05' && (
                                 <>
                                   <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? 'rgba(234, 88, 12, 0.2)' : '#ffedd5', color: isDark ? '#fdba74' : '#c2410c', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    🔥 FF: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('fire') || (c.game || '').toLowerCase().includes('both')).length}
+                                    <FaFire style={{ color: '#ea580c' }} /> FF: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('fire') || (c.game || '').toLowerCase().includes('both')).length}
                                   </span>
                                   <span style={{ fontSize: '0.72rem', fontWeight: '700', padding: '0.15rem 0.5rem', borderRadius: '4px', background: isDark ? 'rgba(6, 182, 212, 0.2)' : '#cffafe', color: isDark ? '#67e8f9' : '#0891b2', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                    🎯 BGMI: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('bgmi') || (c.game || '').toLowerCase().includes('both')).length}
+                                    <FaCrosshairs style={{ color: '#0891b2' }} /> BGMI: {eventMembers.filter(c => (c.game || '').toLowerCase().includes('bgmi') || (c.game || '').toLowerCase().includes('both')).length}
                                   </span>
                                 </>
                               )}
@@ -5373,9 +5376,15 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                                   : 'rgba(124, 58, 237, 0.4)'
                                               }`
                                             }}>
-                                              {(coord.game || '').toLowerCase().includes('fire') && '🔥 Free Fire'}
-                                              {(coord.game || '').toLowerCase().includes('bgmi') && '🎯 BGMI'}
-                                              {!(coord.game || '').toLowerCase().includes('fire') && !(coord.game || '').toLowerCase().includes('bgmi') && '🎮 ' + coord.game}
+                                              {(coord.game || '').toLowerCase().includes('fire') && (
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaFire style={{ color: '#ea580c' }} /> Free Fire</span>
+                                              )}
+                                              {(coord.game || '').toLowerCase().includes('bgmi') && (
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaCrosshairs style={{ color: '#0891b2' }} /> BGMI</span>
+                                              )}
+                                              {!(coord.game || '').toLowerCase().includes('fire') && !(coord.game || '').toLowerCase().includes('bgmi') && (
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaGamepad /> {coord.game}</span>
+                                              )}
                                             </span>
                                           )}
                                         </div>
@@ -5621,7 +5630,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                             background: (coord.game || '').toLowerCase().includes('fire') ? '#ea580c' : (coord.game || '').toLowerCase().includes('bgmi') ? '#0891b2' : '#7c3aed',
                                             color: '#ffffff'
                                           }}>
-                                            {(coord.game || '').toLowerCase().includes('fire') ? '🔥 FF' : (coord.game || '').toLowerCase().includes('bgmi') ? '🎯 BGMI' : '🎮 ' + coord.game}
+                                            {(coord.game || '').toLowerCase().includes('fire') ? (
+                                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaFire size={9} /> FF</span>
+                                            ) : (coord.game || '').toLowerCase().includes('bgmi') ? (
+                                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaCrosshairs size={9} /> BGMI</span>
+                                            ) : (
+                                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaGamepad size={9} /> {coord.game}</span>
+                                            )}
                                           </span>
                                         )}
                                       </span>
@@ -7834,7 +7849,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                       textTransform: 'uppercase',
                       alignSelf: 'flex-start'
                     }}>
-                      ⚡ Live Homepage Hero Preview (When Closed):
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                        <FaBolt style={{ color: '#eab308' }} /> Live Homepage Hero Preview (When Closed):
+                      </span>
                     </div>
 
                     {/* Red Marquee Capsule Pill Preview */}
@@ -9683,7 +9700,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
                       <label style={{ ...S.label, marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px', color: isDark ? '#fdba74' : '#c2410c', fontWeight: '800' }}>
-                        <span>🎮 Battle of Champions Game Track *</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaGamepad /> Battle of Champions Game Track *</span>
                         <span style={{ fontSize: '0.72rem', fontWeight: '600', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isDark ? '#374151' : '#ffedd5' }}>Required</span>
                       </label>
                       <span style={{ fontSize: '0.74rem', color: isDark ? '#9ca3af' : '#64748b' }}>
@@ -9719,7 +9736,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                           transform: coordGame === 'Free Fire' ? 'scale(1.02)' : 'scale(1)'
                         }}
                       >
-                        <span style={{ fontSize: '1rem' }}>🔥</span>
+                        <FaFire size={15} color={coordGame === 'Free Fire' ? '#ea580c' : (isDark ? '#fdba74' : '#c2410c')} />
                         <span>Free Fire</span>
                         {coordGame === 'Free Fire' && <FaCheckCircle size={13} color="#ea580c" />}
                       </button>
@@ -9751,7 +9768,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                           transform: coordGame === 'BGMI' ? 'scale(1.02)' : 'scale(1)'
                         }}
                       >
-                        <span style={{ fontSize: '1rem' }}>🎯</span>
+                        <FaCrosshairs size={15} color={coordGame === 'BGMI' ? '#0891b2' : (isDark ? '#67e8f9' : '#0e7490')} />
                         <span>BGMI</span>
                         {coordGame === 'BGMI' && <FaCheckCircle size={13} color="#0891b2" />}
                       </button>
@@ -9783,7 +9800,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                           transform: coordGame === 'Both' ? 'scale(1.02)' : 'scale(1)'
                         }}
                       >
-                        <span style={{ fontSize: '1rem' }}>🎮</span>
+                        <FaGamepad size={15} color={coordGame === 'Both' ? '#7c3aed' : (isDark ? '#d8b4fe' : '#6d28d9')} />
                         <span>Both (FF & BGMI)</span>
                         {coordGame === 'Both' && <FaCheckCircle size={13} color="#7c3aed" />}
                       </button>
@@ -10477,7 +10494,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
                               alignItems: 'center',
                               gap: '5px'
                             }}>
-                              <span>✨ Suggested: <strong>{smartThemeSuggestion.name}</strong></span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <FaMagic style={{ color: '#eab308' }} /> Suggested: <strong>{smartThemeSuggestion.name}</strong>
+                              </span>
                               {!isSuggestedSelected && !isLeadCoordinator && (
                                 <button
                                   type="button"
@@ -10564,13 +10583,13 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                     </span>
                                   </div>
                                   {isSelected && (
-                                    <span style={{
-                                      fontSize: '0.72rem',
-                                      fontWeight: '800',
-                                      color: theme.primaryColor
-                                    }}>
-                                      ✓
-                                    </span>
+                                    <FaCheck
+                                      size={11}
+                                      style={{
+                                        color: theme.primaryColor,
+                                        flexShrink: 0
+                                      }}
+                                    />
                                   )}
                                 </div>
 
