@@ -79,6 +79,7 @@ import { getEventBanner, defaultEventImages } from '../data/eventImages.js';
 import { getApiUrl } from '../config/api';
 import ParticipantVerifier from '../components/ParticipantVerifier.jsx';
 import RegistrationVerification from '../components/RegistrationVerification.jsx';
+import PaymentScreenshotViewerModal from '../components/PaymentScreenshotViewerModal.jsx';
 import EventRegistrationCharts from '../components/EventRegistrationCharts.jsx';
 import {
   fetchAdminHomepageCoordinators,
@@ -333,6 +334,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
   const [isRegDetailsModalOpen, setIsRegDetailsModalOpen] = useState(false);
   const [isOnSiteRegisterModalOpen, setIsOnSiteRegisterModalOpen] = useState(false);
   const [isDeletingRegId, setIsDeletingRegId] = useState(null);
+  const [viewerScreenshotReg, setViewerScreenshotReg] = useState(null);
 
   // UTR & Verification metrics for badge & notification queue
   const utrRegistrationsList = registrationsList.filter(r => {
@@ -353,11 +355,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
 
   const [isQuickVerifyingId, setIsQuickVerifyingId] = useState(null);
 
-  const handleQuickVerifyRegistration = (reg) => {
-    const regId = reg.id || reg.ticket_code || reg.registrationId;
-    if (!regId) return;
+  const executeDirectVerifyRegistration = (regId, regTicket) => {
     setIsQuickVerifyingId(regId);
-    const toastId = toast.loading(`Verifying participant #${reg.ticket_code || regId}...`);
+    const toastId = toast.loading(`Verifying participant #${regTicket || regId}...`);
 
     fetch(getApiUrl(`/api/admin/registrations/${regId}/verify`), {
       method: 'PATCH',
@@ -374,9 +374,9 @@ export default function AdminDashboard({ token, user, onLogout }) {
       .then(res => res.json())
       .then(resData => {
         if (resData.success) {
-          toast.success(`Participant #${reg.ticket_code || regId} verified successfully!`, { id: toastId });
+          toast.success(`Participant #${regTicket || regId} verified successfully!`, { id: toastId });
           setRegistrationsList(prev => prev.map(item => {
-            const matchId = item.id === reg.id || item.ticket_code === reg.ticket_code || item.registrationId === reg.registrationId;
+            const matchId = item.id === regId || item.ticket_code === regTicket || item.registrationId === regId;
             if (matchId) {
               return {
                 ...item,
@@ -396,12 +396,56 @@ export default function AdminDashboard({ token, user, onLogout }) {
         }
       })
       .catch(err => {
-        console.error('Quick verify error:', err);
-        toast.error('Network error while verifying', { id: toastId });
+        console.error('Error verifying registration:', err);
+        toast.error('Network error verifying registration', { id: toastId });
       })
       .finally(() => {
         setIsQuickVerifyingId(null);
       });
+  };
+
+  // Helper to extract Payment Screenshot Path from record or venue_snapshot
+  const getRegScreenshot = (r) => {
+    if (!r) return null;
+    if (r.payment_screenshot_path) return r.payment_screenshot_path;
+    if (r.paymentScreenshotPath) return r.paymentScreenshotPath;
+    if (r.screenshotPath) return r.screenshotPath;
+    if (r.screenshot_path) return r.screenshot_path;
+    if (r.venue_snapshot) {
+      try {
+        const snap = typeof r.venue_snapshot === 'string' ? JSON.parse(r.venue_snapshot) : r.venue_snapshot;
+        if (snap) {
+          return snap.payment_screenshot_path || snap.paymentScreenshotPath || snap.screenshotPath || null;
+        }
+      } catch (e) {}
+    }
+    return null;
+  };
+
+  const handleQuickVerifyRegistration = (reg) => {
+    const regId = typeof reg === 'string' ? reg : (reg.id || reg.ticket_code || reg.registrationId);
+    if (!regId) return;
+
+    const regObj = typeof reg === 'object' && reg !== null ? reg : registrationsList.find(r => r.id === regId || r.ticket_code === regId);
+    const fee = Number(regObj?.totalAmount || regObj?.totalFee || regObj?.total_fee || 0);
+    const hasScreenshot = Boolean(getRegScreenshot(regObj));
+
+    if (fee > 0) {
+      if (hasScreenshot) {
+        // Open screenshot viewer modal so admin inspects payment proof before verifying
+        setViewerScreenshotReg(regObj);
+        return;
+      } else {
+        toast.error('Cannot verify: Payment screenshot has not been uploaded for this paid registration. Participant must provide payment proof.', {
+          icon: <FaExclamationTriangle style={{ color: '#ef4444' }} />,
+          duration: 5000
+        });
+        return;
+      }
+    }
+
+    // Free event without fee: verify directly
+    executeDirectVerifyRegistration(regId, regObj?.ticket_code || regId);
   };
 
   // Registration Analytics & Event Helpers
@@ -4147,8 +4191,12 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                     disabled={isVerifying}
                                     onClick={() => handleQuickVerifyRegistration(reg)}
                                     style={{
-                                      background: '#059669',
-                                      color: '#ffffff',
+                                      background: getRegScreenshot(reg)
+                                        ? '#059669'
+                                        : (Number(reg.totalAmount || reg.totalFee || reg.total_fee || 0) > 0 ? (isDark ? '#374151' : '#cbd5e1') : '#059669'),
+                                      color: (getRegScreenshot(reg) || Number(reg.totalAmount || reg.totalFee || reg.total_fee || 0) === 0)
+                                        ? '#ffffff'
+                                        : (isDark ? '#9ca3af' : '#475569'),
                                       border: 'none',
                                       borderRadius: '8px',
                                       padding: '0.45rem 0.85rem',
@@ -4161,10 +4209,23 @@ export default function AdminDashboard({ token, user, onLogout }) {
                                       boxShadow: '0 2px 6px rgba(5,150,105,0.3)',
                                       transition: 'all 0.15s ease'
                                     }}
-                                    title="Click to Verify & Confirm this registration immediately"
+                                    title={
+                                      getRegScreenshot(reg)
+                                        ? 'View payment screenshot & verify participant'
+                                        : (Number(reg.totalAmount || reg.totalFee || reg.total_fee || 0) > 0 ? 'Cannot verify: Screenshot proof missing' : 'Confirm registration')
+                                    }
                                   >
-                                    <FaCheckCircle size={12} />
-                                    <span>{isVerifying ? 'Verifying...' : 'Verify Now'}</span>
+                                    {getRegScreenshot(reg) ? (
+                                      <>
+                                        <FaImage size={12} />
+                                        <span>View &amp; Verify</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FaCheckCircle size={12} />
+                                        <span>{isVerifying ? 'Verifying...' : 'Verify Now'}</span>
+                                      </>
+                                    )}
                                   </button>
 
                                   <button
@@ -7094,6 +7155,21 @@ export default function AdminDashboard({ token, user, onLogout }) {
                             {/* Actions */}
                             <td style={{ ...S.td, textAlign: 'center' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                {getRegScreenshot(reg) && (
+                                  <button
+                                    onClick={() => setViewerScreenshotReg(reg)}
+                                    style={{
+                                      ...S.actionBtnView,
+                                      background: isDark ? 'rgba(2, 132, 199, 0.15)' : '#eff6ff',
+                                      color: '#0284c7',
+                                      borderColor: isDark ? 'rgba(56, 189, 248, 0.4)' : '#bfdbfe'
+                                    }}
+                                    title="View payment screenshot"
+                                  >
+                                    <FaImage size={11} />
+                                    <span>Proof</span>
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => {
                                     setSelectedRegDetails(reg);
@@ -10005,6 +10081,37 @@ export default function AdminDashboard({ token, user, onLogout }) {
                     </div>
                   </div>
                   <div>
+                    <div style={S.label}>Payment Screenshot</div>
+                    <div style={{ marginTop: '4px' }}>
+                      {getRegScreenshot(selectedRegDetails) ? (
+                        <button
+                          type="button"
+                          onClick={() => setViewerScreenshotReg(selectedRegDetails)}
+                          style={{
+                            background: 'rgba(2, 132, 199, 0.15)',
+                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                            color: '#38bdf8',
+                            padding: '0.3rem 0.75rem',
+                            borderRadius: '6px',
+                            fontSize: '0.8rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}
+                        >
+                          <FaImage size={11} />
+                          <span>View Screenshot</span>
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.82rem', color: isDark ? '#64748b' : '#94a3b8', fontStyle: 'italic' }}>
+                          Screenshot: Not uploaded
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
                     <div style={S.label}>Registered At</div>
                     <div style={{ fontWeight: '500', fontSize: '0.88rem', color: isDark ? '#cbd5e1' : '#475569', marginTop: '3px' }}>
                       {selectedRegDetails.created_at 
@@ -10104,7 +10211,18 @@ export default function AdminDashboard({ token, user, onLogout }) {
             </div>
 
             <div style={{ ...S.modalFooter, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {getRegScreenshot(selectedRegDetails) && (
+                  <button
+                    type="button"
+                    onClick={() => setViewerScreenshotReg(selectedRegDetails)}
+                    style={{ ...S.filterBtn, background: isDark ? 'rgba(2, 132, 199, 0.2)' : '#eff6ff', color: '#0284c7', borderColor: '#38bdf8' }}
+                    title="View uploaded payment screenshot"
+                  >
+                    <FaImage size={11} />
+                    <span>View Screenshot</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handlePrintTicket(selectedRegDetails)}
@@ -11509,6 +11627,26 @@ export default function AdminDashboard({ token, user, onLogout }) {
           </div>
         </div>
       )}
+
+      {/* Payment Screenshot Viewer Modal */}
+      <PaymentScreenshotViewerModal
+        registration={viewerScreenshotReg}
+        token={token}
+        isOpen={Boolean(viewerScreenshotReg)}
+        onClose={() => setViewerScreenshotReg(null)}
+        onVerify={async (reg) => {
+          const id = reg.id || reg.registrationId || reg.ticket_code;
+          const ticket = reg.ticket_code || reg.ticketCode || id;
+          executeDirectVerifyRegistration(id, ticket);
+          setViewerScreenshotReg(null);
+        }}
+        onReject={async (reg) => {
+          const id = reg.id || reg.registrationId || reg.ticket_code;
+          await handleQuickVerifyRegistration(id, 'flagged');
+          setViewerScreenshotReg(null);
+        }}
+        isDark={isDark}
+      />
     </div>
   );
 }

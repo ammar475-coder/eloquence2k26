@@ -31,6 +31,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiUrl, getWsUrl } from '../config/api';
 import { getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api.js';
+import { findEvent, normalizeEvent } from '../utils/eventUtils.js';
 import { getEventSticker } from '../data/eventStickers.js';
 import coordinatorsData from '../data/coordinator.js';
 import rulesData from '../data/rules.js';
@@ -246,7 +247,7 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
     return () => { isMounted = false; };
   }, [eventId]);
 
-  const event = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()) || (eventsList.length > 0 ? eventsList[0] : null);
+  const event = findEvent(eventsList, eventId);
 
   useEffect(() => {
     if (!event?.id) return;
@@ -309,15 +310,19 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
 
   const displayTeamSize = activeEsportsData
     ? activeEsportsData.teamSize
-    : event?.teamSize;
+    : (event?.teamSize || event?.team_size);
 
   const displayFeeType = activeEsportsData
     ? activeEsportsData.feeType
-    : event?.feeType;
+    : (event?.feeType || event?.fee_type || 'per_head');
 
   const displayIsTeam = activeEsportsData
     ? activeEsportsData.isTeam
-    : event?.isTeam;
+    : Boolean(event?.isTeam || event?.is_team);
+
+  const displayMaxMembers = activeEsportsData
+    ? 4
+    : Number(event?.maxMembers || event?.max_members || (displayIsTeam ? 3 : 1));
 
   const staticFallbackCoords = getStaticFallbackCoordinators(event?.id, event);
   const allCoords = (Array.isArray(liveCoordinators) && liveCoordinators.length > 0)
@@ -951,9 +956,13 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                         <span className="rules-box-icon"><FaUsers /></span>
                         <span className="rules-box-label">MEMBERS</span>
                       </div>
-                      <div className="rules-box-value">{displayTeamSize}</div>
+                      <div className="rules-box-value">
+                        {displayTeamSize || (displayIsTeam ? `Max ${displayMaxMembers} Members` : 'Individual')}
+                      </div>
                       <span className="rules-box-subhint">
-                        {displayIsTeam ? 'Team competition' : 'Solo entry'}
+                        {displayIsTeam
+                          ? (displayMaxMembers > 1 ? `Team (Max ${displayMaxMembers} members)` : 'Team competition')
+                          : 'Solo entry'}
                       </span>
                     </div>
                   </div>
@@ -1069,28 +1078,6 @@ export default function EventRulesPage({ eventId, from, categoryFilter, initialG
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span className="rules-count-badge">{rounds.length} Rounds</span>
-                          {typeof window !== 'undefined' && localStorage.getItem('adminToken') && (
-                            <a
-                              href="/admin"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                background: 'rgba(56, 189, 248, 0.15)',
-                                border: '1px solid rgba(56, 189, 248, 0.35)',
-                                color: '#38bdf8',
-                                padding: '3px 9px',
-                                borderRadius: '6px',
-                                fontSize: '0.72rem',
-                                fontWeight: '600',
-                                textDecoration: 'none',
-                                transition: 'all 0.2s ease'
-                              }}
-                              title="Admin: Edit this event and its rounds in Admin Panel"
-                            >
-                              Edit in Admin
-                            </a>
-                          )}
                         </div>
                       </div>
                       <div className="rules-rounds-grid">

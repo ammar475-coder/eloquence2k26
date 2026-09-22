@@ -393,17 +393,25 @@
     "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
     "image": "/events/card_ppt_presentation-BHzUng4c.png",
     "rules": [
-      "- Max 3 members per team; assemble 20 min before your slot",
-      "- Submit a 300-word abstract 1 day before the event, and the final PPT (in PDF) before the event",
-      "- 5-min presentation + 2-min Q&A, max 6 slides",
-      "- ⁠Topic must be any one from the given set of topics",
-      "- Evaluated on technical content, clarity, and Q&A performance",
-      "- Maintain decorum and respect other presenters",
-      "- Organizers aren't liable for technical glitches; participants are responsible for their files"
+      "Max 3 members per team; assemble 20 min before your slot",
+      "Submit a 300-word abstract 1 day before the event, and the final PPT (in PDF) before the event",
+      "5-min presentation + 2-min Q&A, max 6 slides",
+      "Topic must be any one from the given set of topics",
+      "Evaluated on technical content, clarity, and Q&A performance",
+      "Maintain decorum and respect other presenters",
+      "Organizers aren't liable for technical glitches; participants are responsible for their files"
     ],
     "rounds": [
-      "Preliminary Deck Screening: Initial slide deck review by panel judges.",
-      "Final Stage Pitch: Live presentation followed by jury Q&A."
+      {
+        "desc": "Initial slide deck review by panel judges.",
+        "name": "Preliminary Deck Screening",
+        "time": ""
+      },
+      {
+        "desc": "Live presentation followed by jury Q&A.",
+        "name": "Final Stage Pitch",
+        "time": ""
+      }
     ],
     "guidelines": [
       "Standard projector and clicker will be provided.",
@@ -416,7 +424,7 @@
       "₹100/head"
     ],
     "created_at": "2026-09-16T10:16:13.515539+00:00",
-    "updated_at": "2026-09-19T12:30:22.818+00:00",
+    "updated_at": "2026-09-22T06:17:46.544+00:00",
     "venue_image": ""
   },
   {
@@ -586,11 +594,11 @@
     "venue_image": ""
   },
   {
-    "id": "tech-06",
-    "number": "06",
+    "id": "tech-05",
+    "number": "12",
     "name": "UI/UX",
     "alias": "UI/UX",
-    "subtitle": "UI and UX DESIGN",
+    "subtitle": "Figma Designing",
     "category": "technical",
     "team_size": "Individual",
     "min_members": 1,
@@ -599,11 +607,11 @@
     "fee_per_head": 50,
     "fee_type": "per_head",
     "is_team": false,
-    "tag": "Product Design",
-    "venue": "MAIN BUILDING Python Lab",
-    "timing": "10:40 AM TO 12:40 PM",
-    "description": "Design intuitive, modern digital interfaces and user experiences using industry-standard design tools.",
-    "image": "/events/event-tech-06-1789621679528-2221.png",
+    "tag": "Technical Presentation",
+    "venue": "Main Block Python Lab",
+    "timing": "11:00 AM – 01:00 PM",
+    "description": "Figma",
+    "image": "/events/event-1790059620422-4643.png",
     "rules": [
       "Individual participation only.",
       "Systems will be provided for all participants.",
@@ -620,27 +628,42 @@
     ],
     "rounds": [
       {
-        "desc": "Design smooth login, registration, and onboarding screens.",
-        "name": "Round 1: Auth & Onboarding Flow",
+        "desc": "",
+        "name": "Round 1: Preliminary Round",
         "time": "30 Mins"
-      },
-      {
-        "desc": "Create main dashboard UI with interactive prototypes.",
-        "name": "Round 2: Feature Dashboard & Interactions",
-        "time": "60 Mins"
       }
     ],
-    "guidelines": [
-      "Participants can bring their own laptops with Figma installed."
-    ],
-    "highlights": [
-      "Tools: Figma & Canva",
-      "AI strictly restricted",
-      "Round 1: Login page",
-      "Round 2: Dashboard"
-    ],
-    "created_at": "2026-09-16T10:16:14.040091+00:00",
-    "updated_at": "2026-09-19T11:13:42.903+00:00",
+    "guidelines": [],
+    "highlights": [],
+    "created_at": "2026-09-22T06:48:29.559452+00:00",
+    "updated_at": "2026-09-22T06:51:16.003+00:00",
     "venue_image": ""
+  },
+  {
+    "id": "tech-06",
+    "number": "99",
+    "name": "UI/UX",
+    "alias": null,
+    "subtitle": null,
+    "category": "technical",
+    "team_size": "Individual",
+    "min_members": 1,
+    "max_members": 1,
+    "fee": null,
+    "fee_per_head": 50,
+    "fee_type": "per_head",
+    "is_team": false,
+    "tag": null,
+    "venue": null,
+    "timing": null,
+    "description": null,
+    "image": null,
+    "rules": null,
+    "rounds": null,
+    "guidelines": null,
+    "highlights": null,
+    "created_at": "2026-09-22T10:08:40.744644+00:00",
+    "updated_at": "2026-09-22T10:08:40.744644+00:00",
+    "venue_image": null
   }
 ]

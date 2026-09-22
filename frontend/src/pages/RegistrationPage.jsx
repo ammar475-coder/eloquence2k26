@@ -38,10 +38,12 @@ import {
   FaInfoCircle,
   FaCopy
 } from 'react-icons/fa';
-import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus } from '../services/api.js';
+import { submitRegistration, createPaymentOrder, verifyPaymentAndRegister, getCachedEvents, fetchEventsData, fetchRegistrationStatus, setCachedRegistrationStatus, uploadPaymentScreenshot } from '../services/api.js';
 import { getEventSticker } from '../data/eventStickers.js';
+import { findEvent, normalizeEvent } from '../utils/eventUtils.js';
 import paymentQrImg from '../assets/payment_upi_qr.jpg';
 import { QRCodeSVG } from 'qrcode.react';
+import PaymentScreenshotUpload from '../components/PaymentScreenshotUpload.jsx';
 
 // Helper to dynamically load official Razorpay Checkout SDK
 const loadRazorpayScript = () => {
@@ -80,8 +82,8 @@ const createEmptyMember = (defaultCollege = '') => ({
 export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const initialEvents = getCachedEvents() || [];
   const initialSelected = eventId
-    ? initialEvents.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase())
-    : (initialEvents.length > 0 ? initialEvents[0] : null);
+    ? findEvent(initialEvents, eventId)
+    : (initialEvents.length > 0 ? normalizeEvent(initialEvents[0]) : null);
 
   const [eventsList, setEventsList] = useState(initialEvents);
   const [selectedEvent, setSelectedEvent] = useState(initialSelected);
@@ -181,10 +183,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
         if (Array.isArray(data) && data.length > 0) {
           setEventsList(data);
           if (eventId) {
-            const found = data.find(
-              (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
-            );
-            if (found) setSelectedEvent(found);
+            const found = findEvent(data, eventId);
+            if (found) {
+              setSelectedEvent(found);
+              initTeamMembersForEvent(found);
+            }
           }
         }
       })
@@ -198,10 +201,11 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
   useEffect(() => {
     if (eventId && eventsList.length > 0) {
-      const found = eventsList.find(
-        (e) => e.id === eventId || e.id?.toLowerCase() === eventId?.toLowerCase()
-      );
-      if (found) setSelectedEvent(found);
+      const found = findEvent(eventsList, eventId);
+      if (found) {
+        setSelectedEvent(found);
+        initTeamMembersForEvent(found);
+      }
     }
   }, [eventId, eventsList]);
 
@@ -210,12 +214,16 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [showSaveModal, setShowSaveModal] = useState(true);
 
   const formRef = useRef(null);
-  const isEsports = selectedEvent ? selectedEvent.id === 'nontech-05' : eventId === 'nontech-05';
+  const isEsports = selectedEvent ? (selectedEvent.id === 'nontech-05' || selectedEvent.id?.startsWith('nontech-05')) : eventId === 'nontech-05';
+  const isTeam = Boolean(selectedEvent?.isTeam || selectedEvent?.is_team);
+  const minMembers = Number(selectedEvent?.minMembers || selectedEvent?.min_members || 1);
+  const maxMembers = Number(selectedEvent?.maxMembers || selectedEvent?.max_members || (isTeam ? 3 : 1));
+  const feeType = selectedEvent?.feeType || selectedEvent?.fee_type || 'per_head';
   const isFixedTeam = Boolean(
     selectedEvent && (
-      selectedEvent.feeType === 'per_squad' ||
-      selectedEvent.feeType === 'per_team' ||
-      (selectedEvent.isTeam && selectedEvent.minMembers > 1 && selectedEvent.minMembers === selectedEvent.maxMembers)
+      feeType === 'per_squad' ||
+      feeType === 'per_team' ||
+      (isTeam && minMembers > 1 && minMembers === maxMembers)
     )
   );
 
@@ -270,6 +278,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   const [copied, setCopied] = useState(false);
   const [upiUtr, setUpiUtr] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
+  const [screenshotFile, setScreenshotFile] = useState(null);
+  const [screenshotError, setScreenshotError] = useState(null);
   const [qrViewMode, setQrViewMode] = useState('dynamic'); // 'dynamic' | 'original'
   const [showEventModal, setShowEventModal] = useState(false);
   const [modalCategory, setModalCategory] = useState('all');
@@ -286,7 +296,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (eventId) {
       if (eventsList.length > 0) {
-        const ev = eventsList.find((e) => e.id === eventId || e.id?.toLowerCase() === eventId.toLowerCase());
+        const ev = findEvent(eventsList, eventId);
         if (ev) {
           setSelectedEvent(ev);
           initTeamMembersForEvent(ev);
@@ -306,33 +316,38 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
   // Helper to pre-populate team members based on event requirements WITHOUT erasing entered data
   const initTeamMembersForEvent = (event) => {
     if (!event) return;
+    const ev = normalizeEvent(event);
     setFields((prev) => {
       const existing = Array.isArray(prev.teamMembers) ? prev.teamMembers : [];
       let nextMembers = [...existing];
-      const isFixed = event.feeType === 'per_squad' || event.feeType === 'per_team' || (event.isTeam && event.minMembers > 1 && event.minMembers === event.maxMembers);
+      const evIsTeam = Boolean(ev.isTeam || ev.is_team);
+      const evMin = Number(ev.minMembers || ev.min_members || 1);
+      const evMax = Number(ev.maxMembers || ev.max_members || (evIsTeam ? 3 : 1));
+      const evFeeType = ev.feeType || ev.fee_type || 'per_head';
+      const isFixed = evFeeType === 'per_squad' || evFeeType === 'per_team' || (evIsTeam && evMin > 1 && evMin === evMax);
 
-      if (isFixed && event.maxMembers > 1) {
-        // Fixed squad / team (e.g. 4-player squad or 5-member team): 1 lead + (event.maxMembers - 1) members
-        const targetCount = event.maxMembers - 1;
+      if (isFixed && evMax > 1) {
+        // Fixed squad / team (e.g. 4-player squad or 5-member team): 1 lead + (evMax - 1) members
+        const targetCount = evMax - 1;
         while (nextMembers.length < targetCount) {
           nextMembers.push(createEmptyMember(prev.college));
         }
         if (nextMembers.length > targetCount) {
           nextMembers = nextMembers.slice(0, targetCount);
         }
-      } else if (event.isTeam && event.minMembers > 1) {
+      } else if (evIsTeam && evMin > 1) {
         // Min members required
-        const minCount = Math.max(1, event.minMembers - 1);
+        const minCount = Math.max(1, evMin - 1);
         while (nextMembers.length < minCount) {
           nextMembers.push(createEmptyMember(prev.college));
         }
-        if (event.maxMembers && nextMembers.length > event.maxMembers - 1) {
-          nextMembers = nextMembers.slice(0, event.maxMembers - 1);
+        if (evMax && nextMembers.length > evMax - 1) {
+          nextMembers = nextMembers.slice(0, evMax - 1);
         }
-      } else if (event.isTeam && event.minMembers <= 1) {
-        // Optional extra members: start solo unless extra members already entered, capped at maxMembers - 1
-        if (event.maxMembers && nextMembers.length > event.maxMembers - 1) {
-          nextMembers = nextMembers.slice(0, event.maxMembers - 1);
+      } else if (evIsTeam && evMin <= 1) {
+        // Optional extra members: start solo unless extra members already entered, capped at evMax - 1
+        if (evMax && nextMembers.length > evMax - 1) {
+          nextMembers = nextMembers.slice(0, evMax - 1);
         }
       } else {
         // Solo event: clear additional team members
@@ -446,7 +461,8 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
 
   const addTeamMember = () => {
     if (!selectedEvent) return;
-    if (fields.teamMembers.length + 1 < selectedEvent.maxMembers) {
+    const max = Number(selectedEvent.maxMembers || selectedEvent.max_members || 3);
+    if (fields.teamMembers.length + 1 < max) {
       setFields((prev) => ({
         ...prev,
         teamMembers: [...prev.teamMembers, createEmptyMember(prev.college)],
@@ -618,7 +634,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
     }
     setErrors({});
 
-    if (selectedEvent?.isTeam) {
+    if (selectedEvent?.isTeam || selectedEvent?.is_team) {
       setStep('team');
     } else {
       setStep('review');
@@ -747,6 +763,20 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
       return;
     }
 
+    // ── MANDATORY PAYMENT SCREENSHOT CHECK ──
+    if (!screenshotFile) {
+      setScreenshotError('Payment screenshot proof is mandatory. Please upload your payment receipt / screenshot to complete registration.');
+      toast.error('Please upload your payment screenshot before confirming registration.', {
+        icon: <FaExclamationTriangle style={{ color: '#ef4444' }} />
+      });
+      const uploadElem = document.getElementById('payment-screenshot-upload-box');
+      if (uploadElem) {
+        uploadElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const whatsappRaw = (fields.whatsapp && fields.whatsapp.trim()) || (fields.phone && fields.phone.trim()) || '';
       const clean10Digits = whatsappRaw.replace(/\D/g, '').slice(-10);
@@ -782,6 +812,23 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           id: 'avenger-success-toast'
         });
         const resTicket = data.ticketData || {};
+        const createdRegId = resTicket.ticketCode || data.registrationId || resTicket.id;
+
+        // Mandatory payment screenshot upload and Sharp compression via backend
+        if (screenshotFile && createdRegId) {
+          try {
+            const uploadRes = await uploadPaymentScreenshot(createdRegId, screenshotFile);
+            if (uploadRes && uploadRes.path) {
+              resTicket.paymentScreenshotPath = uploadRes.path;
+              resTicket.payment_screenshot_path = uploadRes.path;
+            } else if (uploadRes && !uploadRes.success) {
+              toast.error(uploadRes.message || 'Payment screenshot upload warning. Please retain your receipt.', { duration: 6000 });
+            }
+          } catch (uploadErr) {
+            console.warn('[Payment Screenshot Upload Notice]', uploadErr);
+          }
+        }
+
         setTicketData({
           ...resTicket,
           registrationId: resTicket.ticketCode || data.registrationId || 'ELQ26-REG',
@@ -1337,7 +1384,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             </div>
 
             {/* Step 2: Team Details (if team event) */}
-            {selectedEvent?.isTeam && (
+            {(selectedEvent?.isTeam || selectedEvent?.is_team) && (
               <>
                 <div
                   className={`reg-step-item ${step === 'team' ? 'active' : step === 'review' ? 'completed' : ''}`}
@@ -1366,7 +1413,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             {/* Step 3 (or 2 for solo): Review & Confirm */}
             <div className={`reg-step-item ${step === 'review' ? 'active' : ''}`}>
               <span className="reg-step-num">
-                {selectedEvent?.isTeam ? '03' : '02'}
+                {(selectedEvent?.isTeam || selectedEvent?.is_team) ? '03' : '02'}
                 {step === 'review' && <span className="reg-step-pulse-ring" />}
               </span>
               <span className="reg-step-label">REVIEW & CONFIRM</span>
@@ -1579,7 +1626,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                       <FaExchangeAlt style={{ marginRight: '0.4rem' }} /> CHANGE EVENT
                     </button>
                     <button type="submit" className="btn btn-primary">
-                      {selectedEvent.isTeam ? (
+                      {(selectedEvent?.isTeam || selectedEvent?.is_team) ? (
                         <>
                           CONTINUE TO TEAM DETAILS <FaArrowRight style={{ marginLeft: '0.4rem' }} />
                         </>
@@ -1594,14 +1641,14 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
               )}
 
               {/* STEP 02: TEAM DETAILS (Only for team events) */}
-              {step === 'team' && selectedEvent?.isTeam && (
+              {step === 'team' && (selectedEvent?.isTeam || selectedEvent?.is_team) && (
                 <form onSubmit={handleProceedToReviewFromTeam} noValidate className="reg-card-panel">
                   <div className="panel-title-bar">
                     <div className="panel-title-left">
                       <span className="panel-step-tag">STEP 02</span>
                       <h3 className="panel-title">SQUAD / TEAM CONFIGURATION</h3>
                     </div>
-                    <span className="panel-req-hint">{selectedEvent.teamSize}</span>
+                    <span className="panel-req-hint">{selectedEvent.teamSize || selectedEvent.team_size}</span>
                   </div>
 
                   <p className="team-intro-note">
@@ -1825,9 +1872,9 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                     })}
 
                     {/* Add Member Button if limit not reached */}
-                    {!isFixedTeam && fields.teamMembers.length + 1 < selectedEvent.maxMembers && (
+                    {!isFixedTeam && fields.teamMembers.length + 1 < (selectedEvent.maxMembers || selectedEvent.max_members || 3) && (
                       <button type="button" className="add-member-btn" onClick={addTeamMember}>
-                        + ADD TEAM MEMBER (+₹{selectedEvent.feePerHead || 50}) • UP TO {selectedEvent.maxMembers} PARTICIPANTS
+                        + ADD TEAM MEMBER (+₹{selectedEvent.feePerHead || selectedEvent.fee_per_head || 50}) • UP TO {selectedEvent.maxMembers || selectedEvent.max_members || 3} PARTICIPANTS
                       </button>
                     )}
                   </div>
@@ -1896,7 +1943,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
             <div className="review-panel-card">
               <div className="panel-title-bar">
                 <div className="panel-title-left">
-                  <span className="panel-step-tag">STEP {selectedEvent.isTeam ? '03' : '02'}</span>
+                  <span className="panel-step-tag">STEP {(selectedEvent.isTeam || selectedEvent.is_team) ? '03' : '02'}</span>
                   <h3 className="panel-title">REVIEW REGISTRATION</h3>
                 </div>
                 <span className="review-check-pill">
@@ -1997,7 +2044,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                 </div>
 
                 {/* 3. Team Details (If Applicable) */}
-                {selectedEvent.isTeam && (
+                {(selectedEvent.isTeam || selectedEvent.is_team) && (
                   <div className="review-section-box review-full-col">
                     <div className="review-sec-header">
                       <h4>SQUAD CONFIGURATION</h4>
@@ -2203,6 +2250,17 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
                               Scan QR above with any UPI app (Google Pay, PhonePe, Paytm, BHIM) — the <strong>₹{feeInfo.total}</strong> amount will appear automatically. Complete payment and enter your 12-digit UTR/Ref number to complete registration.
                             </p>
                           </div>
+
+                          {/* Payment Screenshot Upload */}
+                          <PaymentScreenshotUpload
+                            file={screenshotFile}
+                            onFileSelect={(selectedFile) => {
+                              setScreenshotFile(selectedFile);
+                              setScreenshotError(null);
+                            }}
+                            disabled={isSubmitting}
+                            error={screenshotError}
+                          />
                         </div>
                       </div>
                     </div>
