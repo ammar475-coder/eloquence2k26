@@ -733,7 +733,7 @@ export default function RegistrationPage({ eventId, initialGame, onNavigate }) {
           id: 'avenger-success-toast'
         });
         const resTicket = data.ticketData || {};
-        const createdRegId = resTicket.ticketCode || data.registrationId || resTicket.id;
+        const createdRegId = resTicket.id || resTicket.ticketCode || data.registrationId;
 
         // Mandatory payment screenshot upload and Sharp compression via backend
         if (screenshotFile && createdRegId) {

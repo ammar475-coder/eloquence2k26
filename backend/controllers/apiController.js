@@ -951,19 +951,20 @@ exports.registerEvent = async (req, res) => {
       full_name: fields.fullName,
       email: fields.email,
       phone: fields.phone,
-      college: fields.college,
-      department: fields.department,
-      year: fields.year,
+      college: fields.college || 'C. Abdul Hakeem College of Engg & Tech',
+      department: fields.department || 'CSE',
+      year: fields.year || '3rd Year',
       members_count: 1 + validTeamMembers.length,
-      total_fee: totalFee,
+      total_fee: finalTotalFee,
       payment_status: initialPaymentStatus,
       registration_status: 'confirmed',
-      payment_method: paymentMethod || (isPaid ? 'UPI_QR' : 'ON_SITE_DESK'),
+      payment_method: paymentMethod || 'UPI_QR',
       razorpay_payment_id: cleanUtr || null,
+      upi_utr: cleanUtr || null,
+      verification_status: initialVerificationStatus,
       venue_snapshot: venueSnapshotStr,
       timing_snapshot: currentEvent.timing || '10:00 AM – 1:00 PM',
-      is_verified: !isPaid,
-      payment_screenshot_path: screenshotPath
+      is_verified: false
     };
 
     let { data: regData, error: regError } = await supabase
@@ -973,26 +974,49 @@ exports.registerEvent = async (req, res) => {
 
     if (regError) {
       console.warn('[Supabase Registration Warning]:', regError.message);
-      // If payment_screenshot_path column is not yet migrated in Supabase, fallback without it
-      if (regError.message && regError.message.includes('payment_screenshot_path')) {
+      // If error occurs due to columns not in table schema, fallback without them
+      if (regError.message && (regError.message.includes('upi_utr') || regError.message.includes('verification_status') || regError.message.includes('payment_screenshot_path'))) {
+        delete regInsertPayload.upi_utr;
+        delete regInsertPayload.verification_status;
         delete regInsertPayload.payment_screenshot_path;
         const fbRes = await supabase.from('registrations').insert([regInsertPayload]).select('id');
         regData = fbRes.data;
+        regError = fbRes.error;
       }
     }
 
-    if (regData && regData[0] && validTeamMembers.length > 0) {
-      const dbRegId = regData[0].id;
-      const membersToInsert = validTeamMembers.map((member, idx) => ({
-        registration_id: dbRegId,
-        member_number: idx + 2,
-        member_name: (typeof member === 'string' ? member : (member.name || '')).trim()
-      }));
+    if (regError) {
+      console.error('[Supabase Registration Error]:', regError.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Database error saving registration: ' + (regError.message || 'Unknown database error')
+      });
+    }
 
-      await supabase.from('registration_members').insert(membersToInsert);
+    if (regData && regData[0]) {
+      const dbRegId = regData[0].id;
+      ticketData.id = dbRegId;
+      ticketData.registrationId = dbRegId;
+
+      if (validTeamMembers.length > 0) {
+        const membersToInsert = validTeamMembers.map((member, idx) => ({
+          registration_id: dbRegId,
+          member_number: idx + 2,
+          member_name: (typeof member === 'string' ? member : (member.name || '')).trim()
+        }));
+
+        const { error: membersErr } = await supabase.from('registration_members').insert(membersToInsert);
+        if (membersErr) {
+          console.warn('[Registration Members Insert Warning]:', membersErr.message);
+        }
+      }
     }
   } catch (dbEx) {
-    console.warn('[Supabase Registration Exception]:', dbEx.message);
+    console.error('[Supabase Registration Exception]:', dbEx);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to record registration: ' + (dbEx.message || 'Internal server error')
+    });
   }
 
   // 3. Broadcast real-time event via WebSocket to all dashboards and clients
@@ -1029,14 +1053,35 @@ exports.uploadPaymentScreenshot = async (req, res) => {
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(normId);
 
   try {
-    const query = isUUID
-      ? supabase.from('registrations').select('*').eq('id', normId).maybeSingle()
-      : supabase.from('registrations').select('*').ilike('ticket_code', normId).maybeSingle();
+    let reg = null;
+    // Retry up to 3 attempts with brief backoff to prevent read-after-write replication delay
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const query = isUUID
+        ? supabase.from('registrations').select('*').eq('id', normId).maybeSingle()
+        : supabase.from('registrations').select('*').ilike('ticket_code', normId).maybeSingle();
 
-    const { data: reg, error: fetchErr } = await query;
-    if (fetchErr) {
-      console.warn('Fetch registration for screenshot upload warning:', fetchErr.message);
+      const { data, error: fetchErr } = await query;
+      if (fetchErr) {
+        console.warn('Fetch registration for screenshot upload warning:', fetchErr.message);
+      }
+      if (data) {
+        reg = data;
+        break;
+      }
+      // Alternate lookup if UUID check was ambiguous
+      const altQuery = isUUID
+        ? supabase.from('registrations').select('*').ilike('ticket_code', normId).maybeSingle()
+        : supabase.from('registrations').select('*').eq('id', normId).maybeSingle();
+      const { data: altData } = await altQuery;
+      if (altData) {
+        reg = altData;
+        break;
+      }
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 300));
+      }
     }
+
     if (!reg) {
       return res.status(404).json({ success: false, message: 'Registration not found' });
     }
