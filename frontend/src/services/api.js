@@ -633,6 +633,43 @@ export async function updateRegistrationPaymentStatus(registrationId, status, to
   return res.json();
 }
 
+/**
+ * Imports one or more official participant pass PDFs and extracts details to save in database
+ */
+export async function importPassPdf(files, autoSave = true, token = null) {
+  const formData = new FormData();
+  const fileList = Array.isArray(files) ? files : [files];
+  for (const f of fileList) {
+    formData.append('pdf', f);
+  }
+  formData.append('autoSave', String(autoSave));
+
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(getApiUrl(`/api/registrations/import-pdf?autoSave=${autoSave}`), {
+    method: 'POST',
+    headers,
+    body: formData
+  });
+  return res.json();
+}
+
+/**
+ * Saves a list of imported registrations directly to the database
+ */
+export async function saveImportedRegistrations(registrations, token = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(getApiUrl('/api/registrations/save-imported'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ registrations })
+  });
+  return res.json();
+}
+
 
 
 
