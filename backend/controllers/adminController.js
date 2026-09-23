@@ -178,19 +178,19 @@ const coordinatorToDb = (c) => {
 };
 
 const EVENT_TEAM_RULES = {
-  'tech-01': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members' },
-  'tech-02': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2' },
-  'tech-03': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2' },
-  'tech-04': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2' },
-  'tech-05': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'tech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'nontech-01': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'nontech-02': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members' },
-  'nontech-03': { isTeam: true, minMembers: 2, maxMembers: 4, teamSize: 'Max of 4 members' },
-  'nontech-04': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'nontech-05': { isTeam: true, minMembers: 4, maxMembers: 4, teamSize: 'Only Squad Match (4 Players)' },
-  'nontech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual only' },
-  'nontech-07': { isTeam: true, minMembers: 5, maxMembers: 5, teamSize: 'Team of 5 Members' }
+  'tech-01': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members', feePerHead: 100, feeType: 'per_head' },
+  'tech-02': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2', feePerHead: 50, feeType: 'per_head' },
+  'tech-03': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2', feePerHead: 50, feeType: 'per_head' },
+  'tech-04': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2', feePerHead: 50, feeType: 'per_head' },
+  'tech-05': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'tech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'nontech-01': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'nontech-02': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members', feePerHead: 50, feeType: 'per_head' },
+  'nontech-03': { isTeam: true, minMembers: 2, maxMembers: 4, teamSize: 'Max of 4 members', feePerHead: 50, feeType: 'per_head' },
+  'nontech-04': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'nontech-05': { isTeam: true, minMembers: 4, maxMembers: 4, teamSize: 'Only Squad Match (4 Players)', feePerHead: 50, feeType: 'per_squad' },
+  'nontech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual only', feePerHead: 50, feeType: 'per_head' },
+  'nontech-07': { isTeam: true, minMembers: 5, maxMembers: 5, teamSize: 'Team of 5 Members', feePerHead: 50, feeType: 'per_team' }
 };
 
 const dbToEvent = (e) => {
@@ -211,8 +211,9 @@ const dbToEvent = (e) => {
   const minMembers = Number(e.min_members ?? e.minMembers ?? (rule ? rule.minMembers : 1));
   const maxMembers = Number(e.max_members ?? e.maxMembers ?? (rule ? rule.maxMembers : (isTeam ? 3 : 1)));
   const teamSize = e.team_size || e.teamSize || (rule ? rule.teamSize : (isTeam ? `Max of ${maxMembers} members` : 'Individual'));
-  const feePerHead = Number(e.fee_per_head ?? e.feePerHead ?? 0);
-  const feeType = e.fee_type || e.feeType || 'per_head';
+  const rawFee = Number(e.fee_per_head ?? e.feePerHead ?? 0);
+  const feePerHead = rawFee > 0 ? rawFee : (rule ? rule.feePerHead : (normId === 'tech-01' ? 100 : 50));
+  const feeType = e.fee_type || e.feeType || (rule ? rule.feeType : 'per_head');
 
   return {
     id: e.id,
@@ -227,7 +228,7 @@ const dbToEvent = (e) => {
     min_members: minMembers,
     maxMembers: maxMembers,
     max_members: maxMembers,
-    fee: e.fee,
+    fee: e.fee || (feeType === 'per_squad' || feeType === 'per_team' ? `₹${feePerHead * maxMembers} per team` : `₹${feePerHead} per head`),
     feePerHead: feePerHead,
     fee_per_head: feePerHead,
     feeType: feeType,

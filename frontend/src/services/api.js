@@ -72,7 +72,7 @@ export async function submitRegistration(payload) {
       feeFormula: payload.feeFormula,
       registrationStatus: 'CONFIRMED',
       paymentStatus: 'PENDING',
-      paymentMethod: 'ON_SITE_DESK',
+      paymentMethod: 'UPI_QR',
       createdAt: now.toISOString(),
       createdAtFormatted: now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
       isOfflineFallback: true,

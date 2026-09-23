@@ -229,19 +229,19 @@ const dbToHomepageTeam = (t) => {
 };
 
 const EVENT_TEAM_RULES = {
-  'tech-01': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members' },
-  'tech-02': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2' },
-  'tech-03': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2' },
-  'tech-04': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2' },
-  'tech-05': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'tech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'nontech-01': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'nontech-02': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members' },
-  'nontech-03': { isTeam: true, minMembers: 2, maxMembers: 4, teamSize: 'Max of 4 members' },
-  'nontech-04': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual' },
-  'nontech-05': { isTeam: true, minMembers: 4, maxMembers: 4, teamSize: 'Only Squad Match (4 Players)' },
-  'nontech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual only' },
-  'nontech-07': { isTeam: true, minMembers: 5, maxMembers: 5, teamSize: 'Team of 5 Members' }
+  'tech-01': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members', feePerHead: 100, feeType: 'per_head' },
+  'tech-02': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2', feePerHead: 50, feeType: 'per_head' },
+  'tech-03': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2', feePerHead: 50, feeType: 'per_head' },
+  'tech-04': { isTeam: true, minMembers: 1, maxMembers: 2, teamSize: 'Individual / Team of 2', feePerHead: 50, feeType: 'per_head' },
+  'tech-05': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'tech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'nontech-01': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'nontech-02': { isTeam: true, minMembers: 1, maxMembers: 3, teamSize: 'Max of 3 members', feePerHead: 50, feeType: 'per_head' },
+  'nontech-03': { isTeam: true, minMembers: 2, maxMembers: 4, teamSize: 'Max of 4 members', feePerHead: 50, feeType: 'per_head' },
+  'nontech-04': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual', feePerHead: 50, feeType: 'per_head' },
+  'nontech-05': { isTeam: true, minMembers: 4, maxMembers: 4, teamSize: 'Only Squad Match (4 Players)', feePerHead: 50, feeType: 'per_squad' },
+  'nontech-06': { isTeam: false, minMembers: 1, maxMembers: 1, teamSize: 'Individual only', feePerHead: 50, feeType: 'per_head' },
+  'nontech-07': { isTeam: true, minMembers: 5, maxMembers: 5, teamSize: 'Team of 5 Members', feePerHead: 50, feeType: 'per_team' }
 };
 
 const dbToEvent = (e) => {
@@ -262,8 +262,9 @@ const dbToEvent = (e) => {
   const minMembers = Number(e.min_members ?? e.minMembers ?? (rule ? rule.minMembers : 1));
   const maxMembers = Number(e.max_members ?? e.maxMembers ?? (rule ? rule.maxMembers : (isTeam ? 3 : 1)));
   const teamSize = e.team_size || e.teamSize || (rule ? rule.teamSize : (isTeam ? `Max of ${maxMembers} members` : 'Individual'));
-  const feePerHead = Number(e.fee_per_head ?? e.feePerHead ?? 0);
-  const feeType = e.fee_type || e.feeType || 'per_head';
+  const rawFee = Number(e.fee_per_head ?? e.feePerHead ?? 0);
+  const feePerHead = rawFee > 0 ? rawFee : (rule ? rule.feePerHead : (normId === 'tech-01' ? 100 : 50));
+  const feeType = e.fee_type || e.feeType || (rule ? rule.feeType : 'per_head');
 
   return {
     id: e.id,
@@ -278,7 +279,7 @@ const dbToEvent = (e) => {
     min_members: minMembers,
     maxMembers: maxMembers,
     max_members: maxMembers,
-    fee: e.fee,
+    fee: e.fee || (feeType === 'per_squad' || feeType === 'per_team' ? `₹${feePerHead * maxMembers} per team` : `₹${feePerHead} per head`),
     feePerHead: feePerHead,
     fee_per_head: feePerHead,
     feeType: feeType,
@@ -769,8 +770,6 @@ exports.registerEvent = async (req, res) => {
   if (typeof fields === 'string') {
     try { fields = JSON.parse(fields); } catch (e) {}
   }
-  const totalFee = req.body.totalFee;
-  const paymentMethod = req.body.paymentMethod || 'ON_SITE_DESK';
   const game = req.body.game;
   
   if (!currentEvent || !fields) {
@@ -839,10 +838,19 @@ exports.registerEvent = async (req, res) => {
       };
     });
 
-  const isPaid = Number(totalFee) > 0;
-  // Security enforcement: clients cannot self-verify paid events
-  const initialVerificationStatus = isPaid ? 'pending' : 'verified';
-  const initialPaymentStatus = isPaid ? 'PENDING' : 'FREE';
+  // Calculate fee strictly proportional to participants (never 0)
+  const normEventId = String((currentEvent && currentEvent.id) || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+  const eventRule = EVENT_TEAM_RULES[normEventId] || null;
+  const canonicalPerHead = eventRule ? eventRule.feePerHead : (normEventId === 'tech-01' ? 100 : 50);
+  const totalMemberCount = 1 + validTeamMembers.length;
+  const expectedTotalFee = totalMemberCount * canonicalPerHead;
+  const clientFee = Number(req.body.totalFee) || 0;
+  const finalTotalFee = clientFee > 0 ? clientFee : expectedTotalFee;
+  const paymentMethod = 'UPI_QR';
+
+  // Security enforcement: All online web registrations require verification
+  const initialVerificationStatus = 'pending';
+  const initialPaymentStatus = 'PENDING';
 
   // Handle payment screenshot if file was uploaded or path passed
   let screenshotPath = (fields && (fields.paymentScreenshotPath || fields.payment_screenshot_path)) || req.body.paymentScreenshotPath || req.body.payment_screenshot_path || null;
@@ -865,7 +873,7 @@ exports.registerEvent = async (req, res) => {
 
   const paymentMeta = {
     venue: currentEvent.venue || 'CSE Department Labs',
-    payment_method: paymentMethod || (isPaid ? 'UPI_QR' : 'ON_SITE_DESK'),
+    payment_method: paymentMethod,
     game: game || null,
     upi_utr: cleanUtr || null,
     transaction_id: cleanUtr || null,
@@ -891,23 +899,24 @@ exports.registerEvent = async (req, res) => {
     email: fields.email,
     phone: fields.phone,
     year: fields.year,
-    isTeam: Boolean(currentEvent.isTeam),
+    isTeam: Boolean(currentEvent.isTeam || currentEvent.is_team || (eventRule && eventRule.isTeam)),
     teamName: fields.teamName || null,
-    membersCount: 1 + validTeamMembers.length,
+    membersCount: totalMemberCount,
     teamMembersList: validTeamMembers.map(m => m.fullName || m.name),
     teamMembers: validTeamMembers,
-    totalFee: Number(totalFee) || 0,
-    totalAmount: Number(totalFee) || 0,
+    totalFee: finalTotalFee,
+    totalAmount: finalTotalFee,
     paymentStatus: initialPaymentStatus,
     payment_status: initialPaymentStatus,
-    paymentMethod: paymentMethod || (isPaid ? 'UPI_QR' : 'ON_SITE_DESK'),
+    paymentMethod: paymentMethod,
+    payment_method: paymentMethod,
     upiUtr: cleanUtr || null,
     transactionId: cleanUtr || null,
     paymentScreenshotPath: screenshotPath,
     payment_screenshot_path: screenshotPath,
     verificationStatus: initialVerificationStatus,
     verification_status: initialVerificationStatus,
-    isVerified: !isPaid,
+    isVerified: false,
     isFlagged: false,
     registrationStatus: 'active',
     venue: currentEvent.venue,
