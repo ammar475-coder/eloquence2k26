@@ -1261,7 +1261,7 @@ const enrichRegistrationRecord = (r) => {
 
   copy.is_verified = Boolean(copy.is_verified || copy.isVerified || copy.attendance_status === 'verified' || copy.attendanceStatus === 'verified');
   copy.isVerified = copy.is_verified;
-  copy.attendance_status = copy.is_verified ? 'verified' : (copy.attendance_status || copy.attendanceStatus || 'pending');
+  copy.attendance_status = copy.attendance_status || copy.attendanceStatus || 'pending';
   copy.attendanceStatus = copy.attendance_status;
   copy.verified_at = copy.verified_at || copy.verifiedAt || null;
   copy.verifiedAt = copy.verified_at;

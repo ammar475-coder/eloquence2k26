@@ -2146,12 +2146,13 @@ exports.verifyRegistration = async (req, res) => {
   const nowIso = new Date().toISOString();
   const noteReason = flagReason || reason || 'Flagged for UTR review';
 
-  const verifiedAt = isNowVerified ? nowIso : null;
-  const verifiedBy = isNowVerified ? operatorName : null;
+  const isUnadmit = action === 'unadmit' || req.body.attendance_status === 'pending' || req.body.attended === false;
+  const verifiedAt = isUnadmit ? null : (isNowVerified ? nowIso : null);
+  const verifiedBy = isUnadmit ? null : (isNowVerified ? operatorName : null);
   const flaggedAt = isNowFlagged ? nowIso : null;
   const flaggedBy = isNowFlagged ? operatorName : null;
   const finalFlagReason = isNowFlagged ? noteReason : null;
-  const targetAttendance = req.body.attendance_status || (action === 'unadmit' ? 'pending' : (isNowVerified ? 'verified' : 'pending'));
+  const targetAttendance = req.body.attendance_status || (isUnadmit ? 'pending' : (isNowVerified ? 'verified' : 'pending'));
 
   try {
     const updatePayload = {
@@ -2180,7 +2181,7 @@ exports.verifyRegistration = async (req, res) => {
         is_verified: isNowVerified,
         verified_at: verifiedAt,
         verified_by: verifiedBy,
-        attendance_status: isNowVerified ? 'verified' : 'pending'
+        attendance_status: targetAttendance
       };
       const fbQuery = isUUID
         ? supabase.from('registrations').update(fallbackPayload).eq('id', normId)
@@ -2362,13 +2363,17 @@ exports.updatePaymentStatus = async (req, res) => {
       is_verified: isNowVerified,
       verified_at: verifiedAt,
       verified_by: verifiedBy,
-      attendance_status: isNowVerified ? 'verified' : 'pending',
       verification_status: newVerificationStatus,
       is_flagged: isNowFlagged,
       flag_reason: isNowFlagged ? noteReason : null,
       flagged_at: flaggedAt,
       flagged_by: flaggedBy
     };
+    if (isReject) {
+      updatePayload.attendance_status = 'pending';
+    } else if (req.body.attendance_status) {
+      updatePayload.attendance_status = req.body.attendance_status;
+    }
 
     const query = isUUID
       ? supabase.from('registrations').update(updatePayload).eq('id', normId)
@@ -2382,9 +2387,13 @@ exports.updatePaymentStatus = async (req, res) => {
       const fbPayload = {
         is_verified: isNowVerified,
         verified_at: verifiedAt,
-        verified_by: verifiedBy,
-        attendance_status: isNowVerified ? 'verified' : 'pending'
+        verified_by: verifiedBy
       };
+      if (isReject) {
+        fbPayload.attendance_status = 'pending';
+      } else if (req.body.attendance_status) {
+        fbPayload.attendance_status = req.body.attendance_status;
+      }
       const fbQuery = isUUID
         ? supabase.from('registrations').update(fbPayload).eq('id', normId)
         : supabase.from('registrations').update(fbPayload).ilike('ticket_code', normId);

@@ -383,8 +383,7 @@ export default function AdminDashboard({ token, user, onLogout }) {
                 is_verified: true,
                 isVerified: true,
                 verification_status: 'verified',
-                verificationStatus: 'verified',
-                attendance_status: 'verified'
+                verificationStatus: 'verified'
               };
             }
             return item;

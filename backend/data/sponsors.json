@@ -172,18 +172,19 @@
   {
     "id": "sponsor-1790146029184",
     "name": "Waffle Liscious",
-    "companyName": "",
+    "company_name": "",
     "logo": "/sponsors/sponsor-1790159763782-2652.png",
     "description": "",
     "website": "",
-    "locationUrl": "",
-    "contactName": "",
-    "contactEmail": "",
-    "contactPhone": "",
+    "contact_name": "",
+    "contact_email": "",
+    "contact_phone": "",
     "category": "Standard",
-    "displayOrder": 11,
-    "isActive": true,
-    "updatedAt": "2026-09-23T10:36:03.841Z"
+    "display_order": 11,
+    "is_active": true,
+    "created_at": "2026-09-23T06:47:09.855704+00:00",
+    "updated_at": "2026-09-23T10:36:03.845+00:00",
+    "location_url": null
   },
   {
     "id": "sponsor-1790146049934",
