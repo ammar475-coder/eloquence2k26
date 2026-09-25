@@ -18,7 +18,14 @@
     "timing": "11 :00 AM TO 1:00 PM",
     "description": "Capture cinematic campus moments, dynamic event energy, and craft creative 30-60 second Instagram reels.",
     "image": "/events/event-1789617780279-2457.png",
-    "rules": [],
+    "rules": [
+      "Create content based on the theme announced on the spot.",
+      "Photos and reels must be captured on campus on the event day.",
+      "Submit one photo and one reel (max. 60s); basic editing is allowed.",
+      "Entries must be original and submitted to the given email within the deadline.",
+      "Avoid restricted areas and disturbances; content must be suitable for all.",
+      "Judging will be based on creativity, theme relevance, originality, and presentation."
+    ],
     "rounds": [
       {
         "desc": "Shoot footage across symposium events.",
@@ -40,7 +47,7 @@
       "Background music allowed"
     ],
     "created_at": "2026-09-16T10:16:14.109639+00:00",
-    "updated_at": "2026-09-18T11:40:43.755+00:00",
+    "updated_at": "2026-09-18T13:52:15.905+00:00",
     "venue_image": ""
   },
   {
@@ -59,27 +66,35 @@
     "is_team": true,
     "tag": "Brain Teaser",
     "venue": "MBA SEMINAR HALL",
-    "timing": "1:30 PM to 3:00PM",
-    "description": "Decode visual rebus puzzles, connected clues, movie scenes, and pop-culture links with fast buzzer reflexes.",
+    "timing": "1:30 PM to 3:30PM",
+    "description": "Decode visual rebus puzzles, connected clues, movie scenes, and pop-culture links",
     "image": "/events/event-1789617806355-7221.png",
     "rules": [
-      "The quiz will be conducted in teams through multiple rounds.",
-      "Each question will appear on the screen for a fixed duration.",
-      "Responses must be submitted within the time specified by the organizers.",
-      "No electronic devices, internet access, or outside assistance are permitted.",
-      "Teams will be shortlisted based on their performance in each round.",
-      "The highest-scoring team at the end of the quiz will be declared as the winner."
+      "Participants can participate individually, in a team of two, or in a team of up to three members.",
+      "The event consists of three rounds.",
+      "Participants will have 20 seconds to answer each question in Round 1.",
+      "Participants will have 25 seconds to answer each question in Round 2.",
+      "Participants will have 30 seconds to answer each question in Round 3.",
+      "In each round, a set of words or images will be displayed, and participants must identify the common connection between them.",
+      "Participants must keep their mobile phones and personal belongings inside their bags throughout the event.",
+      "Any participant found engaging in malpractice or unfair practices will be immediately disqualified.",
+      "The participant or team with the highest score will be declared the winner."
     ],
     "rounds": [
       {
-        "desc": "Solve interconnected images to find movie or word titles.",
-        "name": "Round 1: Picture Rebus Clues",
-        "time": "20 Mins"
+        "desc": "2. Each question will have 20 seconds to answer.",
+        "name": "1. Round 1 will have 30 Questions.",
+        "time": "20 seconds"
       },
       {
-        "desc": "Complex multi-stage connection puzzles with countdown timer.",
-        "name": "Round 2: Rapid Buzzer Connection",
-        "time": "30 Mins"
+        "desc": "2. Each question will have 25 seconds to answer.",
+        "name": "1. Round 2 will have 25 questions",
+        "time": "25 seconds"
+      },
+      {
+        "desc": "2. Each question will have 30 seconds to answer.",
+        "name": "1. Round 3 will have 20 questions.",
+        "time": "30 seconds"
       }
     ],
     "guidelines": [
@@ -91,7 +106,7 @@
       "Max 3 per squad"
     ],
     "created_at": "2026-09-16T10:16:14.234348+00:00",
-    "updated_at": "2026-09-18T09:05:30.275+00:00",
+    "updated_at": "2026-09-24T17:57:04.732+00:00",
     "venue_image": ""
   },
   {
@@ -142,7 +157,7 @@
       "Timed squad adventure"
     ],
     "created_at": "2026-09-16T10:16:14.31109+00:00",
-    "updated_at": "2026-09-17T09:43:36.138+00:00",
+    "updated_at": "2026-09-19T11:07:39.822+00:00",
     "venue_image": ""
   },
   {
@@ -189,7 +204,7 @@
       "Bring cones"
     ],
     "created_at": "2026-09-16T10:16:14.405773+00:00",
-    "updated_at": "2026-09-17T13:54:57.09+00:00",
+    "updated_at": "2026-09-19T11:12:02.318+00:00",
     "venue_image": ""
   },
   {
@@ -291,7 +306,7 @@
       "Digital clocks provided"
     ],
     "created_at": "2026-09-16T10:16:14.610922+00:00",
-    "updated_at": "2026-09-18T09:07:22.597+00:00",
+    "updated_at": "2026-09-19T11:09:30.566+00:00",
     "venue_image": ""
   },
   {
@@ -346,7 +361,7 @@
       "₹250 per team"
     ],
     "created_at": "2026-09-16T10:16:14.674392+00:00",
-    "updated_at": "2026-09-18T09:13:00.937+00:00",
+    "updated_at": "2026-09-24T15:03:34.122+00:00",
     "venue_image": ""
   },
   {
@@ -364,8 +379,8 @@
     "fee_type": "per_head",
     "is_team": true,
     "tag": "Technical Presentation",
-    "venue": "CSE & AIDS Smart room",
-    "timing": "10:40 AM TO 3:00 PM",
+    "venue": "TECH TOWER SEMINAR HALL/CSE SMART ROOM",
+    "timing": "11:00 AM TO 3:00 PM",
     "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
     "image": "/events/card_ppt_presentation-BHzUng4c.png",
     "rules": [
@@ -399,8 +414,8 @@
       "₹100/head"
     ],
     "created_at": "2026-09-16T10:16:13.515539+00:00",
-    "updated_at": "2026-09-18T08:58:22.23+00:00",
-    "venue_image": ""
+    "updated_at": "2026-09-25T05:48:29.315+00:00",
+    "venue_image": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80"
   },
   {
     "id": "tech-02",
@@ -430,16 +445,8 @@
       "Finalists are ranked by problems solved and time taken."
     ],
     "rounds": [
-      {
-        "desc": "MCQs covering syntax, complexity, and output prediction.",
-        "name": "Round 1: Written Logic Test",
-        "time": "30 Mins"
-      },
-      {
-        "desc": "Fix broken code snippets and solve competitive problems.",
-        "name": "Round 2: Live Bug Hunting & Coding",
-        "time": "60 Mins"
-      }
+      "Round 1: Written Logic Test: MCQs covering syntax, complexity, and output prediction.",
+      "Round 2: Live Bug Hunting & Coding: Fix broken code snippets and solve competitive problems."
     ],
     "guidelines": [
       "Desktop PCs will be provided with offline compilers.",
@@ -451,7 +458,7 @@
       "Round 2: Coding & Debugging"
     ],
     "created_at": "2026-09-16T10:16:13.781394+00:00",
-    "updated_at": "2026-09-18T09:00:16.827+00:00",
+    "updated_at": "2026-09-20T14:54:15.16+00:00",
     "venue_image": ""
   },
   {
@@ -505,7 +512,7 @@
       "Total 45 mins"
     ],
     "created_at": "2026-09-16T10:16:13.863678+00:00",
-    "updated_at": "2026-09-18T09:09:53.513+00:00",
+    "updated_at": "2026-09-19T11:10:22.639+00:00",
     "venue_image": ""
   },
   {
@@ -540,7 +547,7 @@
       {
         "desc": "Design a pixel-perfect hero and feature section on given theme.",
         "name": "Round 1: Responsive Landing Page",
-        "time": "45 Mins"
+        "time": "30 Mins"
       },
       {
         "desc": "Complete interactive web application with generated UI assets.",
@@ -557,15 +564,15 @@
       "Round 2: Overall website"
     ],
     "created_at": "2026-09-16T10:16:13.942986+00:00",
-    "updated_at": "2026-09-18T09:02:32.61+00:00",
+    "updated_at": "2026-09-25T03:35:57.069+00:00",
     "venue_image": ""
   },
   {
-    "id": "tech-06",
-    "number": "06",
+    "id": "tech-05",
+    "number": "12",
     "name": "UI/UX",
     "alias": "UI/UX",
-    "subtitle": "UI and UX DESIGN",
+    "subtitle": "Figma Designing",
     "category": "technical",
     "team_size": "Individual",
     "min_members": 1,
@@ -574,42 +581,36 @@
     "fee_per_head": 50,
     "fee_type": "per_head",
     "is_team": false,
-    "tag": "Product Design",
-    "venue": "MAIN BUILDING Python Lab",
-    "timing": "10:40 AM TO 12:40 PM",
-    "description": "Design intuitive, modern digital interfaces and user experiences using industry-standard design tools.",
-    "image": "/events/event-tech-06-1789621679528-2221.png",
+    "tag": "Technical Presentation",
+    "venue": "Main Block Python Lab",
+    "timing": "11:00 AM – 01:00 PM",
+    "description": "Figma",
+    "image": "/events/event-1790141793620-6361.png",
     "rules": [
-      "Systems will be provided for all the participants.",
-      "The theme or topic will be announced on the spot; AI tools are strictly restricted.",
-      "Participants can use any design software (e.g., Canva, Figma).",
-      "Round 1 is for designing the login page, Round 2 is for designing the dashboard.",
-      "It should be designed and submitted within the time limit.",
-      "Designs are judged on creativity, visual appeal, and relevance to the theme."
+      "Individual participation only.",
+      "Systems will be provided for all participants.",
+      "The design brief (theme/problem statement) will be announced on the spot.",
+      "Participants may use Figma or Canva only.",
+      "AI tools, pre-made templates, and internet design inspiration are strictly prohibited.",
+      "The challenge consists of 2 rounds:",
+      "Round 1: Login / Onboarding Screen (45 Mins)",
+      "Round 2: Dashboard Screen (45 Mins)",
+      "Designs must be created from scratch within the allotted 45 minutes.",
+      "Participants must submit the original editable design file before the time ends.",
+      "Any form of plagiarism or copying from another participant will result in disqualification.",
+      "The judges' decision will be final."
     ],
     "rounds": [
       {
-        "desc": "Design smooth login, registration, and onboarding screens.",
-        "name": "Round 1: Auth & Onboarding Flow",
+        "desc": "",
+        "name": "Round 1: Preliminary Round",
         "time": "30 Mins"
-      },
-      {
-        "desc": "Create main dashboard UI with interactive prototypes.",
-        "name": "Round 2: Feature Dashboard & Interactions",
-        "time": "60 Mins"
       }
     ],
-    "guidelines": [
-      "Participants can bring their own laptops with Figma installed."
-    ],
-    "highlights": [
-      "Tools: Figma & Canva",
-      "AI strictly restricted",
-      "Round 1: Login page",
-      "Round 2: Dashboard"
-    ],
-    "created_at": "2026-09-16T10:16:14.040091+00:00",
-    "updated_at": "2026-09-18T09:03:11.131+00:00",
+    "guidelines": [],
+    "highlights": [],
+    "created_at": "2026-09-22T06:48:29.559452+00:00",
+    "updated_at": "2026-09-23T05:59:33.694+00:00",
     "venue_image": ""
   }
 ]
