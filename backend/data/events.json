@@ -379,8 +379,8 @@
     "fee_type": "per_head",
     "is_team": true,
     "tag": "Technical Presentation",
-    "venue": "CSE & AIDS Smart room",
-    "timing": "10:40 AM TO 3:00 PM",
+    "venue": "TECH TOWER SEMINAR HALL/CSE SMART ROOM",
+    "timing": "11:00 AM TO 3:00 PM",
     "description": "Showcase your innovative ideas and technical presentation skills using structured slide decks.",
     "image": "/events/card_ppt_presentation-BHzUng4c.png",
     "rules": [
@@ -414,7 +414,7 @@
       "₹100/head"
     ],
     "created_at": "2026-09-16T10:16:13.515539+00:00",
-    "updated_at": "2026-09-24T07:13:13.416+00:00",
+    "updated_at": "2026-09-25T05:48:29.315+00:00",
     "venue_image": "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=1200&q=80"
   },
   {
