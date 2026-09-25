@@ -612,5 +612,57 @@
     "created_at": "2026-09-22T06:48:29.559452+00:00",
     "updated_at": "2026-09-23T05:59:33.694+00:00",
     "venue_image": ""
+  },
+  {
+    "id": "tech-06",
+    "number": "06",
+    "name": "UI/UX",
+    "alias": "UI/UX",
+    "subtitle": "UI and UX DESIGN",
+    "category": "technical",
+    "team_size": "Individual",
+    "min_members": 1,
+    "max_members": 1,
+    "fee": "₹50 per head",
+    "fee_per_head": 50,
+    "fee_type": "per_head",
+    "is_team": false,
+    "tag": "Product Design",
+    "venue": "MAIN BUILDING Python Lab",
+    "timing": "10:40 AM TO 12:40 PM",
+    "description": "Design intuitive, modern digital interfaces and user experiences using industry-standard design tools.",
+    "image": "/events/event-tech-06-1789621679528-2221.png",
+    "rules": [
+      "Systems will be provided for all the participants.",
+      "The theme or topic will be announced on the spot; AI tools are strictly restricted.",
+      "Participants can use any design software (e.g., Canva, Figma).",
+      "Round 1 is for designing the login page, Round 2 is for designing the dashboard.",
+      "It should be designed and submitted within the time limit.",
+      "Designs are judged on creativity, visual appeal, and relevance to the theme."
+    ],
+    "rounds": [
+      {
+        "desc": "Design smooth login, registration, and onboarding screens.",
+        "name": "Round 1: Auth & Onboarding Flow",
+        "time": "30 Mins"
+      },
+      {
+        "desc": "Create main dashboard UI with interactive prototypes.",
+        "name": "Round 2: Feature Dashboard & Interactions",
+        "time": "60 Mins"
+      }
+    ],
+    "guidelines": [
+      "Participants can bring their own laptops with Figma installed."
+    ],
+    "highlights": [
+      "Tools: Figma & Canva",
+      "AI strictly restricted",
+      "Round 1: Login page",
+      "Round 2: Dashboard"
+    ],
+    "created_at": "2026-09-24T17:45:13.299072+00:00",
+    "updated_at": "2026-09-24T17:45:13.299072+00:00",
+    "venue_image": ""
   }
 ]

@@ -192,6 +192,7 @@ export default function ParticipantVerifier({
 
   const html5QrCodeRef = useRef(null);
   const isStartingScannerRef = useRef(false);
+  const isScannerOpenRef = useRef(false);
   const lastScannedKeyRef = useRef('');
   const lastScannedTimeRef = useRef(0);
   const isScanDebounceRef = useRef(false);
@@ -300,27 +301,14 @@ export default function ParticipantVerifier({
 
   // Keep selectedParticipant in sync when registrations list updates
   useEffect(() => {
-    if (selectedParticipant) {
+    if (selectedParticipant && !isVerifying) {
       const currentCode = getTicketCode(selectedParticipant);
       const updated = registrations.find(r => getTicketCode(r) === currentCode || (r.id && r.id === selectedParticipant.id));
       if (updated) {
-        // Prevent regression if currently marked verified locally
-        if (isVerifiedRecord(selectedParticipant) && !isVerifiedRecord(updated)) {
-          setSelectedParticipant(prev => ({
-            ...updated,
-            is_verified: true,
-            isVerified: true,
-            attendance_status: 'verified',
-            attendanceStatus: 'verified',
-            verified_at: prev?.verified_at || prev?.verifiedAt || new Date().toISOString(),
-            verified_by: prev?.verified_by || prev?.verifiedBy || 'Coordinator'
-          }));
-        } else {
-          setSelectedParticipant(updated);
-        }
+        setSelectedParticipant(updated);
       }
     }
-  }, [registrations]);
+  }, [registrations, isVerifying]);
 
   // Handle scanned ticket or input string
   const handleProcessScanCode = async (decodedText) => {
@@ -339,8 +327,9 @@ export default function ParticipantVerifier({
     lastScannedTimeRef.current = now;
 
     // Immediately stop camera scanner so continuous frame loop halts
-    await stopScanner();
+    isScannerOpenRef.current = false;
     setIsScannerOpen(false);
+    await stopScanner();
 
     // Extract ticket code if embedded in URL or JSON
     let lookupKey = cleanText;
@@ -410,7 +399,7 @@ export default function ParticipantVerifier({
         } catch (e) {}
 
         toast.error(
-          `⛔ ENTRY BLOCKED! ${getParticipantName(matched)} is FLAGGED in Registration Verification.\nReason: "${flagReason}"`,
+          `ENTRY BLOCKED: ${getParticipantName(matched)} is FLAGGED in Registration Verification.\nReason: "${flagReason}"`,
           { id: 'scan-verify-toast', duration: 8500 }
         );
       } else if (!isRegVerified) {
@@ -441,7 +430,7 @@ export default function ParticipantVerifier({
         } catch (e) {}
 
         toast.error(
-          `⚠️ ADMISSION DENIED: ${getParticipantName(matched)} (#${getTicketCode(matched)}) is NOT verified in Registration Verification. Only desk-verified participants will be showed.`,
+          `ADMISSION DENIED: ${getParticipantName(matched)} (#${getTicketCode(matched)}) is NOT verified in Registration Verification. Only desk-verified participants will be showed.`,
           { id: 'scan-verify-toast', duration: 7500 }
         );
       } else {
@@ -469,17 +458,25 @@ export default function ParticipantVerifier({
 
         const isAlreadyAdmitted = isEventAdmitted(matched);
 
+        // If this participant is already selected on the open card, prevent auto-verify loops
+        const isCurrentCard = selectedParticipant && (
+          getTicketCode(selectedParticipant).toLowerCase() === getTicketCode(matched).toLowerCase() || 
+          (selectedParticipant.id && selectedParticipant.id === matched.id)
+        );
+
         if (isAlreadyAdmitted) {
           toast.success(
-            `✓ ${getParticipantName(matched)} is ALREADY ADMITTED & PRESENT!`,
+            `${getParticipantName(matched)} is ALREADY ADMITTED & PRESENT!`,
             { id: 'scan-verify-toast', duration: 4500 }
           );
+        } else if (isCurrentCard) {
+          // Already opened on inspection card; do not auto-admit in loop
         } else if (autoVerifyOnScan) {
           // Automatically verify and admit in database
           await handleToggleVerification(matched, true);
         } else {
           toast.success(
-            `✓ Registration Desk Verified: ${getParticipantName(matched)} is eligible for admission`,
+            `Registration Desk Verified: ${getParticipantName(matched)} is eligible for admission`,
             { id: 'scan-verify-toast', duration: 4000 }
           );
         }
@@ -515,16 +512,32 @@ export default function ParticipantVerifier({
   }, [isScannerOpen, scannerMode, selectedCameraId]);
 
   const stopScanner = async () => {
+    isScannerOpenRef.current = false;
     try {
+      // Force kill video stream tracks on any active camera elements in DOM
+      const targetEl = document.getElementById('qr-reader-target');
+      if (targetEl) {
+        const videos = targetEl.querySelectorAll('video');
+        videos.forEach(v => {
+          if (v.srcObject && typeof v.srcObject.getTracks === 'function') {
+            v.srcObject.getTracks().forEach(t => {
+              try { t.stop(); } catch (e) {}
+            });
+          }
+        });
+      }
+
       if (html5QrCodeRef.current) {
         const instance = html5QrCodeRef.current;
         html5QrCodeRef.current = null;
-        if (instance.isScanning) {
-          await instance.stop();
-        }
+        try {
+          if (instance.isScanning) {
+            await instance.stop();
+          }
+        } catch (stopErr) {}
         try {
           await instance.clear();
-        } catch (e) {}
+        } catch (clearErr) {}
       }
     } catch (e) {
       console.warn('Error stopping scanner:', e);
@@ -536,32 +549,37 @@ export default function ParticipantVerifier({
   const startScanner = async () => {
     if (isStartingScannerRef.current) return;
     isStartingScannerRef.current = true;
+    isScannerOpenRef.current = true;
     setScannerError('');
 
     try {
-      // First ensure previous scanner instance is fully stopped and cleared
       await stopScanner();
+      isScannerOpenRef.current = true;
 
       // Allow 120ms for DOM element '#qr-reader-target' to mount cleanly
       await new Promise(r => setTimeout(r, 120));
 
+      if (!isScannerOpenRef.current) return;
+
       const targetEl = document.getElementById('qr-reader-target');
-      if (!targetEl) {
-        isStartingScannerRef.current = false;
+      if (!targetEl || !isScannerOpenRef.current) {
         return;
       }
 
       // Query available camera devices
       const devices = await Html5Qrcode.getCameras();
+      if (!isScannerOpenRef.current) return;
+
       if (!devices || devices.length === 0) {
         setScannerError('No camera devices found on this device');
-        isStartingScannerRef.current = false;
         return;
       }
 
       setCameras(devices);
       const camId = selectedCameraId || devices[devices.length - 1].id; // default to back camera
       if (!selectedCameraId) setSelectedCameraId(camId);
+
+      if (!isScannerOpenRef.current) return;
 
       const html5Qr = new Html5Qrcode('qr-reader-target');
       html5QrCodeRef.current = html5Qr;
@@ -580,7 +598,17 @@ export default function ParticipantVerifier({
           // scanning frames
         }
       );
-      setScannerActive(true);
+
+      if (!isScannerOpenRef.current) {
+        try {
+          if (html5Qr.isScanning) await html5Qr.stop();
+          await html5Qr.clear();
+        } catch (e) {}
+        html5QrCodeRef.current = null;
+        setScannerActive(false);
+      } else {
+        setScannerActive(true);
+      }
     } catch (err) {
       console.warn('QR Scanner Start Error:', err);
       const errMsg = String(err?.message || err);
@@ -620,7 +648,7 @@ export default function ParticipantVerifier({
 
   // Toggle or Confirm Verification API Call
   const handleToggleVerification = async (participant, desiredStatus = true) => {
-    if (!participant) return;
+    if (!participant || isVerifying) return;
     const participantId = participant.id || getTicketCode(participant);
     const code = getTicketCode(participant);
 
@@ -655,6 +683,11 @@ export default function ParticipantVerifier({
     };
     setSelectedParticipant(updatedObj);
 
+    // Prevent immediate auto-scan re-verification burst for this participant
+    lastScannedKeyRef.current = code;
+    lastScannedTimeRef.current = Date.now();
+    isScanDebounceRef.current = true;
+
     try {
       const res = await fetch(getApiUrl(`/api/admin/registrations/${encodeURIComponent(participantId)}/verify`), {
         method: 'PATCH',
@@ -665,7 +698,9 @@ export default function ParticipantVerifier({
         body: JSON.stringify({
           isVerified: true,
           attendance_status: desiredStatus ? 'verified' : 'pending',
-          action: desiredStatus ? 'admit' : 'unadmit'
+          action: desiredStatus ? 'admit' : 'unadmit',
+          verifiedAt: verifiedAt,
+          verifiedBy: verifiedBy
         })
       });
 
@@ -678,7 +713,19 @@ export default function ParticipantVerifier({
           { id: `verify-status-${code}`, duration: 4000 }
         );
 
-        const finalRecord = data.data ? { ...updatedObj, ...data.data } : updatedObj;
+        const targetAtt = desiredStatus ? 'verified' : 'pending';
+        const finalRecord = {
+          ...updatedObj,
+          ...(data.data || {}),
+          attendance_status: targetAtt,
+          attendanceStatus: targetAtt,
+          attended: desiredStatus,
+          checkedIn: desiredStatus,
+          verified_at: verifiedAt,
+          verifiedAt: verifiedAt,
+          verified_by: verifiedBy,
+          verifiedBy: verifiedBy
+        };
         setSelectedParticipant(finalRecord);
 
         // Trigger global dashboard refresh if provided
@@ -690,12 +737,17 @@ export default function ParticipantVerifier({
         }
       } else {
         toast.error(data.message || 'Failed to update attendance status', { id: `verify-err-${code}`, duration: 6000 });
+        setSelectedParticipant(participant);
       }
     } catch (err) {
       console.error('Verification request error:', err);
       toast.error('Server error updating attendance', { id: `verify-err-${code}` });
+      setSelectedParticipant(participant);
     } finally {
       setIsVerifying(false);
+      setTimeout(() => {
+        isScanDebounceRef.current = false;
+      }, 3000);
     }
   };
 
@@ -1213,7 +1265,11 @@ export default function ParticipantVerifier({
 
           <button 
             type="button" 
-            onClick={() => setIsScannerOpen(!isScannerOpen)}
+            onClick={() => {
+              const next = !isScannerOpen;
+              isScannerOpenRef.current = next;
+              setIsScannerOpen(next);
+            }}
             style={S.scanToggleBtn}
           >
             <FaQrcode size={18} />
@@ -1267,11 +1323,11 @@ export default function ParticipantVerifier({
             onChange={(e) => setStatusFilter(e.target.value)}
             style={S.filterSelect}
           >
-            <option value="verified">✓ Registration Verified Only ({regVerifiedCount})</option>
+            <option value="verified">Registration Verified Only ({regVerifiedCount})</option>
             <option value="all">All Registrations ({totalCount})</option>
-            <option value="flagged">⛔ Flagged Registrations ({flaggedCount})</option>
-            <option value="unverified">⏳ Pending Desk Verification ({unverifiedCount})</option>
-            <option value="admitted">🎟️ Admitted / Present Only ({admittedCount})</option>
+            <option value="flagged">[Blocked] Flagged Registrations ({flaggedCount})</option>
+            <option value="unverified">Pending Desk Verification ({unverifiedCount})</option>
+            <option value="admitted">Admitted / Present Only ({admittedCount})</option>
           </select>
 
           <select 
@@ -1481,8 +1537,9 @@ export default function ParticipantVerifier({
               <p style={{ margin: '4px 0 0 0', fontSize: '0.92rem', color: isDark ? '#fde68a' : '#78350f', fontWeight: '700' }}>
                 Participant: {getParticipantName(scanAlert.participant)} ({getEventName(scanAlert.participant)})
               </p>
-              <div style={{ fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#64748b', marginTop: '4px' }}>
-                ⚠️ This participant has NOT been verified at the Registration Desk (Payment / UTR unconfirmed). In accordance with event policy, only participants verified in Registration Verification will be showed and admitted.
+              <div style={{ fontSize: '0.82rem', color: isDark ? '#cbd5e1' : '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaExclamationTriangle style={{ color: '#eab308', flexShrink: 0 }} />
+                <span>This participant has NOT been verified at the Registration Desk (Payment / UTR unconfirmed). In accordance with event policy, only participants verified in Registration Verification will be showed and admitted.</span>
               </div>
             </div>
           </div>
@@ -1852,10 +1909,14 @@ export default function ParticipantVerifier({
                     type="button"
                     disabled={isVerifying}
                     onClick={() => handleToggleVerification(selectedParticipant, false)}
-                    style={S.undoBtn}
+                    style={{
+                      ...S.undoBtn,
+                      opacity: isVerifying ? 0.7 : 1,
+                      cursor: isVerifying ? 'not-allowed' : 'pointer'
+                    }}
                   >
-                    <FaUndo size={14} />
-                    Undo / Reset Admission
+                    <FaUndo size={14} className={isVerifying ? 'fa-spin' : ''} />
+                    {isVerifying ? 'Resetting Admission...' : 'Undo / Reset Admission'}
                   </button>
                 )}
 
